@@ -1,0 +1,23 @@
+fetcher:
+  request_delay_ms: 300    # Yahoo Finance 請求間隔（ms）
+  timeout_sec: 30
+  concurrency: 5            # 同時抓取數量
+
+scanner:
+  min_price: 10.0           # 最低收盤價（過濾雞蛋水餃股）
+  min_avg_volume: 500000    # MA20量最低門檻
+  top_n: 50                 # 市場掃描頁顯示前 N 支
+
+  kdj:
+    k_period: 9
+    d_smooth: 3
+    j_smooth: 3
+
+  bollinger:
+    period: 20
+    std_dev: 2.0
+
+report:
+  output_dir: ./reports
+
+stocks_file: stocks.yaml   # portfolio / watchlist 清單

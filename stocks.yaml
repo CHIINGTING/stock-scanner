@@ -1,0 +1,61 @@
+# 持股與觀察清單
+# portfolio: 已持有，填入 cost（成本）與 shares（股數）
+# watchlist: 觀察中
+
+portfolio:
+  - code: "1809"
+    name: "中釉"
+    cost: 43
+    shares: 1000
+  - code: "1504"
+    name: "東元"
+    cost: 79.2
+    shares: 1000
+  - code: "2374"
+    name: "佳能"
+    cost: 84
+    shares: 1000
+  - code: "2401"
+    name: "凌陽"
+    cost: 31
+    shares: 1000
+  - code: "3048"
+    name: "益登"
+    cost: 31
+    shares: 1000
+  - code: "2337"
+    name: "旺宏"
+    cost: 167
+    shares: 1000
+  - code: "2303"
+    name: "聯電"
+    cost: 145
+    shares: 1000
+  - code: "8358"
+    name: "金居"
+    cost: 300
+    shares: 1000
+  - code: "3015"
+    name: "全漢"
+    cost: 54.6
+    shares: 1000
+  - code: "2337"
+    name: "旺宏"
+    cost: 177
+    shares: 1000
+
+watchlist:
+  - code: "5483"
+    name: "中美晶"
+  - code: "2409"
+    name: "友達"
+  - code: "2408"
+    name: "南亞科"
+  - code: "2356"
+    name: "英業達"
+  - code: "2344"
+    name: "華邦電"
+  - code: "2303"
+    name: "台積電"
+  - code: "3149"
+    name: "正達"
