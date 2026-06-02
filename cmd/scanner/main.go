@@ -82,9 +82,9 @@ func main() {
 			log.Fatalf("load stocks file: %v", err)
 		}
 
-		if len(sl.Portfolio) > 0 {
-			fmt.Printf("      抓取 Portfolio (%d 支)...\n", len(sl.Portfolio))
-			pStocks, err := f.FetchPortfolioStocks(sl.Portfolio)
+		if len(sl.AllPositions()) > 0 {
+			fmt.Printf("      抓取 Positions (%d 支)...\n", len(sl.AllPositions()))
+			pStocks, err := f.FetchPortfolioStocks(sl.AllPositions())
 			if err != nil {
 				log.Printf("portfolio fetch error: %v", err)
 			} else {

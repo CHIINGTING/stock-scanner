@@ -35,8 +35,7 @@ func New(cfg Config) *Scanner {
 	return &Scanner{cfg: cfg}
 }
 
-// ScanMarket scans all market stocks and returns results sorted by score descending.
-// Only stocks passing MinPrice/MinAvgVolume filters are included.
+// ScanMarket scans all market stocks, applies filters, sorts by score, returns top N.
 func (s *Scanner) ScanMarket(stocks []fetcher.StockData) []StockAnalysis {
 	var results []StockAnalysis
 	for _, stock := range stocks {
@@ -46,14 +45,9 @@ func (s *Scanner) ScanMarket(stocks []fetcher.StockData) []StockAnalysis {
 		latest := stock.Candles[len(stock.Candles)-1]
 		ind := s.calcIndicators(stock.Candles)
 		n := len(stock.Candles)
-
-		if latest.Close < s.cfg.MinPrice {
+		if latest.Close < s.cfg.MinPrice || ind.VolumeMA[n-1] < s.cfg.MinAvgVolume {
 			continue
 		}
-		if ind.VolumeMA[n-1] < s.cfg.MinAvgVolume {
-			continue
-		}
-
 		results = append(results, s.analyze(stock, ind))
 	}
 
@@ -63,25 +57,32 @@ func (s *Scanner) ScanMarket(stocks []fetcher.StockData) []StockAnalysis {
 
 	topN := s.cfg.TopN
 	if topN == 0 {
-		topN = 50 // config 未設定時的預設值
+		topN = 50
 	}
-	// topN < 0 表示 --all，不截斷
 	if topN > 0 && len(results) > topN {
 		results = results[:topN]
 	}
 
-	log.Printf("market scan: %d stocks passed filters, showing top %d", len(results), len(results))
+	log.Printf("market scan: %d passed filters, showing %d", len(results), len(results))
 	return results
 }
 
-// ScanPortfolio analyzes all portfolio stocks (no price/volume filter applied).
+// ScanPortfolio analyzes portfolio positions with stop-loss / take-profit logic.
 func (s *Scanner) ScanPortfolio(stocks []fetcher.StockData) []StockAnalysis {
-	return s.analyzeAll(stocks)
+	results := s.analyzeAll(stocks)
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Score > results[j].Score
+	})
+	return results
 }
 
-// ScanWatchlist analyzes all watchlist stocks (no price/volume filter applied).
+// ScanWatchlist analyzes watchlist stocks.
 func (s *Scanner) ScanWatchlist(stocks []fetcher.StockData) []StockAnalysis {
-	return s.analyzeAll(stocks)
+	results := s.analyzeAll(stocks)
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Score > results[j].Score
+	})
+	return results
 }
 
 func (s *Scanner) analyzeAll(stocks []fetcher.StockData) []StockAnalysis {
@@ -94,9 +95,6 @@ func (s *Scanner) analyzeAll(stocks []fetcher.StockData) []StockAnalysis {
 		ind := s.calcIndicators(stock.Candles)
 		results = append(results, s.analyze(stock, ind))
 	}
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Score > results[j].Score
-	})
 	return results
 }
 
@@ -106,20 +104,79 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 
 	closes := closeSlice(stock.Candles)
 	volumes := volumeFloatSlice(stock.Candles)
+	highs := highSlice(stock.Candles)
+	lows := lowSlice(stock.Candles)
 
-	sc, reasons := score(closes, volumes, ind)
+	// BestFourPoint checkpoints
+	bfpChecks, bfpPoints := bestFourPoint(closes, volumes, highs, lows, ind)
 
-	// Portfolio P&L context
+	// Composite numeric score
+	sc, scoreReasons := score(closes, volumes, ind)
+
+	// Volume analysis (for display fields)
+	va := analyzeVolume(closes, volumes, ind)
+
+	// Blend BFP + score for base action
+	bfpAction := actionFromBFP(bfpPoints)
+	numAction := rawAction(sc)
+	baseAction := blendAction(bfpAction, numAction)
+
+	// Portfolio P&L and position-specific overrides
 	var pnlPct, pnlVal float64
+	finalAction := baseAction
+	var positionReason string
+
 	if stock.Source == "portfolio" && stock.CostBasis > 0 {
 		pnlPct = (latest.Close - stock.CostBasis) / stock.CostBasis * 100
 		pnlVal = (latest.Close - stock.CostBasis) * float64(stock.Shares)
-		reasons = append(reasons, portfolioReason(stock.CostBasis, latest.Close, pnlPct, stock.Shares))
+
+		override, reason := positionAdvice(pnlPct, ind.RSI[n-1], ind.MA20, ind.KDJ)
+		if override != "" {
+			finalAction = override
+			positionReason = reason
+		}
 	}
 
-	action := actionFromScore(sc, stock.Source, pnlPct)
+	// Build final reasons list
+	var reasons []string
+	// BFP checkpoint summary first
+	passedNames := []string{}
+	failedNames := []string{}
+	for _, c := range bfpChecks {
+		if c.Pass {
+			passedNames = append(passedNames, c.Name)
+		} else {
+			failedNames = append(failedNames, c.Name)
+		}
+	}
+	reasons = append(reasons, fmt.Sprintf("交易評分 %d/5 條件成立（✓ %v）", bfpPoints, passedNames))
+	// Checkpoint details
+	for _, c := range bfpChecks {
+		mark := "✓"
+		if !c.Pass {
+			mark = "✗"
+		}
+		reasons = append(reasons, fmt.Sprintf("%s [%s] %s", mark, c.Name, c.Reason))
+	}
+	// Score-based reasons (volume, etc.)
+	reasons = append(reasons, scoreReasons...)
+	// Position-specific advice last
+	if positionReason != "" {
+		reasons = append(reasons, "→ "+positionReason)
+	} else if stock.Source == "portfolio" && stock.CostBasis > 0 {
+		dir := "浮盈"
+		if pnlPct < 0 {
+			dir = "虧損"
+		}
+		reasons = append(reasons, fmt.Sprintf(
+			"→ 持倉成本 %.1f，現價 %.1f，%s %.1f%%（%d股，損益 %+.0f 元）",
+			stock.CostBasis, latest.Close, dir, pnlPct, stock.Shares, pnlVal))
+	}
+
+	// Price targets
 	entry, stop, t1, t2 := priceTargets(latest.Close, ind.ATR[n-1], ind.BB)
 
+	// Volume ratio
 	var volRatio float64
 	if ind.VolumeMA[n-1] > 0 {
 		volRatio = float64(latest.Volume) / ind.VolumeMA[n-1]
@@ -140,8 +197,11 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 		PnLValue:  pnlVal,
 
 		Score:   sc,
-		Action:  action,
+		Action:  finalAction,
 		Reasons: reasons,
+
+		BFPPoints: bfpPoints,
+		BFP:       bfpChecks,
 
 		EntryPrice: entry,
 		StopLoss:   stop,
@@ -159,16 +219,13 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 		BBLower:     ind.BB.Lower[n-1],
 		VolumeRatio: volRatio,
 		ATR:         ind.ATR[n-1],
-	}
-}
 
-func portfolioReason(cost, close, pnlPct float64, shares int) string {
-	dir := "浮盈"
-	if pnlPct < 0 {
-		dir = "虧損"
+		VolumeScore:       va.score,
+		AvgVolume20:       int64(ind.VolumeMA[n-1]),
+		PriceVolumeSignal: va.signal,
+		BuySellRatio:      va.buySellRatio,
+		IsLargeOrder:      va.isLargeOrder,
 	}
-	return fmt.Sprintf("持倉成本 %.1f，現價 %.1f，%s %.1f%%（%d 股，損益 %.0f 元）",
-		cost, close, dir, pnlPct, shares, (close-cost)*float64(shares))
 }
 
 func (s *Scanner) calcIndicators(candles []fetcher.Candle) indicator.Result {
@@ -193,6 +250,22 @@ func volumeFloatSlice(candles []fetcher.Candle) []float64 {
 	out := make([]float64, len(candles))
 	for i, c := range candles {
 		out[i] = float64(c.Volume)
+	}
+	return out
+}
+
+func highSlice(candles []fetcher.Candle) []float64 {
+	out := make([]float64, len(candles))
+	for i, c := range candles {
+		out[i] = c.High
+	}
+	return out
+}
+
+func lowSlice(candles []fetcher.Candle) []float64 {
+	out := make([]float64, len(candles))
+	for i, c := range candles {
+		out[i] = c.Low
 	}
 	return out
 }

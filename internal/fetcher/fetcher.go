@@ -9,60 +9,93 @@ import (
 )
 
 type Config struct {
-	RequestDelayMs int `yaml:"request_delay_ms"`
-	TimeoutSec     int `yaml:"timeout_sec"`
-	Concurrency    int `yaml:"concurrency"`
+	RequestDelayMs int    `yaml:"request_delay_ms"`
+	TimeoutSec     int    `yaml:"timeout_sec"`
+	Concurrency    int    `yaml:"concurrency"`    // default 3
+	CacheTTLMin    int    `yaml:"cache_ttl_min"`  // default 15
+	CacheDir       string `yaml:"cache_dir"`      // default ".cache"
+	EOFCooldownMin int    `yaml:"eof_cooldown_min"` // default 5
 }
 
 type Fetcher struct {
-	cfg    Config
-	client *http.Client
+	cfg         Config
+	client      *http.Client
+	marketCache sync.Map         // code → "TW" | "TWO"
+	dataCache   *dataCache       // OHLCV TTL cache
+	eofCooldown eofCooldownStore // per-ticker cooldown after network errors
 }
 
 func New(cfg Config) *Fetcher {
+	// ── defaults ────────────────────────────────────────────────────────────
 	if cfg.TimeoutSec == 0 {
 		cfg.TimeoutSec = 30
 	}
 	if cfg.Concurrency == 0 {
-		cfg.Concurrency = 5
+		cfg.Concurrency = 3 // conservative default to avoid Yahoo rate-limiting
 	}
 	if cfg.RequestDelayMs == 0 {
-		cfg.RequestDelayMs = 300
+		cfg.RequestDelayMs = 400
 	}
+	if cfg.CacheTTLMin == 0 {
+		cfg.CacheTTLMin = 15
+	}
+	if cfg.CacheDir == "" {
+		cfg.CacheDir = ".cache"
+	}
+	if cfg.EOFCooldownMin == 0 {
+		cfg.EOFCooldownMin = 5
+	}
+
+	log.Printf("fetcher: concurrency=%d delay=%dms cache_ttl=%dmin eof_cooldown=%dmin",
+		cfg.Concurrency, cfg.RequestDelayMs, cfg.CacheTTLMin, cfg.EOFCooldownMin)
+
 	return &Fetcher{
-		cfg:    cfg,
-		client: &http.Client{Timeout: time.Duration(cfg.TimeoutSec) * time.Second},
+		cfg:       cfg,
+		client:    &http.Client{Timeout: time.Duration(cfg.TimeoutSec) * time.Second},
+		dataCache: newDataCache(cfg.CacheDir, time.Duration(cfg.CacheTTLMin)*time.Minute),
 	}
 }
 
-// FetchAll fetches the full TWSE market and returns data for all listed stocks.
+// FetchAll fetches TWSE + TPEX stock lists, then downloads OHLCV for all.
 func (f *Fetcher) FetchAll() ([]StockData, error) {
-	stocks, err := f.FetchStockList()
+	var all []StockInfo
+
+	twse, err := f.FetchStockList()
 	if err != nil {
-		return nil, fmt.Errorf("fetch stock list: %w", err)
+		return nil, fmt.Errorf("TWSE stock list: %w", err)
 	}
-	log.Printf("stock list: %d symbols", len(stocks))
-	return f.fetchBatch(stocks, "market")
+	log.Printf("TWSE: %d symbols", len(twse))
+	all = append(all, twse...)
+
+	tpex, err := f.FetchTPEXList()
+	if err != nil {
+		log.Printf("TPEX stock list warning (skipping): %v", err)
+	} else {
+		log.Printf("TPEX: %d symbols", len(tpex))
+		all = append(all, tpex...)
+	}
+
+	log.Printf("total market symbols: %d", len(all))
+	return f.fetchBatch(all, "market")
 }
 
-// FetchPortfolioStocks fetches stocks from the portfolio section of stocks.yaml.
-func (f *Fetcher) FetchPortfolioStocks(entries []PortfolioEntry) ([]StockData, error) {
+// FetchPortfolioStocks fetches OHLCV data for position/portfolio entries.
+func (f *Fetcher) FetchPortfolioStocks(entries []PositionEntry) ([]StockData, error) {
 	infos := make([]StockInfo, len(entries))
 	for i, e := range entries {
-		infos[i] = StockInfo{Symbol: e.Code, Name: e.Name}
+		infos[i] = StockInfo{Symbol: e.Code, Name: e.Name, Market: e.Market}
 	}
 	results, err := f.fetchBatch(infos, "portfolio")
 	if err != nil {
 		return nil, err
 	}
-	// attach cost basis and shares
-	costMap := make(map[string]PortfolioEntry, len(entries))
+	entryMap := make(map[string]PositionEntry, len(entries))
 	for _, e := range entries {
-		costMap[e.Code] = e
+		entryMap[e.Code] = e
 	}
 	for i := range results {
-		if e, ok := costMap[results[i].Symbol]; ok {
-			results[i].CostBasis = e.Cost
+		if e, ok := entryMap[results[i].Symbol]; ok {
+			results[i].CostBasis = e.EntryPrice()
 			results[i].Shares = e.Shares
 			if results[i].Name == "" {
 				results[i].Name = e.Name
@@ -72,29 +105,26 @@ func (f *Fetcher) FetchPortfolioStocks(entries []PortfolioEntry) ([]StockData, e
 	return results, nil
 }
 
-// FetchWatchlistStocks fetches stocks from the watchlist section of stocks.yaml.
+// FetchWatchlistStocks fetches OHLCV data for watchlist entries.
 func (f *Fetcher) FetchWatchlistStocks(entries []WatchEntry) ([]StockData, error) {
 	infos := make([]StockInfo, len(entries))
 	for i, e := range entries {
-		infos[i] = StockInfo{Symbol: e.Code, Name: e.Name}
+		infos[i] = StockInfo{Symbol: e.Code, Name: e.Name, Market: e.Market}
 	}
 	return f.fetchBatch(infos, "watchlist")
 }
 
 // fetchBatch downloads Yahoo Finance data for a list of stocks in parallel.
+// Respects concurrency limit, per-request delay, and EOF cooldown.
 func (f *Fetcher) fetchBatch(stocks []StockInfo, source string) ([]StockData, error) {
-	type item struct {
-		info StockInfo
-		idx  int
-	}
 	type result struct {
 		data StockData
 		err  error
 	}
 
-	jobs := make(chan item, len(stocks))
-	for i, s := range stocks {
-		jobs <- item{info: s, idx: i}
+	jobs := make(chan StockInfo, len(stocks))
+	for _, s := range stocks {
+		jobs <- s
 	}
 	close(jobs)
 
@@ -109,9 +139,11 @@ func (f *Fetcher) fetchBatch(stocks []StockInfo, source string) ([]StockData, er
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
+
+			// inter-request delay (avoid hammering Yahoo)
 			time.Sleep(time.Duration(f.cfg.RequestDelayMs) * time.Millisecond)
 
-			data, err := f.fetchYahoo(j.info.Symbol, j.info.Name)
+			data, err := f.fetchYahoo(j.Symbol, j.Name, j.Market)
 			if err == nil {
 				data.Source = source
 			}
@@ -136,7 +168,7 @@ func (f *Fetcher) fetchBatch(stocks []StockInfo, source string) ([]StockData, er
 		results = append(results, r.data)
 	}
 	if skipped > 0 {
-		log.Printf("skipped %d symbols (error or insufficient history)", skipped)
+		log.Printf("skipped %d symbols", skipped)
 	}
 	return results, nil
 }

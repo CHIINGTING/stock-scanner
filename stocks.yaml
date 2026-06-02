@@ -1,61 +1,103 @@
-# 持股與觀察清單
-# portfolio: 已持有，填入 cost（成本）與 shares（股數）
-# watchlist: 觀察中
+# ============================================================
+# Stock Radar 持股與觀察清單
+# ============================================================
+#
+# positions: 已持有股票（填入進場成本與股數）
+# watchlist: 觀察中（尚未進場）
+#
+# market 欄位（選填）：
+#   market: "TW"  → 上市（TWSE），抓 {code}.TW
+#   market: "TWO" → 上櫃（TPEX），抓 {code}.TWO
+#   留空           → 自動偵測（先試 .TW，失敗再試 .TWO，結果 cache）
+#
+# entry: 進場成本（每股，元）
+# shares: 持股數量（股）
 
-portfolio:
+positions:
   - code: "1809"
     name: "中釉"
-    cost: 43
+    entry: 43
     shares: 1000
+
   - code: "1504"
     name: "東元"
-    cost: 79.2
+    market: "TW"
+    entry: 79.2
     shares: 1000
+
   - code: "2374"
     name: "佳能"
-    cost: 84
+    market: "TW"
+    entry: 84
     shares: 1000
+
   - code: "2401"
     name: "凌陽"
-    cost: 31
+    entry: 31
     shares: 1000
+
   - code: "3048"
     name: "益登"
-    cost: 31
+    entry: 31
     shares: 1000
+
   - code: "2337"
     name: "旺宏"
-    cost: 167
+    market: "TW"
+    entry: 167
     shares: 1000
+
   - code: "2303"
     name: "聯電"
-    cost: 145
+    market: "TW"
+    entry: 145
     shares: 1000
+
   - code: "8358"
     name: "金居"
-    cost: 300
+    entry: 300
     shares: 1000
+
   - code: "3015"
     name: "全漢"
-    cost: 54.6
+    entry: 54.6
     shares: 1000
+
   - code: "2337"
-    name: "旺宏"
-    cost: 177
+    name: "旺宏(2)"
+    market: "TW"
+    entry: 177
     shares: 1000
 
 watchlist:
   - code: "5483"
     name: "中美晶"
+
   - code: "2409"
     name: "友達"
+    market: "TW"
+
   - code: "2408"
     name: "南亞科"
+    market: "TW"
+
   - code: "2356"
     name: "英業達"
+    market: "TW"
+
   - code: "2344"
     name: "華邦電"
+    market: "TW"
+
   - code: "2303"
-    name: "台積電"
+    name: "聯電"
+    market: "TW"
+
   - code: "3149"
     name: "正達"
+
+  - code: "8299"
+    name: "群聯"
+
+  - code: "3264"
+    name: "欣銓"

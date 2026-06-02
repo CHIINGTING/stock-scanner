@@ -1,128 +1,349 @@
-# stock-scanner
+# 📡 Stock Radar — 台股盤後交易助理
 
-每日收盤後自動掃描台股，產生含評分、交易建議與價格目標的三分頁 HTML 報告。
+Stock Radar 不是技術指標展示工具。
 
-## 三分頁報告
+它直接回答你最關心的問題：
+- **這支股票現在能買嗎？**
+- **我的持股應該續抱還是停損？**
+- **量能是否支持這波漲勢？**
 
-| 頁面 | 說明 |
-|------|------|
-| 📊 市場掃描 | 全市場評分 Top N，依分數排序 |
-| 💼 Portfolio | 持股分析：成本、損益、建議操作 |
-| 👁 Watchlist | 觀察股分析：建議進場時機 |
+---
 
-## 六段式建議
+## 目錄
 
-| 建議 | 說明 |
-|------|------|
-| **STRONG BUY** | 多指標共振，強力進場訊號 |
-| **BUY** | 技術面偏多，可考慮建倉 |
-| **WATCH** | 有潛力但尚未確認，持續觀察 |
-| **HOLD** | 中性，維持現況 |
-| **REDUCE** | 偏空或持倉獲利已高，考慮減倉 |
-| **SELL** | 技術面轉弱或虧損擴大，執行停損 |
+1. [安裝](#安裝)
+2. [快速開始](#快速開始)
+3. [stocks.yaml 格式](#stocksyaml-格式)
+4. [持倉（positions）](#持倉-positions)
+5. [觀察清單（watchlist）](#觀察清單-watchlist)
+6. [Action 建議說明](#action-建議說明)
+7. [BUY 與 WATCH 的差異](#buy-與-watch-的差異)
+8. [量價分析說明](#量價分析說明)
+9. [市場別：TW vs TWO](#市場別tw-vs-two)
+10. [執行參數](#執行參數)
+11. [常見問題](#常見問題)
 
-## 評分系統（0–100）
+---
 
-| 指標 | 滿分 | 邏輯 |
-|------|------|------|
-| RSI(14) | 25 | <30 超賣得高分，>70 超買扣分 |
-| MA20 趨勢 | 25 | 連續上揚天數越多得分越高 |
-| KDJ | 25 | 黃金交叉最高，死亡交叉大扣分 |
-| 成交量比 | 15 | 爆量得分，縮量扣分 |
-| 布林通道 | 10 | 收斂突破 / 擴張方向 |
+## 安裝
 
-### Portfolio 額外調整
+### 前置需求
 
-- 浮盈 ≥ 30% 且技術偏弱 → 自動升級為 **REDUCE**
-- 虧損 ≥ 20% 且無轉強訊號 → 自動升級為 **SELL**
+- Go 1.22 以上
+- 網路連線（抓取 Yahoo Finance 資料）
 
-## 價格目標計算（ATR 基礎）
-
-```
-進場價 = 當日收盤
-停損   = max(布林下軌 − 0.5×ATR, 進場 − 2×ATR)
-目標1  = max(進場 + 2×風險, 布林上軌)
-目標2  = 進場 + 3.5×風險
-```
-
-## 使用方式
+### 步驟
 
 ```bash
-# 1. 安裝依賴
+# 1. Clone 專案
+git clone <your-repo-url> stock-scanner
+cd stock-scanner
+
+# 2. 安裝依賴
 go mod tidy
 
-# 2. 設定持股清單（參考 stocks.yaml）
-cp stocks.yaml my_stocks.yaml
-# 編輯 my_stocks.yaml
-
-# 3. 只分析 Portfolio + Watchlist（快速，< 1 分鐘）
-make run-fast
-
-# 4. 完整市場掃描 + Portfolio（~30 分鐘）
-make run
-
-# 5. 指定日期
-make run-date DATE=2025-12-31
-
-# 6. 指定自訂清單
-make run-stocks STOCKS=my_stocks.yaml
+# 3. 編譯
+make build
 ```
 
-報告輸出：`reports/report_YYYYMMDD.html`
+---
+
+## 快速開始
+
+### 只分析自己的持股與觀察清單（最快，< 1 分鐘）
+
+```bash
+make run-fast
+```
+
+### 加上市場掃描前 50 名
+
+```bash
+make run
+```
+
+### 完整市場掃描（上市 + 上櫃，約 30 分鐘）
+
+```bash
+make run-all
+```
+
+報告輸出至 `reports/report_YYYYMMDD.html`，用瀏覽器開啟即可。
+
+---
 
 ## stocks.yaml 格式
 
+所有持股與觀察清單都在這個檔案設定。
+
 ```yaml
-portfolio:
+positions:
+  - code: "2337"        # 股票代號
+    name: "旺宏"         # 股票名稱（選填，留空則顯示 Yahoo 名稱）
+    market: "TW"        # 市場（選填：TW / TWO / 留空自動偵測）
+    entry: 173.5        # 進場成本（每股，元）
+    shares: 1000        # 持股股數
+
   - code: "5483"
-    name: "中美晶"    # 選填，留空則用 Yahoo 名稱
-    cost: 165         # 成本價（元）
-    shares: 2000      # 持股張數（股）
+    name: "中美晶"
+    market: "TWO"       # 上櫃股必須填 TWO
+    entry: 165
+    shares: 2000
 
 watchlist:
-  - code: "2337"
-    name: "旺宏"
   - code: "2408"
+    name: "南亞科"
+    market: "TW"
+
+  - code: "8299"
+    name: "群聯"
+    # market 未填 → 自動偵測
 ```
 
-## 專案結構
+---
+
+## 持倉（positions）
+
+`positions:` 區段用來追蹤你**已持有**的股票。
+
+系統會根據進場成本與目前技術面，給出以下資訊：
+
+| 欄位 | 說明 |
+|------|------|
+| 成本 | 你的進場價（entry） |
+| 現價 | 最新收盤價 |
+| 損益% | (現價 - 成本) / 成本 × 100 |
+| 損益額 | (現價 - 成本) × 股數 |
+| 交易建議 | HOLD / REDUCE / TAKE PROFIT / STOP LOSS |
+| 停損價 | 建議的停損點 |
+| 目標1 | 第一目標（通常為布林上軌或 2× 風險） |
+| 目標2 | 第二目標（3.5× 風險） |
+
+### 自動觸發條件
+
+**STOP LOSS 觸發：**
+- 虧損超過 15%（立即停損）
+- 虧損超過 10% 且 MA20 下彎或 KDJ 死叉
+- 虧損超過 7% 且 MA20 下彎 + KDJ 死叉同時發生
+
+**TAKE PROFIT 觸發：**
+- 浮盈超過 30%（建議全數獲利了結）
+- 浮盈超過 15% 且 RSI 超買（>72）
+- 浮盈超過 15% 且 KDJ 死亡交叉（動能轉弱）
+
+**REDUCE 觸發：**
+- 浮盈超過 12% 且 RSI 偏高（>65）
+
+---
+
+## 觀察清單（watchlist）
+
+`watchlist:` 區段用來追蹤你**尚未進場**但感興趣的股票。
+
+系統會給出：
+
+| 欄位 | 說明 |
+|------|------|
+| 建議進場價 | 技術上合理的進場點 |
+| 停損 | 如果進場後的停損位 |
+| 目標1 / 目標2 | 預期目標價 |
+| 交易建議 | STRONG BUY / BUY / WATCH / HOLD |
+
+---
+
+## Action 建議說明
+
+| Action | 意義 | 適用情境 |
+|--------|------|----------|
+| **STRONG BUY** | 強力買進 | 5/5 交易條件全部成立，主力量能確認 |
+| **BUY** | 買進 | 4/5 條件成立，技術面明確偏多 |
+| **WATCH** | 繼續觀察 | 3/5 條件成立，條件尚未完全到位 |
+| **HOLD** | 持有 | 2/5 條件成立，無明確進出場訊號 |
+| **REDUCE** | 減碼 | 浮盈已大 + 技術面轉弱，分批獲利 |
+| **TAKE PROFIT** | 獲利了結 | 達到目標或出現明確賣出訊號 |
+| **STOP LOSS** | 停損出場 | 虧損超標或技術面持續惡化 |
+| **SELL** | 賣出 | 技術面全面走空 |
+
+---
+
+## BUY 與 WATCH 的差異
+
+**WATCH（觀察）** — 條件尚未齊全，不應貿然進場：
+- 可能 MA20 還在下彎
+- 可能量能不足
+- 可能 KDJ 尚未交叉
+- → 等待訊號確認，設定價格警示
+
+**BUY（買進）** — 多數條件已成立：
+- MA20 上揚確認
+- RSI 在合理進場區間
+- KDJ 多頭排列或黃金交叉
+- 量能配合
+- → 可以進場，但仍需設好停損
+
+**STRONG BUY（強力買進）** — 所有條件齊全：
+- 5/5 交易條件全部成立
+- 通常伴隨爆量（主力積極介入）
+- 技術結構完美
+- → 積極進場，但不要追高超過進場價 3%
+
+---
+
+## 量價分析說明
+
+量能是本系統最重視的指標之一，佔評分 **25 分**（共 100 分）。
+
+### 量價訊號
+
+| 訊號 | 說明 | 操作意義 |
+|------|------|----------|
+| **價漲量增** ✅ | 漲幅有量能支撐 | 最佳買進訊號 |
+| **價漲量縮** ⚠️ | 漲幅缺乏量能 | 小心假突破 |
+| **價跌量增** ❌ | 大量下跌，賣壓沉重 | 避免進場，持有者考慮停損 |
+| **價跌量縮** ⚠️ | 量縮整理 | 等待方向確認 |
+
+### 量比（Volume Ratio）
 
 ```
-stock-scanner/
-├── cmd/scanner/main.go              # 程式入口
-├── internal/
-│   ├── fetcher/
-│   │   ├── types.go                 # Candle, StockData
-│   │   ├── fetcher.go               # 並行抓取（market / portfolio / watchlist）
-│   │   ├── twse.go                  # TWSE 上市股票清單
-│   │   ├── yahoo.go                 # Yahoo Finance 日線 OHLCV
-│   │   └── portfolio.go             # 讀取 stocks.yaml
-│   ├── indicator/
-│   │   ├── ma.go                    # SMA、MA20 趨勢標籤
-│   │   ├── kdj.go                   # KDJ 隨機指標
-│   │   ├── bollinger.go             # 布林通道
-│   │   ├── volume.go                # 量比
-│   │   ├── rsi.go                   # RSI（Wilder 平滑法）
-│   │   ├── atr.go                   # ATR（平均真實範圍）
-│   │   └── calculator.go            # 整合計算入口
-│   ├── scanner/
-│   │   ├── types.go                 # Action, StockAnalysis
-│   │   ├── scorer.go                # 評分引擎 + 價格目標
-│   │   └── scanner.go               # 市場掃描 / Portfolio / Watchlist
-│   └── report/
-│       └── report.go                # 三分頁 HTML + 終端摘要
-├── stocks.yaml                      # 持股與觀察清單
-├── configs/config.yaml              # 參數設定
-└── Makefile
+量比 = 當日成交量 / 20日平均量
 ```
 
-## 資料來源
+- 量比 > 2.0：爆量，主力介入
+- 量比 1.0–2.0：正常放量
+- 量比 < 0.8：縮量，市場觀望
 
-- **股票清單**：[TWSE Open API](https://openapi.twse.com.tw/)
-- **歷史 OHLCV**：Yahoo Finance（`{code}.TW`，6 個月日線）
+### 大單偵測
 
-## 注意事項
+當量比超過 3 倍時，系統會標記「大單偵測」：
+- 搭配上漲：法人/主力積極建倉
+- 搭配下跌：主力出貨，需謹慎因應
 
-- 本工具**僅供研究參考，非投資建議**。
-- Yahoo Finance 有請求速率限制，`request_delay_ms` 建議 ≥ 200ms。
-- 若 TWSE API 在非交易日返回空資料，市場掃描會無結果，可加 `--no-market` 跳過。
+---
+
+## 市場別：TW vs TWO
+
+台灣股市分為兩個交易市場：
+
+| 市場 | 說明 | Yahoo 代碼格式 | 例子 |
+|------|------|----------------|------|
+| **上市（TWSE）** | 台灣證券交易所 | `{code}.TW` | `2330.TW` |
+| **上櫃（TPEX）** | 證券櫃檯買賣中心 | `{code}.TWO` | `5483.TWO` |
+
+### 如何判斷是上市還是上櫃？
+
+最簡單的方法：在台股查詢網站（如 台灣 Yahoo 股市）搜尋股票代號，查看是「上市」還是「上櫃」。
+
+### stocks.yaml 設定
+
+```yaml
+# 上市股票（TWSE）
+- code: "2330"
+  market: "TW"      # 明確指定
+
+# 上櫃股票（TPEX）
+- code: "5483"
+  market: "TWO"     # 明確指定
+
+# 不確定時：留空，系統自動偵測
+- code: "3048"
+  # market 留空 → 先試 .TW，失敗再試 .TWO
+```
+
+**建議**：確定的股票請明確填入 market，可避免一次額外的網路請求。
+
+---
+
+## 執行參數
+
+```bash
+# 只分析持股 + 觀察清單（跳過全市場，最快）
+./bin/scanner --no-market
+
+# 市場掃描前 50 名（預設）
+./bin/scanner --top 50
+
+# 市場掃描前 100 名
+./bin/scanner --top 100
+
+# 市場掃描前 500 名
+./bin/scanner --top 500
+
+# 掃描全部上市 + 上櫃股票（最慢，約 30 分鐘）
+./bin/scanner --all
+
+# 指定分析日期
+./bin/scanner --date 2025-12-31
+
+# 使用不同的持股清單檔案
+./bin/scanner --stocks my_portfolio.yaml
+
+# 自訂設定檔
+./bin/scanner --config configs/config.yaml
+```
+
+### Makefile 快捷指令
+
+```bash
+make run-fast    # 只跑 Positions + Watchlist
+make run         # Top 50 市場掃描
+make run-top100  # Top 100
+make run-top500  # Top 500
+make run-all     # 全部（上市 + 上櫃）
+```
+
+---
+
+## 5 個交易評分條件（BestFourPoint 啟發）
+
+系統評估 5 個獨立條件，並顯示通過幾個（●●●○○ = 3/5）：
+
+| 條件 | 檢查內容 |
+|------|----------|
+| **趨勢** | 價格站上 MA20 + MA20 連續上揚 |
+| **動能** | RSI 在最佳進場區間（25–65） |
+| **擺盪** | KDJ 黃金交叉或多頭排列 |
+| **量能** | 量比 > 1.3 且價漲量增 |
+| **突破** | 布林帶突破上軌或站上中線 |
+
+滿足條件越多，建議越積極：
+- 5/5 → STRONG BUY
+- 4/5 → BUY
+- 3/5 → WATCH
+- 2/5 → HOLD
+- 1/5 → REDUCE
+- 0/5 → SELL
+
+---
+
+## 常見問題
+
+**Q：報告顯示「無資料」？**
+A：可能是 Yahoo Finance 速率限制。請稍後再試，或調低 `configs/config.yaml` 的 `concurrency`。
+
+**Q：上櫃股票（如 5483）查不到資料？**
+A：請在 stocks.yaml 加入 `market: "TWO"`。若不確定，留空讓系統自動偵測。
+
+**Q：市場掃描在假日執行結果為空？**
+A：TWSE / TPEX API 在休市日不提供當日資料。建議在交易日收盤後（15:00 後）執行。
+
+**Q：STOP LOSS 訊號代表什麼？**
+A：系統偵測到你的持倉虧損超過設定門檻（預設 -7% 且技術面惡化，或 -15% 無條件觸發）。這是建議，最終決定仍由你判斷。
+
+**Q：評分和 BFP 條件哪個更重要？**
+A：系統同時使用兩者，取較保守的結果。BFP 條件是質性判斷（幾個條件成立），評分是量化細節（每個指標的強度）。
+
+**Q：如何設定自己的停損線？**
+A：目前停損由 ATR（平均真實波幅）和布林通道下軌動態計算。若想自訂，可修改 `internal/scanner/scorer.go` 的 `priceTargets` 函式。
+
+**Q：Yahoo Finance 速率限制怎麼辦？**
+A：調高 `configs/config.yaml` 中的 `request_delay_ms`（建議 500–1000ms），或降低 `concurrency`（建議 3–5）。
+
+---
+
+## 免責聲明
+
+本工具僅供技術分析研究使用，**不構成投資建議**。
+
+股票投資有風險，進場前請做好風險管理，設定停損。
+
+過去績效不代表未來結果。

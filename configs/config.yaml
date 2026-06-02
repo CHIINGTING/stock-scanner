@@ -1,12 +1,21 @@
 fetcher:
-  request_delay_ms: 300    # Yahoo Finance 請求間隔（ms）
-  timeout_sec: 30
-  concurrency: 5            # 同時抓取數量
+  concurrency: 3          # 同時請求數（預設3，建議不超過5，避免 Yahoo 限速）
+  request_delay_ms: 400   # 每個 Worker 請求間隔（ms），建議 300~500
+  timeout_sec: 30         # 單次 HTTP 請求 timeout
+
+  # ── Cache 設定 ──────────────────────────────────────────────────────────
+  cache_ttl_min: 15       # OHLCV 資料快取時效（分鐘），同一 ticker 15分內不重抓
+  cache_dir: ".cache"     # 快取目錄（相對於執行目錄）
+
+  # ── EOF / 連線失敗保護 ───────────────────────────────────────────────────
+  # 遇到 EOF 或連線重置後，該 ticker 在 eof_cooldown_min 分鐘內不再請求
+  # 避免大量 EOF 時繼續轟炸 Yahoo Finance
+  eof_cooldown_min: 5
 
 scanner:
-  min_price: 10.0           # 最低收盤價（過濾雞蛋水餃股）
-  min_avg_volume: 500000    # MA20量最低門檻
-  top_n: 50                 # 市場掃描頁顯示前 N 支
+  min_price: 10.0         # 最低收盤價（過濾低價股）
+  min_avg_volume: 500000  # MA20 量能門檻
+  top_n: 50               # 市場掃描頁顯示前 N 名（--top 旗標可覆蓋）
 
   kdj:
     k_period: 9
@@ -20,4 +29,4 @@ scanner:
 report:
   output_dir: ./reports
 
-stocks_file: stocks.yaml   # portfolio / watchlist 清單
+stocks_file: stocks.yaml  # portfolio / watchlist 清單

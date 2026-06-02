@@ -2,16 +2,24 @@ package fetcher
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 )
 
 const yahooChartURL = "https://query1.finance.yahoo.com/v8/finance/chart/"
+
+// errNetworkFailure is a sentinel used to signal that the failure was a
+// low-level network/connection problem (not a Yahoo API "no data" response).
+// fetchYahooAutoDetect uses this to decide whether to try the other market suffix.
+var errNetworkFailure = errors.New("network failure")
 
 type yahooResponse struct {
 	Chart struct {
@@ -39,73 +47,180 @@ type yahooResponse struct {
 	} `json:"chart"`
 }
 
-// fetchYahoo downloads 6 months of daily OHLCV data from Yahoo Finance.
-// providedName overrides the Yahoo-returned name when non-empty.
-func (f *Fetcher) fetchYahoo(symbol, providedName string) (StockData, error) {
-	ticker := symbol + ".TW"
-	params := url.Values{
-		"interval": []string{"1d"},
-		"range":    []string{"6mo"},
+// isNetworkError returns true for EOF, connection-reset and similar transient
+// transport-layer errors that should NOT be retried immediately.
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
 	}
+	if errors.Is(err, io.EOF) {
+		return true
+	}
+	s := err.Error()
+	for _, needle := range []string{
+		"EOF",
+		"connection reset by peer",
+		"connection refused",
+		"use of closed network connection",
+		"i/o timeout",
+		"no such host",
+		"TLS handshake timeout",
+	} {
+		if strings.Contains(s, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Public entry point
+// ──────────────────────────────────────────────────────────────────────────────
+
+// fetchYahoo dispatches to the appropriate fetch strategy based on market.
+//
+//   - market "TW"  → fetch {code}.TW
+//   - market "TWO" → fetch {code}.TWO
+//   - market ""    → auto-detect: try .TW, then .TWO (result cached)
+func (f *Fetcher) fetchYahoo(code, providedName, market string) (StockData, error) {
+	if market != "" {
+		return f.fetchYahooTicker(code, providedName, YahooSymbol(code, market), market)
+	}
+	return f.fetchYahooAutoDetect(code, providedName)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Auto-detect (.TW → .TWO fallback)
+// ──────────────────────────────────────────────────────────────────────────────
+
+func (f *Fetcher) fetchYahooAutoDetect(code, providedName string) (StockData, error) {
+	// Use cached market suffix if known
+	if cached, ok := f.marketCache.Load(code); ok {
+		m := cached.(string)
+		return f.fetchYahooTicker(code, providedName, YahooSymbol(code, m), m)
+	}
+
+	// Try TWSE first
+	data, err := f.fetchYahooTicker(code, providedName, YahooSymbol(code, "TW"), "TW")
+	if err == nil && len(data.Candles) >= 5 {
+		f.marketCache.Store(code, "TW")
+		return data, nil
+	}
+
+	// If it was a network/cooldown error, don't attempt .TWO — the connection
+	// itself is unreliable. Only try .TWO on API-level "no data" errors.
+	if err != nil && errors.Is(err, errNetworkFailure) {
+		return StockData{Symbol: code}, err
+	}
+
+	// API-level error (wrong market, no data) → try TPEX suffix
+	data, err = f.fetchYahooTicker(code, providedName, YahooSymbol(code, "TWO"), "TWO")
+	if err == nil && len(data.Candles) >= 5 {
+		f.marketCache.Store(code, "TWO")
+		return data, nil
+	}
+
+	return StockData{Symbol: code}, fmt.Errorf("%s: not found on .TW or .TWO", code)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Core fetch with cache + EOF cooldown
+// ──────────────────────────────────────────────────────────────────────────────
+
+func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (StockData, error) {
+	// 1. Data cache (TTL = cfg.CacheTTLMin)
+	if data, ok := f.dataCache.Get(ticker); ok {
+		return *data, nil
+	}
+
+	// 2. EOF cooldown — refuse request if ticker is still cooling down
+	if active, until := f.eofCooldown.IsActive(ticker); active {
+		remaining := time.Until(until).Round(time.Second)
+		log.Printf("cooldown: skip %s for %v more", ticker, remaining)
+		// Wrap as errNetworkFailure so auto-detect does not try the other suffix
+		return StockData{Symbol: code}, fmt.Errorf("%w: %s cooldown active (%v remaining)",
+			errNetworkFailure, ticker, remaining)
+	}
+
+	// 3. Build request
+	params := url.Values{"interval": {"1d"}, "range": {"6mo"}}
 	reqURL := yahooChartURL + ticker + "?" + params.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
-		return StockData{Symbol: symbol}, err
+		return StockData{Symbol: code}, err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; stock-scanner/1.0)")
 	req.Header.Set("Accept", "application/json")
 
+	// 4. Attempt loop — max 2 retries for non-network errors only
+	const maxAttempts = 3
 	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		if attempt > 0 {
-			time.Sleep(time.Duration(attempt) * 2 * time.Second)
+			time.Sleep(time.Duration(attempt*3) * time.Second) // 3 s, 6 s
 		}
-		resp, err := f.client.Do(req)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if resp.StatusCode == http.StatusTooManyRequests {
-			lastErr = fmt.Errorf("rate limited (429)")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
+
+		resp, doErr := f.client.Do(req)
+		if doErr != nil {
+			if isNetworkError(doErr) {
+				// Set per-ticker cooldown and stop retrying immediately.
+				f.eofCooldown.Set(ticker, time.Duration(f.cfg.EOFCooldownMin)*time.Minute)
+				return StockData{Symbol: code}, fmt.Errorf("%w: %v", errNetworkFailure, doErr)
+			}
+			lastErr = doErr
 			continue
 		}
 
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			if isNetworkError(readErr) {
+				f.eofCooldown.Set(ticker, time.Duration(f.cfg.EOFCooldownMin)*time.Minute)
+				return StockData{Symbol: code}, fmt.Errorf("%w: body read: %v", errNetworkFailure, readErr)
+			}
+			lastErr = readErr
+			continue
+		}
+
+		// Rate-limited: wait longer and retry
+		if resp.StatusCode == http.StatusTooManyRequests {
+			log.Printf("yahoo: 429 rate-limit for %s, sleeping 10s", ticker)
+			time.Sleep(10 * time.Second)
+			lastErr = fmt.Errorf("rate-limited (429)")
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			// Non-retriable API error
+			return StockData{Symbol: code}, fmt.Errorf("HTTP %d", resp.StatusCode)
+		}
+
+		// 5. Parse JSON
 		var yr yahooResponse
 		if err := json.Unmarshal(body, &yr); err != nil {
-			return StockData{Symbol: symbol}, fmt.Errorf("parse: %w", err)
+			return StockData{Symbol: code}, fmt.Errorf("parse: %w", err)
 		}
 		if yr.Chart.Error != nil {
-			return StockData{Symbol: symbol}, fmt.Errorf("yahoo: %s", yr.Chart.Error.Description)
+			return StockData{Symbol: code}, fmt.Errorf("yahoo API: %s", yr.Chart.Error.Description)
 		}
 		if len(yr.Chart.Result) == 0 {
-			return StockData{Symbol: symbol}, fmt.Errorf("no data")
+			return StockData{Symbol: code}, fmt.Errorf("no result")
 		}
 
 		res := yr.Chart.Result[0]
 		if len(res.Indicators.Quote) == 0 {
-			return StockData{Symbol: symbol}, fmt.Errorf("no quote")
+			return StockData{Symbol: code}, fmt.Errorf("no quote data")
 		}
 		q := res.Indicators.Quote[0]
 
-		// resolve display name
 		name := providedName
 		if name == "" {
 			name = res.Meta.ShortName
 		}
 		if name == "" {
-			name = symbol
+			name = code
 		}
 
 		candles := make([]Candle, 0, len(res.Timestamp))
@@ -134,7 +249,14 @@ func (f *Fetcher) fetchYahoo(symbol, providedName string) (StockData, error) {
 			return candles[i].Date.Before(candles[j].Date)
 		})
 
-		return StockData{Symbol: symbol, Name: name, Candles: candles}, nil
+		result := StockData{Symbol: code, Name: name, Market: market, Candles: candles}
+
+		// 6. Store in cache on success
+		f.dataCache.Set(ticker, result)
+
+		return result, nil
 	}
-	return StockData{Symbol: symbol}, fmt.Errorf("yahoo fetch failed after 3 attempts: %w", lastErr)
+
+	return StockData{Symbol: code}, fmt.Errorf("yahoo %s failed after %d attempts: %w",
+		ticker, maxAttempts, lastErr)
 }

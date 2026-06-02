@@ -1,4 +1,5 @@
 bin/
 reports/
+.cache/
 *.log
 .DS_Store

@@ -9,43 +9,86 @@ import (
 	"time"
 )
 
-const twseStockDayAllURL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
+const (
+	twseStockDayAllURL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
+	tpexQuotesURL      = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
+)
+
+// ── TWSE (上市) ───────────────────────────────────────────────────────────────
 
 type twseRow struct {
 	Code string `json:"Code"`
 	Name string `json:"Name"`
 }
 
-// FetchStockList returns all TSE-listed stocks from TWSE open API.
-// Falls back to yesterday if today's data is not yet available.
+// FetchStockList returns all TWSE-listed (上市) ordinary stocks.
 func (f *Fetcher) FetchStockList() ([]StockInfo, error) {
-	rows, err := f.fetchTWSERows(twseStockDayAllURL)
+	rows, err := fetchJSONSlice[twseRow](f, twseStockDayAllURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("TWSE: %w", err)
 	}
 	if len(rows) == 0 {
-		return nil, fmt.Errorf("TWSE returned empty stock list (market may be closed today)")
+		return nil, fmt.Errorf("TWSE returned empty list (market may be closed)")
 	}
 
 	var stocks []StockInfo
 	for _, r := range rows {
 		code := strings.TrimSpace(r.Code)
 		name := strings.TrimSpace(r.Name)
-		// only include 4-digit stock codes (ordinary listed shares)
-		if len(code) != 4 {
+		if !isOrdinaryStockCode(code) {
 			continue
 		}
-		// skip ETFs/funds (code starts with 0)
-		if strings.HasPrefix(code, "0") {
-			continue
-		}
-		stocks = append(stocks, StockInfo{Symbol: code, Name: name})
+		stocks = append(stocks, StockInfo{Symbol: code, Name: name, Market: "TW"})
 	}
 	return stocks, nil
 }
 
-func (f *Fetcher) fetchTWSERows(url string) ([]twseRow, error) {
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+// ── TPEX (上櫃) ───────────────────────────────────────────────────────────────
+
+type tpexRow struct {
+	Code    string `json:"SecuritiesCompanyCode"`
+	Company string `json:"Company"`
+}
+
+// FetchTPEXList returns all TPEX-listed (上櫃) ordinary stocks.
+func (f *Fetcher) FetchTPEXList() ([]StockInfo, error) {
+	rows, err := fetchJSONSlice[tpexRow](f, tpexQuotesURL)
+	if err != nil {
+		return nil, fmt.Errorf("TPEX: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("TPEX returned empty list")
+	}
+
+	var stocks []StockInfo
+	for _, r := range rows {
+		code := strings.TrimSpace(r.Code)
+		name := strings.TrimSpace(r.Company)
+		if !isOrdinaryStockCode(code) {
+			continue
+		}
+		stocks = append(stocks, StockInfo{Symbol: code, Name: name, Market: "TWO"})
+	}
+	return stocks, nil
+}
+
+// ── shared helpers ────────────────────────────────────────────────────────────
+
+// isOrdinaryStockCode returns true for 4-digit codes that are ordinary shares.
+func isOrdinaryStockCode(code string) bool {
+	if len(code) != 4 {
+		return false
+	}
+	if strings.HasPrefix(code, "0") { // ETFs / funds
+		return false
+	}
+	return true
+}
+
+// fetchJSONSlice is a generic helper: GETs rawURL and unmarshals the body into []T.
+// Go methods cannot have type parameters, so this is a package-level function.
+func fetchJSONSlice[T any](f *Fetcher, rawURL string) ([]T, error) {
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -72,11 +115,11 @@ func (f *Fetcher) fetchTWSERows(url string) ([]twseRow, error) {
 			lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
 			continue
 		}
-		var rows []twseRow
-		if err := json.Unmarshal(body, &rows); err != nil {
-			return nil, fmt.Errorf("parse TWSE response: %w", err)
+		var result []T
+		if err := json.Unmarshal(body, &result); err != nil {
+			return nil, fmt.Errorf("parse response: %w", err)
 		}
-		return rows, nil
+		return result, nil
 	}
-	return nil, fmt.Errorf("TWSE request failed after 3 attempts: %w", lastErr)
+	return nil, fmt.Errorf("request failed after 3 attempts: %w", lastErr)
 }
