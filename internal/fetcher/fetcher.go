@@ -15,6 +15,7 @@ type Config struct {
 	CacheTTLMin    int    `yaml:"cache_ttl_min"`  // default 15
 	CacheDir       string `yaml:"cache_dir"`      // default ".cache"
 	EOFCooldownMin int    `yaml:"eof_cooldown_min"` // default 5
+	HistoryRange   string `yaml:"history_range"`  // default "2y" (Yahoo range, e.g. 6mo/1y/2y)
 }
 
 type Fetcher struct {
@@ -44,6 +45,9 @@ func New(cfg Config) *Fetcher {
 	}
 	if cfg.EOFCooldownMin == 0 {
 		cfg.EOFCooldownMin = 5
+	}
+	if cfg.HistoryRange == "" {
+		cfg.HistoryRange = "2y"
 	}
 
 	log.Printf("fetcher: concurrency=%d delay=%dms cache_ttl=%dmin eof_cooldown=%dmin",

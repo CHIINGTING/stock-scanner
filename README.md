@@ -15,7 +15,7 @@ Stock Radar 不是技術指標展示工具。
 2. [快速開始](#快速開始)
 3. [stocks.yaml 格式](#stocksyaml-格式)
 4. [持倉（positions）](#持倉-positions)
-5. [觀察清單（watchlist）](#觀察清單-watchlist)
+5. [觀察清單（watchlist）= 飆股候選追蹤系統](#觀察清單watchlist-飆股候選追蹤系統)
 6. [族群輪動（Rotation）](#族群輪動-rotation)
 7. [Action 建議說明](#action-建議說明)
 8. [BUY 與 WATCH 的差異](#buy-與-watch-的差異)
@@ -137,18 +137,60 @@ watchlist:
 
 ---
 
-## 觀察清單（watchlist）
+## 觀察清單（watchlist）= 飆股候選追蹤系統
 
-`watchlist:` 區段用來追蹤你**尚未進場**但感興趣的股票。
+> 核心一句話：**Scanner 找標的，Watchlist 判斷它是不是快變飆股。**
 
-系統會給出：
+能進觀察清單代表已通過初篩，所以「🚀 飆股候選」分頁不是普通排名表，而是回答 6 件事：
+(1) 是不是快發動？(2) 該等／準備／買／移除？(3) 進場看哪個價位？(4) 失敗跌破哪裡放棄？
+(5) 有沒有回測支持？(6) 最大風險是什麼？
 
-| 欄位 | 說明 |
+UI 為**兩層**：第一層精簡列表（股票｜族群｜飆股分數｜階段｜操作建議｜風險），
+點任一檔展開**決策卡片**（族群輪動／型態狀態／回測結果／價位計畫／理由／風險）。
+
+### 飆股分數（rocket_candidate_score, 0~100）
+
+5 組加權：族群資金流入(25)＋個股相對強勢(20)＋技術接近噴出(25)＋量能結構健康(15)＋尚未過熱(15−罰分)。
+
+| 分數 | 意義 |
 |------|------|
-| 建議進場價 | 技術上合理的進場點 |
-| 停損 | 如果進場後的停損位 |
-| 目標1 / 目標2 | 預期目標價 |
-| 交易建議 | STRONG BUY / BUY / WATCH / HOLD |
+| 0~39 | 不適合觀察 |
+| 40~59 | 有潛力，未就緒 |
+| 60~74 | 準備中，密切追蹤 |
+| 75~89 | 高機率準備發動 |
+| 90~100 | 已主升或過熱，小心追高 |
+
+### 飆股階段（rocket_stage）→ 操作建議（watch_action）
+
+| 階段 | 操作建議 |
+|------|----------|
+| NOT_READY 未就緒 | WAIT |
+| BASE_BUILDING 築底 | WATCH_CLOSELY |
+| PRE_BREAKOUT 突破前 | PREPARE_ENTRY |
+| BREAKOUT_START 起漲 | BREAKOUT_BUY |
+| MAIN_RUN 主升 | PULLBACK_BUY（拉回量縮）／ WATCH_CLOSELY |
+| OVERHEATED 過熱 | TAKE_PROFIT |
+| FAILED 失敗 | REMOVE_FROM_WATCHLIST |
+
+### 整理型態分類（consolidation bucket）
+
+**整理時間只做分類，不是越長越好。** 強勢股急漲後只整理 3~5 天，只要守住支撐、量縮、
+高點不墜、低點墊高、族群續流入，仍可是高品質 base（高分 PRE_BREAKOUT）。品質看
+`base_quality_score`（壓縮＋量縮＋支撐＋接近前高＋族群流入 − 爆量長黑 − 跌破平台），不看天數。
+
+| bucket | 天數 | 型態 |
+|--------|------|------|
+| MICRO_BASE | 3~5 | 強勢急拉後短整、強勢換手 |
+| SHORT_BASE | 6~10 | 短線再攻前準備 |
+| SWING_BASE | 11~20 | 明顯平台、判斷突破 |
+| MID_BASE | 21~40 | 波段平台 |
+| LONG_BASE | 41~60 | 中長底/大型平台 |
+
+### 回測（backtest）
+
+把「目前型態」拿去過去**同型態 + 同整理 bucket**的情境回測：5 日平均報酬、最大回撤、
+勝率、風報比。同時跑**個股**與**族群**兩個層級（族群 = pool 同族群成員歷史，樣本更多、
+信心更高）。回測樣本依賴歷史長度，預設抓 2 年（`fetcher.history_range`）。
 
 ---
 

@@ -143,7 +143,11 @@ func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (S
 	}
 
 	// 3. Build request
-	params := url.Values{"interval": {"1d"}, "range": {"6mo"}}
+	histRange := f.cfg.HistoryRange
+	if histRange == "" {
+		histRange = "2y"
+	}
+	params := url.Values{"interval": {"1d"}, "range": {histRange}}
 	reqURL := yahooChartURL + ticker + "?" + params.Encode()
 
 	req, err := http.NewRequest(http.MethodGet, reqURL, nil)

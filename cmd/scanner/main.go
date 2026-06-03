@@ -83,7 +83,9 @@ func main() {
 	s := scanner.New(cfg.Scanner)
 
 	// ── 1. Portfolio & Watchlist ──────────────────────────────────────────────
-	var portfolioResults, watchlistResults []scanner.StockAnalysis
+	var portfolioResults []scanner.StockAnalysis
+	var watchlistResults []scanner.WatchlistEntry
+	var wStocks []fetcher.StockData // raw watchlist OHLCV (enriched after rotation)
 
 	if _, statErr := os.Stat(cfg.StocksFile); statErr == nil {
 		fmt.Printf("[1/4] 讀取 %s ...\n", cfg.StocksFile)
@@ -104,11 +106,11 @@ func main() {
 
 		if len(sl.Watchlist) > 0 {
 			fmt.Printf("      抓取 Watchlist (%d 支)...\n", len(sl.Watchlist))
-			wStocks, err := f.FetchWatchlistStocks(sl.Watchlist)
+			ws, err := f.FetchWatchlistStocks(sl.Watchlist)
 			if err != nil {
 				log.Printf("watchlist fetch error: %v", err)
 			} else {
-				watchlistResults = s.ScanWatchlist(wStocks)
+				wStocks = ws // enriched into rocket candidates after rotation (step 3.5)
 			}
 		}
 	} else {
@@ -131,6 +133,8 @@ func main() {
 
 	// ── 3. Sector Rotation ─────────────────────────────────────────────────────
 	var rotationResults []scanner.SectorRotation
+	var sectorList *fetcher.SectorList
+	var grouped map[string][]fetcher.StockData
 	if !*skipRotation {
 		if _, statErr := os.Stat(cfg.SectorsFile); statErr == nil {
 			fmt.Printf("[3/4] 讀取族群清單 %s ...\n", cfg.SectorsFile)
@@ -138,13 +142,15 @@ func main() {
 			if err != nil {
 				log.Printf("load sectors file: %v", err)
 			} else {
+				sectorList = sl
 				infos := sl.UniqueInfos()
 				fmt.Printf("      抓取族群成員 (%d 支)...\n", len(infos))
 				sectorStocks, err := f.FetchSectorStocks(infos)
 				if err != nil {
 					log.Printf("sector fetch error: %v", err)
 				} else {
-					order, grouped := groupBySector(sl, sectorStocks)
+					var order []string
+					order, grouped = groupBySector(sl, sectorStocks)
 					rotationResults = s.ScanRotation(order, grouped)
 				}
 			}
@@ -155,12 +161,53 @@ func main() {
 		fmt.Println("[3/4] 跳過族群輪動 (--no-rotation)")
 	}
 
+	// ── 3.5 Watchlist 飆股候選追蹤（連動族群輪動）────────────────────────────────
+	if len(wStocks) > 0 {
+		fmt.Printf("      分析 Watchlist 飆股候選 (%d 支)...\n", len(wStocks))
+		sectorOf := buildSectorOf(sectorList, rotationResults)
+		rotMap := make(map[string]*scanner.SectorRotation, len(rotationResults))
+		for i := range rotationResults {
+			rotMap[rotationResults[i].Name] = &rotationResults[i]
+		}
+		watchlistResults = s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped)
+	}
+
 	// ── 4. Report ─────────────────────────────────────────────────────────────
 	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
 	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate); err != nil {
 		log.Fatalf("report: %v", err)
 	}
+}
+
+// buildSectorOf maps each member stock code to its sector name, preferring the
+// highest-ranked sector (by rotation opportunity) when a code belongs to several.
+func buildSectorOf(sl *fetcher.SectorList, ranked []scanner.SectorRotation) map[string]string {
+	out := map[string]string{}
+	if sl == nil {
+		return out
+	}
+	members := map[string][]string{}
+	for _, sec := range sl.Sectors {
+		for _, st := range sec.Stocks {
+			members[sec.Name] = append(members[sec.Name], st.Code)
+		}
+	}
+	for _, r := range ranked { // ranked order = opportunity order
+		for _, code := range members[r.Name] {
+			if _, ok := out[code]; !ok {
+				out[code] = r.Name
+			}
+		}
+	}
+	for _, sec := range sl.Sectors { // sectors not present in ranked (rotation skipped)
+		for _, st := range sec.Stocks {
+			if _, ok := out[st.Code]; !ok {
+				out[st.Code] = sec.Name
+			}
+		}
+	}
+	return out
 }
 
 // groupBySector distributes the de-duplicated fetched data back into each sector

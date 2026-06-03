@@ -6,9 +6,10 @@ CMD  := ./cmd/scanner
 build:
 	go build -o $(BIN) $(CMD)
 
-# 只跑 portfolio / watchlist，跳過全市場掃描與族群輪動（最快，< 1 分鐘）
+# 只跑 portfolio / watchlist + 族群輪動（跳過全市場掃描）。
+# 保留輪動，飆股候選才有族群資金流入連動。
 run-fast: build
-	./$(BIN) -config configs/config.yaml --no-market --no-rotation
+	./$(BIN) -config configs/config.yaml --no-market
 
 # 只跑族群輪動（跳過全市場掃描），找下一波接棒族群
 run-rotation: build

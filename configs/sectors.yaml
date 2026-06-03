@@ -123,6 +123,13 @@ sectors:
       - { code: "5880", name: "合庫金" }
       - { code: "2883", name: "開發金" }
       - { code: "2890", name: "永豐金" }
+      # ── 證券業（獨立上市券商）──
+      - { code: "2855", name: "統一證" }
+      - { code: "6005", name: "群益證" }
+      - { code: "6016", name: "康和證" }
+      - { code: "6020", name: "大慶證" }
+      - { code: "5864", name: "致和證" }
+      - { code: "6026", name: "福邦證" }
 
   - name: "電子零組件"
     stocks:

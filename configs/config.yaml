@@ -12,6 +12,11 @@ fetcher:
   # 避免大量 EOF 時繼續轟炸 Yahoo Finance
   eof_cooldown_min: 5
 
+  # ── 歷史抓取範圍 ────────────────────────────────────────────────────────
+  # Yahoo range：6mo / 1y / 2y。越長回測樣本越多（Watchlist 飆股回測建議 ≥1y），
+  # 但全市場掃描（--all 數千檔）回應變大、稍慢。預設 2y。
+  history_range: "2y"
+
 scanner:
   min_price: 10.0         # 最低收盤價（過濾低價股）
   min_avg_volume: 500000  # MA20 量能門檻

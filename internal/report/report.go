@@ -52,13 +52,14 @@ type reportData struct {
 	MarketLabel  string
 	Market       []scanner.StockAnalysis
 	Portfolio    []scanner.StockAnalysis
-	Watchlist    []scanner.StockAnalysis
+	Watchlist    []scanner.WatchlistEntry
 	Rotation     []scanner.SectorRotation
 	PortfolioSum PortfolioSummary
 }
 
 func (r *Report) Generate(
-	market, portfolio, watchlist []scanner.StockAnalysis,
+	market, portfolio []scanner.StockAnalysis,
+	watchlist []scanner.WatchlistEntry,
 	rotation []scanner.SectorRotation,
 	marketLabel string,
 	date time.Time,
@@ -319,6 +320,93 @@ func (r *Report) Generate(
 				return "lvl-weak"
 			}
 		},
+		"rocketStageLabel": func(st scanner.RocketStage) string { return rocketStageText(st) },
+		"rocketStageCSS": func(st scanner.RocketStage) string {
+			switch st {
+			case scanner.StagePreBreakout, scanner.StageBreakoutStart:
+				return "rk-go"
+			case scanner.StageMainRun:
+				return "rk-run"
+			case scanner.StageBaseBuilding:
+				return "rk-base"
+			case scanner.StageOverheated:
+				return "rk-hot"
+			case scanner.StageFailed:
+				return "rk-fail"
+			default:
+				return "rk-wait"
+			}
+		},
+		"watchActionLabel": func(a scanner.WatchAction) string { return string(a) },
+		"watchActionCSS": func(a scanner.WatchAction) string {
+			switch a {
+			case scanner.ActBreakoutBuy, scanner.ActPullbackBuy:
+				return "act-buy"
+			case scanner.ActPrepare:
+				return "act-prepare"
+			case scanner.ActWatchClose:
+				return "act-watch"
+			case scanner.ActTakeProfit:
+				return "act-tp"
+			case scanner.ActRemove:
+				return "act-remove"
+			default:
+				return "act-wait"
+			}
+		},
+		"bucketLabel": func(b scanner.ConsolBucket) string {
+			switch b {
+			case scanner.MicroBase:
+				return "極短整理 MICRO (3~5日)"
+			case scanner.ShortBase:
+				return "短線平台 SHORT (6~10日)"
+			case scanner.SwingBase:
+				return "波段平台 SWING (11~20日)"
+			case scanner.MidBase:
+				return "中期平台 MID (21~40日)"
+			case scanner.LongBase:
+				return "長期底部 LONG (41~60日)"
+			default:
+				return "無明顯整理"
+			}
+		},
+		"confCSS": func(c string) string {
+			switch c {
+			case "HIGH":
+				return "lvl-strong"
+			case "MEDIUM":
+				return "lvl-mid"
+			default:
+				return "lvl-weak"
+			}
+		},
+		"rocketGauge": func(score int) template.HTML {
+			cls := "bar-low"
+			if score >= 75 {
+				cls = "bar-high"
+			} else if score >= 60 {
+				cls = "bar-mid"
+			}
+			return template.HTML(fmt.Sprintf(
+				`<div class="score-bar"><div class="%s" style="width:%dpx"></div><span>%d</span></div>`,
+				cls, score, score))
+		},
+		"riskCSS": func(label string) string {
+			if label == "—" || label == "" {
+				return "lvl-weak"
+			}
+			return "risk-tag"
+		},
+		"probCSS": func(p string) string {
+			switch p {
+			case "HIGH":
+				return "lvl-strong"
+			case "MEDIUM":
+				return "lvl-mid"
+			default:
+				return "lvl-weak"
+			}
+		},
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -386,7 +474,7 @@ func fmtVolume(v int64) string {
 	}
 }
 
-func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, rotation []scanner.SectorRotation, marketLabel string, date time.Time) {
+func printConsole(market, portfolio []scanner.StockAnalysis, watchlist []scanner.WatchlistEntry, rotation []scanner.SectorRotation, marketLabel string, date time.Time) {
 	sep := "═══════════════════════════════════════════════════════════════════"
 	fmt.Printf("\n%s\n  台股掃描報告  %s\n%s\n", sep, date.Format("2006-01-02"), sep)
 
@@ -422,13 +510,20 @@ func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, rotation
 	}
 
 	if len(watchlist) > 0 {
-		fmt.Printf("\n[👁 觀察清單 (Watchlist)]\n")
-		fmt.Printf("%-6s  %-8s  %7s  %4s  %3s/5  %-12s  %7s  %7s  %7s\n",
-			"代號", "名稱", "現價", "分數", "BFP", "建議", "進場", "停損", "目標1")
-		for _, a := range watchlist {
-			fmt.Printf("%-6s  %-8s  %7.2f  %4d  %5d  %-12s  %7.2f  %7.2f  %7.2f\n",
-				a.Symbol, a.Name, a.Close, a.Score, a.BFPPoints, a.Action,
-				a.EntryPrice, a.StopLoss, a.Target1)
+		fmt.Printf("\n[🚀 觀察清單 — 飆股候選追蹤]\n")
+		fmt.Printf("%-6s  %-9s  %-12s  %5s  %-15s  %-22s  %s\n",
+			"代號", "名稱", "族群", "飆股分", "階段", "操作建議", "風險")
+		var imminent []string
+		for _, e := range watchlist {
+			fmt.Printf("%-6s  %-9s  %-12s  %5d  %-15s  %-22s  %s\n",
+				e.A.Symbol, e.A.Name, e.Sector, e.RocketScore,
+				rocketStageText(e.RocketStage), string(e.WatchAction), e.RiskLabel)
+			if e.RocketStage == scanner.StagePreBreakout || e.RocketStage == scanner.StageBreakoutStart {
+				imminent = append(imminent, fmt.Sprintf("%s(%d)", e.A.Name, e.RocketScore))
+			}
+		}
+		if len(imminent) > 0 {
+			fmt.Printf("  ▶ 最接近發動：%s\n", strings.Join(imminent, "、"))
 		}
 	}
 
@@ -443,21 +538,76 @@ func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, rotation
 		}
 	}
 
-	// Detailed reasons for positions + watchlist
-	fmt.Printf("\n[原因詳細]\n")
-	for _, a := range append(portfolio, watchlist...) {
-		tag := "持倉"
-		if a.Source == "watchlist" {
-			tag = "觀察"
-		}
-		fmt.Printf("  %s %s [%s]:\n", a.Symbol, a.Name, tag)
-		for _, r := range a.Reasons {
-			if r != "" {
-				fmt.Printf("    %s\n", r)
+	// Detailed reasons for positions
+	if len(portfolio) > 0 {
+		fmt.Printf("\n[持倉原因詳細]\n")
+		for _, a := range portfolio {
+			fmt.Printf("  %s %s:\n", a.Symbol, a.Name)
+			for _, r := range a.Reasons {
+				if r != "" {
+					fmt.Printf("    %s\n", r)
+				}
 			}
+			fmt.Printf("    → 進場 %.2f  停損 %.2f  目標1 %.2f  目標2 %.2f\n\n",
+				a.EntryPrice, a.StopLoss, a.Target1, a.Target2)
 		}
-		fmt.Printf("    → 進場 %.2f  停損 %.2f  目標1 %.2f  目標2 %.2f\n\n",
-			a.EntryPrice, a.StopLoss, a.Target1, a.Target2)
+	}
+
+	// Watchlist decision detail
+	if len(watchlist) > 0 {
+		fmt.Printf("\n[飆股候選決策詳細]\n")
+		for _, e := range watchlist {
+			fmt.Printf("  %s %s｜%s｜%s｜飆股分 %d｜噴出機率 %s｜觀察 %s\n",
+				e.A.Symbol, e.A.Name, e.Sector, rocketStageText(e.RocketStage),
+				e.RocketScore, e.ExplosionProb, e.DaysToWatch)
+			fmt.Printf("    輪動: 短線 %s／20日 %s／族群階段 %s\n",
+				shortDirText(e.SectorFlowDir), e.SectorMidLabel, stageText(e.SectorStage))
+			fmt.Printf("    型態: %s／整理 %d 天／回測 %s 個股勝率 %.0f%%(%d)／族群勝率 %.0f%%(%d)／信心 %s\n",
+				bucketText(e.Consol.Bucket), e.Consol.Days, e.Backtest.PatternName,
+				e.Backtest.StockWinRate, e.Backtest.StockSampleCount,
+				e.Backtest.SectorWinRate, e.Backtest.SectorSampleCount, e.Backtest.Confidence)
+			fmt.Printf("    價位: 現價 %.2f／進場 %s／突破 %.2f／支撐 %.2f／停損 %.2f／停利 %s\n",
+				e.A.Close, e.EntryZone, e.BreakoutPrice, e.SupportPrice, e.StopLossPrice, e.TakeProfitZone)
+			fmt.Printf("    操作: %s｜風險: %s\n\n", string(e.WatchAction), e.RiskWarning)
+		}
+	}
+}
+
+func rocketStageText(st scanner.RocketStage) string {
+	switch st {
+	case scanner.StageNotReady:
+		return "未就緒 NOT_READY"
+	case scanner.StageBaseBuilding:
+		return "築底 BASE_BUILDING"
+	case scanner.StagePreBreakout:
+		return "突破前 PRE_BREAKOUT"
+	case scanner.StageBreakoutStart:
+		return "起漲 BREAKOUT_START"
+	case scanner.StageMainRun:
+		return "主升 MAIN_RUN"
+	case scanner.StageOverheated:
+		return "過熱 OVERHEATED"
+	case scanner.StageFailed:
+		return "失敗 FAILED"
+	default:
+		return string(st)
+	}
+}
+
+func bucketText(b scanner.ConsolBucket) string {
+	switch b {
+	case scanner.MicroBase:
+		return "MICRO"
+	case scanner.ShortBase:
+		return "SHORT"
+	case scanner.SwingBase:
+		return "SWING"
+	case scanner.MidBase:
+		return "MID"
+	case scanner.LongBase:
+		return "LONG"
+	default:
+		return "NO_BASE"
 	}
 }
 
@@ -581,6 +731,35 @@ th.rotscore{min-width:120px}
 .sector-meta{padding:8px 14px;font-size:.72rem;color:#94a3b8;line-height:1.8;background:#0b1422}
 .meta-concl{display:block;color:#e2e8f0;font-weight:600;font-size:.78rem;margin-bottom:3px}
 .meta-nums b{font-weight:700}
+
+/* ── Watchlist 飆股候選 ───────────────────────────────────────────────────── */
+.rk-go{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}      /* PRE/BREAKOUT */
+.rk-run{background:#052e16;color:#4ade80;border:1px solid #16a34a}      /* MAIN_RUN */
+.rk-base{background:#1c2433;color:#cbd5e1;border:1px solid #475569}     /* BASE_BUILDING */
+.rk-hot{background:#2d1200;color:#fdba74;border:1px solid #ea580c}      /* OVERHEATED */
+.rk-fail{background:#3b0a0a;color:#fca5a5;border:1px solid #dc2626}     /* FAILED */
+.rk-wait{background:#161e2e;color:#94a3b8;border:1px solid #334155}     /* NOT_READY */
+.act-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.68rem;white-space:nowrap}
+.act-buy{background:#052e16;color:#4ade80;border:1px solid #16a34a}
+.act-prepare{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}
+.act-watch{background:#1c2433;color:#cbd5e1;border:1px solid #475569}
+.act-tp{background:#052e16;color:#a3e635;border:1px solid #65a30d}
+.act-remove{background:#3b0a0a;color:#fca5a5;border:1px solid #dc2626}
+.act-wait{background:#161e2e;color:#94a3b8;border:1px solid #334155}
+.risk-tag{display:inline-block;color:#fca5a5;font-weight:600;font-size:.72rem}
+.wl-card{padding:12px 16px;background:#0b1422}
+.wl-head{font-size:.85rem;color:#e2e8f0;font-weight:600;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid #1e3a5f}
+.wl-head b{color:#38bdf8;font-size:1rem}
+.wl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.wl-sec{background:#0f1d30;border:1px solid #16263d;border-radius:8px;padding:10px 12px;font-size:.74rem;color:#cbd5e1;line-height:1.85}
+.wl-sec h4{font-size:.72rem;color:#7dd3fc;margin-bottom:5px;font-weight:700}
+.wl-sec b{color:#f1f5f9}
+.wl-sec ul{margin:0;padding-left:16px}
+.wl-sec li{margin:2px 0}
+.wl-note{color:#94a3b8;font-size:.7rem;margin-top:3px;font-style:italic}
+.wl-risk{border-color:#3b1414;background:#1a0f12}
+.wl-risk h4{color:#fca5a5}
+@media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -589,7 +768,7 @@ th.rotscore{min-width:120px}
 
 <div class="tabs">
   <button class="tab-btn active" onclick="tab(event,'positions')">💼 持倉 ({{ len .Portfolio }})</button>
-  <button class="tab-btn" onclick="tab(event,'watchlist')">👁 觀察清單 ({{ len .Watchlist }})</button>
+  <button class="tab-btn" onclick="tab(event,'watchlist')">🚀 飆股候選 ({{ len .Watchlist }})</button>
   <button class="tab-btn" onclick="tab(event,'market')">📊 市場掃描({{ .MarketLabel }})</button>
   <button class="tab-btn" onclick="tab(event,'rotation')">🔄 輪動 ({{ len .Rotation }})</button>
 </div>
@@ -651,43 +830,78 @@ th.rotscore{min-width:120px}
 {{ end }}
 </div>
 
-<!-- ══ WATCHLIST ════════════════════════════════════════════════════════════ -->
+<!-- ══ WATCHLIST：飆股候選追蹤 ══════════════════════════════════════════════ -->
 <div id="tab-watchlist" class="tab-pane">
 {{ if eq (len .Watchlist) 0 }}
 <div class="empty">觀察清單無資料。請在 stocks.yaml 的 watchlist: 區段加入股票。</div>
 {{ else }}
+<div class="rot-intro">🚀 <b>飆股候選追蹤</b>：Scanner 找標的，Watchlist 判斷它是不是<b>快變飆股</b>。點任一檔展開決策卡片，回答：要等突破還是拉回？失敗跌破哪裡移除？型態過去成功率高不高？</div>
 <table>
   <thead><tr>
-    <th>代號</th><th>名稱</th>
-    <th class="r">現價</th><th class="r">量比</th>
-    <th>BFP</th><th>評分</th><th>交易建議</th>
-    <th class="r t-entry">建議進場</th><th class="r t-stop">停損</th>
-    <th class="r t-t1">目標1</th><th class="r t-t2">目標2</th>
-    <th class="r">RSI</th><th>MA20</th><th class="r">K</th><th class="r">D</th>
-    <th>量價</th><th class="r">量分</th>
-    <th>分析原因</th>
+    <th>#</th><th>股票</th><th>族群</th>
+    <th class="rotscore">飆股分數</th><th>階段</th>
+    <th>操作建議</th><th class="r">噴出</th><th>風險</th><th></th>
   </tr></thead>
   <tbody>
-  {{ range .Watchlist }}
-  <tr>
-    <td class="sym">{{ .Symbol }}</td>
-    <td class="name-col">{{ .Name }}</td>
-    <td class="r">{{ f2 .Close }}</td>
-    <td class="r {{ volCSS .VolumeRatio }}">{{ f1 .VolumeRatio }}x</td>
-    <td>{{ bfpDots .BFPPoints }}</td>
-    <td>{{ scoreBar .Score }}</td>
-    <td><span class="action-badge {{ actionCSS .Action }}">{{ .Action }}</span></td>
-    <td class="r t-entry">{{ f2 .EntryPrice }}</td>
-    <td class="r t-stop">{{ f2 .StopLoss }}</td>
-    <td class="r t-t1">{{ f2 .Target1 }}</td>
-    <td class="r t-t2">{{ f2 .Target2 }}</td>
-    <td class="r {{ rsiCSS .RSI }}">{{ f1 .RSI }}</td>
-    <td>{{ .MA20Trend }}</td>
-    <td class="r">{{ f1 .KDJK }}</td>
-    <td class="r">{{ f1 .KDJD }}</td>
-    <td class="{{ pvCSS .PriceVolumeSignal }}">{{ .PriceVolumeSignal }}</td>
-    <td class="r"><span class="vol-score">{{ .VolumeScore }}</span></td>
-    <td><div class="reasons">{{ joinReasons .Reasons }}</div></td>
+  {{ range $i, $e := .Watchlist }}
+  <tr class="sector-row" onclick="toggleWatch({{ $i }})">
+    <td class="neu">{{ inc $i }}</td>
+    <td><span class="sym">{{ $e.A.Symbol }}</span> <span class="name-col">{{ $e.A.Name }}</span></td>
+    <td class="name-col">{{ if $e.Sector }}{{ $e.Sector }}{{ else }}—{{ end }}</td>
+    <td class="rotscore">{{ rocketGauge $e.RocketScore }}</td>
+    <td><span class="stage-badge {{ rocketStageCSS $e.RocketStage }}">{{ rocketStageLabel $e.RocketStage }}</span></td>
+    <td><span class="act-badge {{ watchActionCSS $e.WatchAction }}">{{ watchActionLabel $e.WatchAction }}</span></td>
+    <td class="r {{ probCSS $e.ExplosionProb }}">{{ $e.ExplosionProb }}</td>
+    <td><span class="{{ riskCSS $e.RiskLabel }}">{{ $e.RiskLabel }}</span></td>
+    <td class="exp-caret"><span id="wcaret-{{ $i }}">▸</span></td>
+  </tr>
+  <tr class="sector-detail" id="wdetail-{{ $i }}">
+    <td colspan="9">
+      <div class="wl-card">
+        <div class="wl-head">{{ $e.A.Symbol }} {{ $e.A.Name }}｜{{ if $e.Sector }}{{ $e.Sector }}{{ else }}無族群{{ end }}｜<span class="stage-badge {{ rocketStageCSS $e.RocketStage }}">{{ rocketStageLabel $e.RocketStage }}</span>　飆股分數 <b>{{ $e.RocketScore }}</b>　操作 <span class="act-badge {{ watchActionCSS $e.WatchAction }}">{{ watchActionLabel $e.WatchAction }}</span>　建議觀察 {{ $e.DaysToWatch }}</div>
+        <div class="wl-grid">
+          <div class="wl-sec">
+            <h4>① 族群輪動</h4>
+            {{ if $e.HasSector }}
+            <div>短線流向：<span class="{{ shortDirCSS $e.SectorFlowDir }}">{{ shortDirLabel $e.SectorFlowDir }}</span></div>
+            <div>20日強度：<span class="{{ midCSS $e.SectorMidLabel }}">{{ $e.SectorMidLabel }}</span>　族群階段：{{ stageLabel $e.SectorStage }}</div>
+            <div class="wl-note">{{ $e.SectorNote }}</div>
+            {{ else }}<div class="wl-note">此股不在任何族群清單中，無族群輪動連動。</div>{{ end }}
+          </div>
+          <div class="wl-sec">
+            <h4>② 型態狀態</h4>
+            <div>整理型態：{{ bucketLabel $e.Consol.Bucket }}</div>
+            <div>整理天數：{{ $e.Consol.Days }} 天　區間：{{ f1 $e.Consol.RangePct }}%</div>
+            <div>價格壓縮：{{ f0pct $e.Consol.PriceCompressionScore }}　量縮比：{{ f2 $e.Consol.VolumeDryUpRatio }}</div>
+            <div>支撐守住：{{ f0pct $e.Consol.SupportHoldScore }}　base 品質：<b>{{ f0pct $e.Consol.BaseQualityScore }}</b></div>
+          </div>
+          <div class="wl-sec">
+            <h4>③ 回測結果</h4>
+            <div>型態：{{ $e.Backtest.PatternName }}</div>
+            <div>個股：{{ $e.Backtest.StockSampleCount }} 筆／勝率 {{ f0pct $e.Backtest.StockWinRate }}</div>
+            <div>族群：{{ $e.Backtest.SectorSampleCount }} 筆／勝率 {{ f0pct $e.Backtest.SectorWinRate }}</div>
+            <div>平均5日 <b class="{{ pnlCSS $e.Backtest.AvgReturn }}">{{ pctSign1 $e.Backtest.AvgReturn }}</b>　回撤 <b class="neg">{{ pctSign1 $e.Backtest.AvgDrawdown }}</b>　風報 {{ f2 $e.Backtest.RiskReward }}</div>
+            <div>信心：<span class="{{ confCSS $e.Backtest.Confidence }}">{{ $e.Backtest.Confidence }}</span></div>
+          </div>
+          <div class="wl-sec">
+            <h4>④ 價位計畫</h4>
+            <div>現價：<b>{{ f2 $e.A.Close }}</b></div>
+            <div>進場區：{{ $e.EntryZone }}</div>
+            <div>突破價：<span class="t-t1">{{ f1 $e.BreakoutPrice }}</span>　支撐價：{{ f1 $e.SupportPrice }}</div>
+            <div>停損價：<span class="t-stop">{{ f1 $e.StopLossPrice }}</span>　停利區：<span class="t-t2">{{ $e.TakeProfitZone }}</span></div>
+          </div>
+          <div class="wl-sec">
+            <h4>⑤ 理由</h4>
+            <ul>{{ range $e.Reasons }}<li>{{ . }}</li>{{ end }}</ul>
+          </div>
+          <div class="wl-sec wl-risk">
+            <h4>⑥ 風險</h4>
+            <div class="risk-tag">{{ $e.RiskLabel }}</div>
+            <div class="wl-note">{{ $e.RiskWarning }}</div>
+          </div>
+        </div>
+      </div>
+    </td>
   </tr>
   {{ end }}
   </tbody>
@@ -821,6 +1035,13 @@ function tab(e,n){
 function toggleSector(i){
   var row=document.getElementById('detail-'+i);
   var caret=document.getElementById('caret-'+i);
+  if(!row)return;
+  var open=row.classList.toggle('open');
+  if(caret)caret.textContent=open?'▾':'▸';
+}
+function toggleWatch(i){
+  var row=document.getElementById('wdetail-'+i);
+  var caret=document.getElementById('wcaret-'+i);
   if(!row)return;
   var open=row.classList.toggle('open');
   if(caret)caret.textContent=open?'▾':'▸';

@@ -61,34 +61,34 @@ positions:
     shares: 1000
 
 watchlist:
-  - code: "5483"
-    name: "中美晶"
+  - code: "2889"
+    name: "國票金"
 
-  - code: "2409"
-    name: "友達"
-    market: "TW"
+  - code: "5490"
+    name: "同亨"
+    market: "TWO"
 
-  - code: "2408"
-    name: "南亞科"
-    market: "TW"
+  - code: "6270"
+    name: "倍微"
+    market: "TWO"
 
   - code: "2356"
     name: "英業達"
     market: "TW"
 
-  - code: "2344"
-    name: "華邦電"
+  - code: "2504"
+    name: "國產"
     market: "TW"
 
-  - code: "2303"
-    name: "聯電"
+  - code: "6152"
+    name: "百一"
     market: "TW"
 
   - code: "3149"
     name: "正達"
 
-  - code: "8299"
-    name: "群聯"
+  - code: "1210"
+    name: "大成"
 
   - code: "3264"
     name: "欣銓"
