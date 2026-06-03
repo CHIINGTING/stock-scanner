@@ -16,12 +16,13 @@ Stock Radar 不是技術指標展示工具。
 3. [stocks.yaml 格式](#stocksyaml-格式)
 4. [持倉（positions）](#持倉-positions)
 5. [觀察清單（watchlist）](#觀察清單-watchlist)
-6. [Action 建議說明](#action-建議說明)
-7. [BUY 與 WATCH 的差異](#buy-與-watch-的差異)
-8. [量價分析說明](#量價分析說明)
-9. [市場別：TW vs TWO](#市場別tw-vs-two)
-10. [執行參數](#執行參數)
-11. [常見問題](#常見問題)
+6. [族群輪動（Rotation）](#族群輪動-rotation)
+7. [Action 建議說明](#action-建議說明)
+8. [BUY 與 WATCH 的差異](#buy-與-watch-的差異)
+9. [量價分析說明](#量價分析說明)
+10. [市場別：TW vs TWO](#市場別tw-vs-two)
+11. [執行參數](#執行參數)
+12. [常見問題](#常見問題)
 
 ---
 
@@ -151,6 +152,67 @@ watchlist:
 
 ---
 
+## 族群輪動（Rotation）
+
+Scanner 的定位是**尋找未來 1~4 週有機會的股票**，不是當沖。真正的大波段通常是
+**先有族群輪動、再有個股表態**——資金會從已噴出的中後段族群（例如記憶體：南亞科/
+華邦電/旺宏）流向下一波接棒族群。
+
+「🔄 輪動」分頁不看「今天最強是誰」，而是回答：
+
+> **「下一波資金可能去哪裡？」**
+
+並刻意把已過熱的族群往後排，優先呈現處於**醞釀 / 確認**階段的族群。
+
+### 族群設定（configs/sectors.yaml）
+
+```yaml
+sectors:
+  - name: "矽光子"
+    stocks:
+      - { code: "6442", name: "光聖" }
+      - { code: "3163", name: "波若威" }
+      # market 留空 → 自動偵測 .TW / .TWO
+  - name: "PCB"
+    stocks:
+      - { code: "3037", name: "欣興" }
+```
+
+> 內建為種子清單，請依需求自行複查、增刪族群與成員代號。
+
+### 族群評分（Sector Score，0–100）
+
+| 權重 | 組件 | 說明 |
+|------|------|------|
+| 30% | 相對強度 | 族群平均 20 日報酬，跨族群正規化 |
+| 25% | 新高比例 | 創 60 日新高的成員占比 |
+| 20% | 突破比例 | 突破 20 日整理高點 / 站上布林上軌的成員占比 |
+| 15% | 量能放大 | 量比 ≥ 1.5 倍均量的成員占比 |
+| 10% | MA60 斜率 | MA60 上揚的成員占比 |
+
+### 輪動階段（Rotation Stage）
+
+| 階段 | 含義 | 操作意義 |
+|------|------|----------|
+| **醞釀 EARLY** | 開始有資金流入、量能增加 | 最佳布局時機 |
+| **確認 CONFIRMED** | 多檔突破整理區 | 趨勢確立，可介入 |
+| **過熱 HOT** | 多檔新高、市場焦點 | 中後段，謹慎追價 |
+| **末段 LATE** | 漲幅過大、超買 | 不建議追價 |
+
+排序採**機會調整**：EARLY / CONFIRMED 會被加權往前，HOT / LATE 往後淡化，
+所以排名第一的不一定是分數最高的，而是「最值得布局」的族群。
+點擊任一族群即可展開其成員股票的個別表現。
+
+### 執行
+
+```bash
+make run-rotation      # 只跑族群輪動（跳過全市場掃描，最快）
+./bin/scanner --no-rotation        # 跳過族群輪動
+./bin/scanner --sectors my.yaml    # 使用自訂族群清單
+```
+
+---
+
 ## Action 建議說明
 
 | Action | 意義 | 適用情境 |
@@ -277,6 +339,12 @@ watchlist:
 # 使用不同的持股清單檔案
 ./bin/scanner --stocks my_portfolio.yaml
 
+# 跳過族群輪動分析
+./bin/scanner --no-rotation
+
+# 使用不同的族群清單檔案
+./bin/scanner --sectors my_sectors.yaml
+
 # 自訂設定檔
 ./bin/scanner --config configs/config.yaml
 ```
@@ -284,11 +352,12 @@ watchlist:
 ### Makefile 快捷指令
 
 ```bash
-make run-fast    # 只跑 Positions + Watchlist
-make run         # Top 50 市場掃描
-make run-top100  # Top 100
-make run-top500  # Top 500
-make run-all     # 全部（上市 + 上櫃）
+make run-fast      # 只跑 Positions + Watchlist（跳過市場掃描與輪動）
+make run-rotation  # 只跑族群輪動
+make run           # Top 50 市場掃描
+make run-top100    # Top 100
+make run-top500    # Top 500
+make run-all       # 全部（上市 + 上櫃）
 ```
 
 ---

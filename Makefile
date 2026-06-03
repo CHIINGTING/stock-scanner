@@ -1,14 +1,18 @@
 BIN  := bin/scanner
 CMD  := ./cmd/scanner
 
-.PHONY: build run run-fast run-top100 run-top500 run-all tidy lint clean test
+.PHONY: build run run-fast run-rotation run-top100 run-top500 run-all tidy lint clean test
 
 build:
 	go build -o $(BIN) $(CMD)
 
-# 只跑 portfolio / watchlist，跳過全市場掃描（快速，< 1 分鐘）
+# 只跑 portfolio / watchlist，跳過全市場掃描與族群輪動（最快，< 1 分鐘）
 run-fast: build
-	./$(BIN) -config configs/config.yaml --no-market
+	./$(BIN) -config configs/config.yaml --no-market --no-rotation
+
+# 只跑族群輪動（跳過全市場掃描），找下一波接棒族群
+run-rotation: build
+	./$(BIN) -config configs/config.yaml --no-market --sectors configs/sectors.yaml
 
 # 市場掃描 Top 50（預設）
 run: build

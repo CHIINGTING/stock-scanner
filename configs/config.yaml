@@ -29,4 +29,5 @@ scanner:
 report:
   output_dir: ./reports
 
-stocks_file: stocks.yaml  # portfolio / watchlist 清單
+stocks_file: stocks.yaml           # portfolio / watchlist 清單
+sectors_file: configs/sectors.yaml # 族群輪動清單（Rotation）

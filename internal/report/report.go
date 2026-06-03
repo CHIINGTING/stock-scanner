@@ -53,11 +53,13 @@ type reportData struct {
 	Market       []scanner.StockAnalysis
 	Portfolio    []scanner.StockAnalysis
 	Watchlist    []scanner.StockAnalysis
+	Rotation     []scanner.SectorRotation
 	PortfolioSum PortfolioSummary
 }
 
 func (r *Report) Generate(
 	market, portfolio, watchlist []scanner.StockAnalysis,
+	rotation []scanner.SectorRotation,
 	marketLabel string,
 	date time.Time,
 ) error {
@@ -73,6 +75,7 @@ func (r *Report) Generate(
 		Market:       market,
 		Portfolio:    portfolio,
 		Watchlist:    watchlist,
+		Rotation:     rotation,
 		PortfolioSum: calcSummary(portfolio),
 	}
 
@@ -170,6 +173,54 @@ func (r *Report) Generate(
 				return "pv-down-vol-down"
 			}
 		},
+		"f0pct":   func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
+		"pctSign1": func(v float64) string { return fmt.Sprintf("%+.1f%%", v) },
+		"sectorScoreBar": func(v float64) template.HTML {
+			s := int(v + 0.5)
+			cls := "bar-low"
+			if s >= 70 {
+				cls = "bar-high"
+			} else if s >= 50 {
+				cls = "bar-mid"
+			}
+			return template.HTML(fmt.Sprintf(
+				`<div class="score-bar"><div class="%s" style="width:%dpx"></div><span>%d</span></div>`,
+				cls, s, s))
+		},
+		"stageCSS": func(s scanner.RotationStage) string {
+			switch s {
+			case scanner.EarlyRotation:
+				return "stage-early"
+			case scanner.ConfirmedRotation:
+				return "stage-confirmed"
+			case scanner.HotRotation:
+				return "stage-hot"
+			case scanner.LateRotation:
+				return "stage-late"
+			default:
+				return "stage-early"
+			}
+		},
+		"stageLabel": func(s scanner.RotationStage) string {
+			switch s {
+			case scanner.EarlyRotation:
+				return "醞釀 EARLY"
+			case scanner.ConfirmedRotation:
+				return "確認 CONFIRMED"
+			case scanner.HotRotation:
+				return "過熱 HOT"
+			case scanner.LateRotation:
+				return "末段 LATE"
+			default:
+				return string(s)
+			}
+		},
+		"boolMark": func(b bool) template.HTML {
+			if b {
+				return template.HTML(`<span class="yes">✓</span>`)
+			}
+			return template.HTML(`<span class="no">·</span>`)
+		},
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -181,8 +232,23 @@ func (r *Report) Generate(
 	}
 
 	log.Printf("report: %s", fname)
-	printConsole(market, portfolio, watchlist, marketLabel, date)
+	printConsole(market, portfolio, watchlist, rotation, marketLabel, date)
 	return nil
+}
+
+func stageText(s scanner.RotationStage) string {
+	switch s {
+	case scanner.EarlyRotation:
+		return "醞釀 EARLY"
+	case scanner.ConfirmedRotation:
+		return "確認 CONFIRMED"
+	case scanner.HotRotation:
+		return "過熱 HOT"
+	case scanner.LateRotation:
+		return "末段 LATE"
+	default:
+		return string(s)
+	}
 }
 
 func fmtVolume(v int64) string {
@@ -198,9 +264,20 @@ func fmtVolume(v int64) string {
 	}
 }
 
-func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, marketLabel string, date time.Time) {
+func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, rotation []scanner.SectorRotation, marketLabel string, date time.Time) {
 	sep := "═══════════════════════════════════════════════════════════════════"
 	fmt.Printf("\n%s\n  台股掃描報告  %s\n%s\n", sep, date.Format("2006-01-02"), sep)
+
+	if len(rotation) > 0 {
+		fmt.Printf("\n[🔄 族群輪動 (Rotation) — 依機會排序，EARLY/CONFIRMED 優先]\n")
+		fmt.Printf("%-4s  %-14s  %-16s  %6s  %6s  %6s  %6s\n",
+			"Rank", "族群", "階段", "分數", "新高%", "突破%", "量能%")
+		for i, sr := range rotation {
+			fmt.Printf("%-4d  %-14s  %-16s  %6.0f  %6.0f  %6.0f  %6.0f\n",
+				i+1, sr.Name, stageText(sr.Stage), sr.Score,
+				sr.NewHighRatio, sr.BreakoutRatio, sr.VolExpansion)
+		}
+	}
 
 	if len(portfolio) > 0 {
 		fmt.Printf("\n[💼 持倉 (Positions)]\n")
@@ -338,6 +415,28 @@ footer{margin-top:20px;font-size:.68rem;color:#374151;text-align:center;padding:
 
 /* Volume score badge */
 .vol-score{display:inline-block;background:#0c1f3a;border:1px solid #1e3a5f;border-radius:4px;padding:1px 6px;font-size:.7rem;color:#38bdf8;font-weight:600}
+
+/* ── Rotation ─────────────────────────────────────────────────────────────── */
+.rot-intro{background:#0d1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:#94a3b8;line-height:1.7}
+.rot-intro b{color:#e2e8f0}
+th.c,td.c{text-align:center}
+th.rotscore{min-width:120px}
+.stage-badge{display:inline-block;padding:3px 9px;border-radius:4px;font-weight:700;font-size:.7rem;white-space:nowrap;letter-spacing:.02em}
+.stage-early{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}          /* 機會：醞釀 */
+.stage-confirmed{background:#052e16;color:#4ade80;border:1px solid #16a34a}      /* 確認 */
+.stage-hot{background:#2d1200;color:#fdba74;border:1px solid #ea580c}            /* 過熱（淡化） */
+.stage-late{background:#1a1a1a;color:#9ca3af;border:1px solid #4b5563}           /* 末段（淡化） */
+.sector-row{cursor:pointer}
+.sector-row:hover td{background:#10243d}
+.exp-caret{color:#64748b;text-align:center;font-size:.8rem}
+.sector-detail{display:none}
+.sector-detail.open{display:table-row}
+.sector-detail>td{padding:0 0 10px 0;background:#0b1422}
+.sub-table{margin:0;border-radius:0;background:#0b1422;box-shadow:inset 3px 0 0 #1e3a5f}
+.sub-table th{background:#0b1422;color:#475569}
+.sub-table td{border-bottom:1px solid #111c2c}
+.yes{color:#4ade80;font-weight:700}
+.no{color:#475569}
 </style>
 </head>
 <body>
@@ -348,6 +447,7 @@ footer{margin-top:20px;font-size:.68rem;color:#374151;text-align:center;padding:
   <button class="tab-btn active" onclick="tab(event,'positions')">💼 持倉 ({{ len .Portfolio }})</button>
   <button class="tab-btn" onclick="tab(event,'watchlist')">👁 觀察清單 ({{ len .Watchlist }})</button>
   <button class="tab-btn" onclick="tab(event,'market')">📊 市場掃描({{ .MarketLabel }})</button>
+  <button class="tab-btn" onclick="tab(event,'rotation')">🔄 輪動 ({{ len .Rotation }})</button>
 </div>
 
 <!-- ══ POSITIONS ════════════════════════════════════════════════════════════ -->
@@ -494,6 +594,68 @@ footer{margin-top:20px;font-size:.68rem;color:#374151;text-align:center;padding:
 {{ end }}
 </div>
 
+<!-- ══ ROTATION ═════════════════════════════════════════════════════════════ -->
+<div id="tab-rotation" class="tab-pane">
+{{ if eq (len .Rotation) 0 }}
+<div class="empty">族群輪動無資料。請在 configs/sectors.yaml 設定族群與成員，並確認未加 --no-rotation。</div>
+{{ else }}
+<div class="rot-intro">🔄 <b>輪動</b>：不看「今天最強是誰」，而是找「下一波資金可能去哪裡」。依<b>機會排序</b>，刻意把已過熱（HOT/LATE）的族群往後排，優先呈現 <span class="stage-badge stage-early">醞釀 EARLY</span> 與 <span class="stage-badge stage-confirmed">確認 CONFIRMED</span> 階段。點族群可展開成員股票。</div>
+<table>
+  <thead><tr>
+    <th>#</th><th>族群</th><th>階段</th>
+    <th class="rotscore">Sector Score</th>
+    <th class="r">相對強度</th><th class="r">新高%</th><th class="r">突破%</th>
+    <th class="r">量能放大</th><th class="r">MA60↑%</th>
+    <th class="r">平均20日</th><th class="r">成員</th><th></th>
+  </tr></thead>
+  <tbody>
+  {{ range $i, $s := .Rotation }}
+  <tr class="sector-row" onclick="toggleSector({{ $i }})">
+    <td class="neu">{{ inc $i }}</td>
+    <td class="sym">{{ $s.Name }}</td>
+    <td><span class="stage-badge {{ stageCSS $s.Stage }}">{{ stageLabel $s.Stage }}</span></td>
+    <td class="rotscore">{{ sectorScoreBar $s.Score }}</td>
+    <td class="r">{{ f0pct $s.RelStrength }}</td>
+    <td class="r">{{ f0pct $s.NewHighRatio }}</td>
+    <td class="r">{{ f0pct $s.BreakoutRatio }}</td>
+    <td class="r">{{ f0pct $s.VolExpansion }}</td>
+    <td class="r">{{ f0pct $s.MA60Slope }}</td>
+    <td class="r {{ pnlCSS $s.AvgReturn20 }}">{{ pctSign1 $s.AvgReturn20 }}</td>
+    <td class="r">{{ len $s.Stocks }}</td>
+    <td class="exp-caret"><span id="caret-{{ $i }}">▸</span></td>
+  </tr>
+  <tr class="sector-detail" id="detail-{{ $i }}">
+    <td colspan="12">
+      <table class="sub-table">
+        <thead><tr>
+          <th>代號</th><th>名稱</th><th class="r">現價</th>
+          <th class="r">20日報酬</th><th class="c">新高</th><th class="c">突破</th>
+          <th class="r">量比</th><th class="c">MA60↑</th><th>建議</th>
+        </tr></thead>
+        <tbody>
+        {{ range $s.Stocks }}
+        <tr>
+          <td class="sym">{{ .Symbol }}</td>
+          <td class="name-col">{{ .Name }}</td>
+          <td class="r">{{ f2 .Close }}</td>
+          <td class="r {{ pnlCSS .Return20 }}">{{ pctSign1 .Return20 }}</td>
+          <td class="c">{{ boolMark .NewHigh }}</td>
+          <td class="c">{{ boolMark .Breakout }}</td>
+          <td class="r {{ volCSS .VolumeRatio }}">{{ f1 .VolumeRatio }}x</td>
+          <td class="c">{{ if .MA60Valid }}{{ boolMark .MA60Up }}{{ else }}<span class="no">—</span>{{ end }}</td>
+          <td><span class="action-badge {{ actionCSS .Action }}">{{ .Action }}</span></td>
+        </tr>
+        {{ end }}
+        </tbody>
+      </table>
+    </td>
+  </tr>
+  {{ end }}
+  </tbody>
+</table>
+{{ end }}
+</div>
+
 <footer>Stock Radar｜資料來源：TWSE / Yahoo Finance｜僅供研究參考，非投資建議</footer>
 </div>
 <script>
@@ -502,6 +664,13 @@ function tab(e,n){
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   e.currentTarget.classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
+}
+function toggleSector(i){
+  var row=document.getElementById('detail-'+i);
+  var caret=document.getElementById('caret-'+i);
+  if(!row)return;
+  var open=row.classList.toggle('open');
+  if(caret)caret.textContent=open?'▾':'▸';
 }
 </script>
 </body>

@@ -14,10 +14,11 @@ import (
 )
 
 type config struct {
-	Fetcher    fetcher.Config `yaml:"fetcher"`
-	Scanner    scanner.Config `yaml:"scanner"`
-	Report     report.Config  `yaml:"report"`
-	StocksFile string         `yaml:"stocks_file"`
+	Fetcher     fetcher.Config `yaml:"fetcher"`
+	Scanner     scanner.Config `yaml:"scanner"`
+	Report      report.Config  `yaml:"report"`
+	StocksFile  string         `yaml:"stocks_file"`
+	SectorsFile string         `yaml:"sectors_file"`
 }
 
 func main() {
@@ -29,6 +30,8 @@ func main() {
 	skipMarket := flag.Bool("no-market", false, "skip full market scan (faster)")
 	topN := flag.Int("top", 0, "market scan top N (50 | 100 | 500); 0 = use config default")
 	scanAll := flag.Bool("all", false, "show all scanned stocks, no top-N limit")
+	sectorsPath := flag.String("sectors", "", "sector rotation YAML (overrides sectors_file in config)")
+	skipRotation := flag.Bool("no-rotation", false, "skip sector rotation analysis")
 	flag.Parse()
 
 	cfg, err := loadConfig(*configPath)
@@ -41,6 +44,13 @@ func main() {
 	}
 	if cfg.StocksFile == "" {
 		cfg.StocksFile = "stocks.yaml"
+	}
+
+	if *sectorsPath != "" {
+		cfg.SectorsFile = *sectorsPath
+	}
+	if cfg.SectorsFile == "" {
+		cfg.SectorsFile = "configs/sectors.yaml"
 	}
 
 	// Resolve market scan scope: --all takes priority over --top
@@ -76,7 +86,7 @@ func main() {
 	var portfolioResults, watchlistResults []scanner.StockAnalysis
 
 	if _, statErr := os.Stat(cfg.StocksFile); statErr == nil {
-		fmt.Printf("[1/3] 讀取 %s ...\n", cfg.StocksFile)
+		fmt.Printf("[1/4] 讀取 %s ...\n", cfg.StocksFile)
 		sl, err := fetcher.LoadStockList(cfg.StocksFile)
 		if err != nil {
 			log.Fatalf("load stocks file: %v", err)
@@ -102,13 +112,13 @@ func main() {
 			}
 		}
 	} else {
-		fmt.Printf("[1/3] %s 不存在，跳過 Portfolio/Watchlist\n", cfg.StocksFile)
+		fmt.Printf("[1/4] %s 不存在，跳過 Portfolio/Watchlist\n", cfg.StocksFile)
 	}
 
 	// ── 2. Full Market Scan ───────────────────────────────────────────────────
 	var marketResults []scanner.StockAnalysis
 	if !*skipMarket {
-		fmt.Println("[2/3] 取得台股清單 (TWSE)...")
+		fmt.Println("[2/4] 取得台股清單 (TWSE)...")
 		marketStocks, err := f.FetchAll()
 		if err != nil {
 			log.Fatalf("market fetch: %v", err)
@@ -116,15 +126,65 @@ func main() {
 		fmt.Printf("      掃描 %d 支股票...\n", len(marketStocks))
 		marketResults = s.ScanMarket(marketStocks)
 	} else {
-		fmt.Println("[2/3] 跳過市場掃描 (--no-market)")
+		fmt.Println("[2/4] 跳過市場掃描 (--no-market)")
 	}
 
-	// ── 3. Report ─────────────────────────────────────────────────────────────
-	fmt.Println("[3/3] 產生報告...")
+	// ── 3. Sector Rotation ─────────────────────────────────────────────────────
+	var rotationResults []scanner.SectorRotation
+	if !*skipRotation {
+		if _, statErr := os.Stat(cfg.SectorsFile); statErr == nil {
+			fmt.Printf("[3/4] 讀取族群清單 %s ...\n", cfg.SectorsFile)
+			sl, err := fetcher.LoadSectorList(cfg.SectorsFile)
+			if err != nil {
+				log.Printf("load sectors file: %v", err)
+			} else {
+				infos := sl.UniqueInfos()
+				fmt.Printf("      抓取族群成員 (%d 支)...\n", len(infos))
+				sectorStocks, err := f.FetchSectorStocks(infos)
+				if err != nil {
+					log.Printf("sector fetch error: %v", err)
+				} else {
+					order, grouped := groupBySector(sl, sectorStocks)
+					rotationResults = s.ScanRotation(order, grouped)
+				}
+			}
+		} else {
+			fmt.Printf("[3/4] %s 不存在，跳過族群輪動\n", cfg.SectorsFile)
+		}
+	} else {
+		fmt.Println("[3/4] 跳過族群輪動 (--no-rotation)")
+	}
+
+	// ── 4. Report ─────────────────────────────────────────────────────────────
+	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
-	if err := r.Generate(marketResults, portfolioResults, watchlistResults, marketLabel, analysisDate); err != nil {
+	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate); err != nil {
 		log.Fatalf("report: %v", err)
 	}
+}
+
+// groupBySector distributes the de-duplicated fetched data back into each sector
+// (a stock may appear in multiple sectors). Returns the sector order and the grouping.
+func groupBySector(sl *fetcher.SectorList, data []fetcher.StockData) ([]string, map[string][]fetcher.StockData) {
+	byCode := make(map[string]fetcher.StockData, len(data))
+	for _, d := range data {
+		byCode[d.Symbol] = d
+	}
+	order := make([]string, 0, len(sl.Sectors))
+	grouped := make(map[string][]fetcher.StockData, len(sl.Sectors))
+	for _, sec := range sl.Sectors {
+		order = append(order, sec.Name)
+		for _, st := range sec.Stocks {
+			if d, ok := byCode[st.Code]; ok {
+				// Preserve the sector's preferred display name.
+				if st.Name != "" {
+					d.Name = st.Name
+				}
+				grouped[sec.Name] = append(grouped[sec.Name], d)
+			}
+		}
+	}
+	return order, grouped
 }
 
 func loadConfig(path string) (config, error) {
