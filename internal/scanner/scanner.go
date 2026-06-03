@@ -107,14 +107,23 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 	highs := highSlice(stock.Candles)
 	lows := lowSlice(stock.Candles)
 
+	// Volume ratio (current vs MA20) — needed for limit-up detection.
+	var volRatio float64
+	if ind.VolumeMA[n-1] > 0 {
+		volRatio = float64(latest.Volume) / ind.VolumeMA[n-1]
+	}
+
+	// Limit-up (漲停) chip dynamics: 量縮 ≠ 轉弱，依價格是否失守判斷。
+	limitStatus, limitNote := detectLimitStatus(stock.Candles, volRatio)
+
 	// BestFourPoint checkpoints
-	bfpChecks, bfpPoints := bestFourPoint(closes, volumes, highs, lows, ind)
+	bfpChecks, bfpPoints := bestFourPoint(closes, volumes, highs, lows, ind, limitStatus, limitNote)
 
 	// Composite numeric score
-	sc, scoreReasons := score(closes, volumes, ind)
+	sc, scoreReasons := score(closes, volumes, ind, limitStatus, limitNote)
 
 	// Volume analysis (for display fields)
-	va := analyzeVolume(closes, volumes, ind)
+	va := analyzeVolume(closes, volumes, ind, limitStatus, limitNote)
 
 	// Blend BFP + score for base action
 	bfpAction := actionFromBFP(bfpPoints)
@@ -176,12 +185,6 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 	// Price targets
 	entry, stop, t1, t2 := priceTargets(latest.Close, ind.ATR[n-1], ind.BB)
 
-	// Volume ratio
-	var volRatio float64
-	if ind.VolumeMA[n-1] > 0 {
-		volRatio = float64(latest.Volume) / ind.VolumeMA[n-1]
-	}
-
 	return StockAnalysis{
 		Symbol: stock.Symbol,
 		Name:   stock.Name,
@@ -225,6 +228,9 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 		PriceVolumeSignal: va.signal,
 		BuySellRatio:      va.buySellRatio,
 		IsLargeOrder:      va.isLargeOrder,
+
+		LimitStatus: limitStatus,
+		LimitNote:   limitNote,
 	}
 }
 

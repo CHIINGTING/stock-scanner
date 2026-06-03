@@ -14,31 +14,16 @@
 # shares: 持股數量（股）
 
 positions:
-  - code: "1809"
-    name: "中釉"
-    entry: 43
-    shares: 1000
 
   - code: "1504"
     name: "東元"
     market: "TW"
-    entry: 79.2
-    shares: 1000
-
-  - code: "2374"
-    name: "佳能"
-    market: "TW"
-    entry: 84
-    shares: 1000
+    entry: 77
+    shares: 2000
 
   - code: "2401"
     name: "凌陽"
     entry: 31
-    shares: 1000
-
-  - code: "3048"
-    name: "益登"
-    entry: 72
     shares: 1000
 
   - code: "2337"
@@ -53,20 +38,26 @@ positions:
     entry: 145
     shares: 1000
 
-  - code: "8358"
-    name: "金居"
-    entry: 300
+  - code: "4532"
+    name: "瑞智"
+    entry: 24.6
     shares: 1000
 
-  - code: "3015"
-    name: "全漢"
-    entry: 54.6
+  - code: "3060"
+    name: "銘異"
+    entry: 34.9
     shares: 1000
 
-  - code: "2337"
-    name: "旺宏(2)"
+  - code: "1710"
+    name: "東聯"
     market: "TW"
-    entry: 177
+    entry: 15.1
+    shares: 1000
+
+  - code: "1710"
+    name: "第一銅"
+    market: "TW"
+    entry: 44.3
     shares: 1000
 
 watchlist:
@@ -101,3 +92,7 @@ watchlist:
 
   - code: "3264"
     name: "欣銓"
+
+  - code: "3163"
+    name: "波若威"
+

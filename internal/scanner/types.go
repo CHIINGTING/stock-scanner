@@ -28,6 +28,17 @@ var ActionCSS = map[Action]string{
 	ActionSell:       "action-sell",
 }
 
+// LimitStatus classifies limit-up (漲停) chip dynamics inferred from daily OHLCV.
+//
+// 量縮本身不是問題，問題是「量縮時價格有沒有失守」：
+//   - 漲停鎖住後量縮 → 賣壓惜售、籌碼鎖定，視為中性偏多（不扣分）。
+//   - 漲停打開後放量下殺 / 漲停後放量下跌 → 出貨，才是負面訊號。
+const (
+	LimitLockedLowVol = "LOCKED_LIMIT_UP_LOW_VOLUME"  // 漲停鎖住後量縮（中性偏多）
+	LimitUpFailed     = "LIMIT_UP_FAILED"             // 漲停打開後放量下殺
+	LimitDistribution = "DISTRIBUTION_AFTER_LIMIT_UP" // 前日漲停後今日放量下跌（出貨）
+)
+
 // BFPCheckpoint holds the result of one BestFourPoint check.
 type BFPCheckpoint struct {
 	Name   string // e.g. "趨勢"
@@ -84,9 +95,13 @@ type StockAnalysis struct {
 	// ── Volume analysis ──────────────────────────────────────────────────────
 	VolumeScore      int     // 0–25
 	AvgVolume20      int64   // 20-day average volume
-	PriceVolumeSignal string  // "價漲量增" | "價漲量縮" | "價跌量增" | "價跌量縮"
+	PriceVolumeSignal string  // "價漲量增" | "價漲量縮" | "價跌量增" | "價跌量縮" | "漲停鎖量" | "漲停失敗"
 	BuySellRatio     float64 // approximated buying pressure ratio (> 1 = bullish)
 	IsLargeOrder     bool    // volume > 3× MA20
+
+	// ── Limit-up (漲停) chip dynamics ────────────────────────────────────────
+	LimitStatus string // "" | LOCKED_LIMIT_UP_LOW_VOLUME | LIMIT_UP_FAILED | DISTRIBUTION_AFTER_LIMIT_UP
+	LimitNote   string // human-readable interpretation (Traditional Chinese)
 }
 
 // PortfolioValue returns current market value of the position.

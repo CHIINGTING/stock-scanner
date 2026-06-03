@@ -4,8 +4,62 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/indicator"
 )
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Limit-up (漲停) chip dynamics
+//
+// Taiwan's daily price limit is ±10%. We only have daily OHLCV bars (no intraday
+// tick / 封單 data), so the "封板 / 打開 / 出貨" dynamics are approximated from the
+// day's open/high/low/close and volume ratio.
+//
+// 核心原則：量縮本身不是問題，問題是「量縮時價格有沒有失守」。
+//   - 漲停鎖住後量縮 → 賣壓惜售、籌碼鎖定 → 不扣分（中性偏多）。
+//   - 只有漲停打開後放量下跌，才是明確警訊。
+// ──────────────────────────────────────────────────────────────────────────────
+
+// detectLimitStatus inspects the latest bar and returns a LimitStatus + interpretation,
+// or ("", "") when no limit-up dynamic applies.
+func detectLimitStatus(candles []fetcher.Candle, volRatio float64) (status, note string) {
+	n := len(candles)
+	if n < 2 {
+		return "", ""
+	}
+	today, prev := candles[n-1], candles[n-2]
+	if prev.Close <= 0 || today.High <= 0 {
+		return "", ""
+	}
+
+	gain := (today.Close/prev.Close - 1) * 100     // 收盤漲幅
+	highGain := (today.High/prev.Close - 1) * 100  // 盤中最高漲幅（是否曾觸及漲停）
+	closedAtHigh := today.Close >= today.High*0.998 // 收在當日最高（封住）
+
+	// 1) 漲停打開後放量下殺：盤中觸及漲停，但收盤大幅拉回且放量。
+	if highGain >= 9.0 && today.Close <= today.High*0.97 && volRatio >= 1.5 {
+		return LimitUpFailed,
+			"⚠️ 漲停打開後放量下殺、無法重新封板，賣壓湧現 — 明確負面訊號"
+	}
+
+	// 2) 漲停後出貨：前一日漲停鎖住，今日放量下跌。
+	if n >= 3 && candles[n-3].Close > 0 {
+		prevGain := (prev.Close/candles[n-3].Close - 1) * 100
+		prevLocked := prevGain >= 9.5 && prev.Close >= prev.High*0.998
+		if prevLocked && today.Close < prev.Close && volRatio >= 1.5 {
+			return LimitDistribution,
+				"⚠️ 前一日漲停鎖住後，今日放量下跌，疑似漲停後出貨 — 負面訊號"
+		}
+	}
+
+	// 3) 漲停鎖住量縮：價格接近/已漲停、收在最高、量縮（賣方惜售、籌碼鎖定）。
+	if gain >= 9.0 && closedAtHigh && volRatio > 0 && volRatio < 1.0 {
+		return LimitLockedLowVol,
+			"🔒 漲停鎖住後量縮，可能代表賣壓不足、籌碼鎖定，不應直接視為轉弱（中性偏多）"
+	}
+
+	return "", ""
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // BestFourPoint-inspired Trading Advice Engine
@@ -27,7 +81,7 @@ import (
 // ──────────────────────────────────────────────────────────────────────────────
 
 // bestFourPoint evaluates all 5 trading checkpoints and returns results.
-func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicator.Result) ([]BFPCheckpoint, int) {
+func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicator.Result, limitStatus, limitNote string) ([]BFPCheckpoint, int) {
 	n := len(closes)
 	if n < 2 {
 		return nil, 0
@@ -146,6 +200,20 @@ func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicat
 				reason += fmt.Sprintf("  ⚠️ 大單偵測：成交量超過 %.0f 倍均量，疑似主力出貨，謹慎因應", vr)
 			}
 		}
+		// 漲停籌碼動態特例：量縮 ≠ 轉弱。覆寫量能判斷。
+		switch limitStatus {
+		case LimitLockedLowVol:
+			pass = true // 漲停鎖住後量縮不視為量能轉弱，給予通過
+			reason = "漲停鎖住後量縮（賣壓不足、籌碼鎖定），量能不視為轉弱"
+			if limitNote != "" {
+				reason = limitNote
+			}
+		case LimitUpFailed, LimitDistribution:
+			pass = false
+			if limitNote != "" {
+				reason = limitNote
+			}
+		}
 		if pass {
 			passes++
 		}
@@ -207,7 +275,7 @@ type volumeResult struct {
 	reasons       []string
 }
 
-func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result) volumeResult {
+func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result, limitStatus, limitNote string) volumeResult {
 	n := len(closes)
 	res := volumeResult{}
 	if n < 2 || ind.VolumeMA[n-1] == 0 {
@@ -217,6 +285,29 @@ func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result) vo
 	res.ratio = rawVols[n-1] / ind.VolumeMA[n-1]
 	res.avgVol20 = int64(ind.VolumeMA[n-1])
 	res.isLargeOrder = res.ratio >= 3.0
+
+	// ── 漲停籌碼動態特例：量縮 ≠ 轉弱 ─────────────────────────────────────────
+	switch limitStatus {
+	case LimitLockedLowVol:
+		// 漲停鎖住後量縮：賣壓惜售、籌碼鎖定，給中性偏多分數，不因量縮扣分。
+		res.signal = "漲停鎖量"
+		res.isLargeOrder = false
+		res.score = 18
+		res.buySellRatio = calcBuySellRatio(closes, ind.VolumeMA)
+		if limitNote != "" {
+			res.reasons = append(res.reasons, limitNote)
+		}
+		return res
+	case LimitUpFailed, LimitDistribution:
+		// 漲停打開後放量下殺 / 漲停後出貨：明確負面。
+		res.signal = "漲停失敗"
+		res.score = 0
+		res.buySellRatio = calcBuySellRatio(closes, ind.VolumeMA)
+		if limitNote != "" {
+			res.reasons = append(res.reasons, limitNote)
+		}
+		return res
+	}
 
 	priceUp := closes[n-1] > closes[n-2]
 	volUp := res.ratio >= 1.2
@@ -328,7 +419,7 @@ func max(a, b int) int {
 //	KDJ     max 20
 //	Volume  max 25  ← increased weight per user request
 //	BB      max 15
-func score(closes, volumes []float64, ind indicator.Result) (total int, reasons []string) {
+func score(closes, volumes []float64, ind indicator.Result, limitStatus, limitNote string) (total int, reasons []string) {
 	n := len(closes)
 	if n == 0 {
 		return 0, nil
@@ -353,7 +444,7 @@ func score(closes, volumes []float64, ind indicator.Result) (total int, reasons 
 	reasons = append(reasons, kdjMsg)
 
 	// Volume (max 25) – use analyzeVolume result
-	va := analyzeVolume(closes, volumes, ind)
+	va := analyzeVolume(closes, volumes, ind, limitStatus, limitNote)
 	total += va.score
 	for _, r := range va.reasons {
 		if r != "" {

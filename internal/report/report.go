@@ -169,6 +169,10 @@ func (r *Report) Generate(
 				return "pv-up-vol-down"
 			case "價跌量增":
 				return "pv-down-vol-up"
+			case "漲停鎖量":
+				return "pv-locked"
+			case "漲停失敗":
+				return "pv-failed"
 			default:
 				return "pv-down-vol-down"
 			}
@@ -400,6 +404,8 @@ tr:hover td{background:#0f1d30}
 .pv-up-vol-down{color:#fbbf24}
 .pv-down-vol-up{color:#f87171;font-weight:600}
 .pv-down-vol-down{color:#64748b}
+.pv-locked{color:#a3e635;font-weight:700}
+.pv-failed{color:#f87171;font-weight:700}
 
 /* Portfolio summary */
 .pf-summary{background:#111827;border:1px solid #1e3a5f;border-radius:10px;padding:14px 20px;margin-bottom:14px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
