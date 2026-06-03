@@ -51,6 +51,65 @@ func TestStageWeightOrdering(t *testing.T) {
 	}
 }
 
+func TestShortFlowDirection(t *testing.T) {
+	tests := []struct {
+		name           string
+		avg3d, upRatio float64
+		want           string
+	}{
+		{"inflow", 2.5, 70, FlowInflow},
+		{"outflow", -2.0, 30, FlowOutflow},
+		{"neutral flat", 0.2, 55, FlowNeutral},
+		{"up gain but weak breadth", 1.5, 40, FlowNeutral}, // gain ok but <50% up
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shortFlowDirection(tt.avg3d, tt.upRatio); got != tt.want {
+				t.Errorf("shortFlowDirection(%v,%v)=%q want %q", tt.avg3d, tt.upRatio, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClassifyShortStage(t *testing.T) {
+	tests := []struct {
+		name                  string
+		stScore, midScore     float64
+		dir                   string
+		avgRSI                float64
+		want                  string
+	}{
+		// 短線強、20日仍弱 → 早期輪動（核心情境：資金剛流入）
+		{"early: short strong mid weak", 60, 30, FlowInflow, 55, STEarlyRotation},
+		// 短中皆強 → 確認
+		{"confirmed: both strong", 60, 60, FlowInflow, 60, STConfirmedRotation},
+		// 短中皆強且超買 → 過熱
+		{"overheated", 70, 70, FlowInflow, 72, STOverheated},
+		// 短線流出 → 轉弱（即使中期還高）
+		{"weakening on outflow", 45, 70, FlowOutflow, 60, STWeakening},
+		// 短線無力 → 轉弱
+		{"weakening dormant", 20, 20, FlowNeutral, 45, STWeakening},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := classifyShortStage(tt.stScore, tt.midScore, tt.dir, tt.avgRSI)
+			if got != tt.want {
+				t.Errorf("classifyShortStage(%v,%v,%q,%v)=%q want %q",
+					tt.stScore, tt.midScore, tt.dir, tt.avgRSI, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLabels(t *testing.T) {
+	if midTermLabel(70) != "強" || midTermLabel(50) != "中" || midTermLabel(20) != "弱" {
+		t.Errorf("midTermLabel boundaries wrong")
+	}
+	if trendLabel(70) != "確認上升" || trendLabel(40) != "尚未確認" || trendLabel(10) != "轉弱" {
+		t.Errorf("trendLabel boundaries wrong")
+	}
+}
+
 func TestNormalizeRelStrength(t *testing.T) {
 	rs := []SectorRotation{
 		{AvgReturn20: 10},

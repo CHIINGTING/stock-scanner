@@ -225,6 +225,100 @@ func (r *Report) Generate(
 			}
 			return template.HTML(`<span class="no">·</span>`)
 		},
+		"flowCSS": func(state string) string {
+			switch state {
+			case "流入":
+				return "flow-in"
+			case "流出":
+				return "flow-out"
+			default:
+				return "flow-neutral"
+			}
+		},
+		"flowLabel": func(state string) string {
+			switch state {
+			case "流入":
+				return "流入 ↑"
+			case "流出":
+				return "流出 ↓"
+			default:
+				return "中性"
+			}
+		},
+		"flowArrow": func(v float64) template.HTML {
+			switch {
+			case v >= 0.2:
+				return template.HTML(`<span class="flow-in">↑</span>`)
+			case v <= -0.2:
+				return template.HTML(`<span class="flow-out">↓</span>`)
+			default:
+				return template.HTML(`<span class="flow-neutral">→</span>`)
+			}
+		},
+		"shortDirCSS": func(dir string) string {
+			switch dir {
+			case scanner.FlowInflow:
+				return "flow-in"
+			case scanner.FlowOutflow:
+				return "flow-out"
+			default:
+				return "flow-neutral"
+			}
+		},
+		"shortDirLabel": func(dir string) string {
+			switch dir {
+			case scanner.FlowInflow:
+				return "流入 ↑"
+			case scanner.FlowOutflow:
+				return "流出 ↓"
+			default:
+				return "中性"
+			}
+		},
+		"shortStageCSS": func(st string) string {
+			switch st {
+			case scanner.STEarlyRotation:
+				return "stage-early"
+			case scanner.STConfirmedRotation:
+				return "stage-confirmed"
+			case scanner.STOverheated:
+				return "stage-hot"
+			default: // WEAKENING
+				return "stage-late"
+			}
+		},
+		"shortStageLabel": func(st string) string {
+			switch st {
+			case scanner.STEarlyRotation:
+				return "早期輪動 EARLY"
+			case scanner.STConfirmedRotation:
+				return "確認輪動 CONFIRMED"
+			case scanner.STOverheated:
+				return "過熱 OVERHEATED"
+			default:
+				return "轉弱 WEAKENING"
+			}
+		},
+		"midCSS": func(label string) string {
+			switch label {
+			case "強":
+				return "lvl-strong"
+			case "中":
+				return "lvl-mid"
+			default:
+				return "lvl-weak"
+			}
+		},
+		"trendCSS": func(label string) string {
+			switch label {
+			case "確認上升":
+				return "lvl-strong"
+			case "尚未確認":
+				return "lvl-mid"
+			default:
+				return "lvl-weak"
+			}
+		},
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -255,6 +349,30 @@ func stageText(s scanner.RotationStage) string {
 	}
 }
 
+func shortDirText(dir string) string {
+	switch dir {
+	case scanner.FlowInflow:
+		return "流入↑"
+	case scanner.FlowOutflow:
+		return "流出↓"
+	default:
+		return "中性"
+	}
+}
+
+func shortStageText(st string) string {
+	switch st {
+	case scanner.STEarlyRotation:
+		return "早期輪動"
+	case scanner.STConfirmedRotation:
+		return "確認輪動"
+	case scanner.STOverheated:
+		return "過熱"
+	default:
+		return "轉弱"
+	}
+}
+
 func fmtVolume(v int64) string {
 	switch {
 	case v >= 1_000_000_000:
@@ -273,13 +391,20 @@ func printConsole(market, portfolio, watchlist []scanner.StockAnalysis, rotation
 	fmt.Printf("\n%s\n  台股掃描報告  %s\n%s\n", sep, date.Format("2006-01-02"), sep)
 
 	if len(rotation) > 0 {
-		fmt.Printf("\n[🔄 族群輪動 (Rotation) — 依機會排序，EARLY/CONFIRMED 優先]\n")
-		fmt.Printf("%-4s  %-14s  %-16s  %6s  %6s  %6s  %6s\n",
-			"Rank", "族群", "階段", "分數", "新高%", "突破%", "量能%")
+		fmt.Printf("\n[🔄 族群輪動 (Rotation) — 三層：短線(1~5日)/中期(20日)/趨勢(60日)，依機會排序]\n")
+		fmt.Printf("%-4s  %-14s  %-8s  %-14s  %6s  %4s  %-10s  %6s\n",
+			"Rank", "族群", "短線流向", "短線階段", "短線分", "20日", "60日趨勢", "機會分")
+		var earlyCandidates []string
 		for i, sr := range rotation {
-			fmt.Printf("%-4d  %-14s  %-16s  %6.0f  %6.0f  %6.0f  %6.0f\n",
-				i+1, sr.Name, stageText(sr.Stage), sr.Score,
-				sr.NewHighRatio, sr.BreakoutRatio, sr.VolExpansion)
+			fmt.Printf("%-4d  %-14s  %-8s  %-14s  %6.0f  %4s  %-10s  %6.0f\n",
+				i+1, sr.Name, shortDirText(sr.ShortTermFlowDir), shortStageText(sr.ShortTermFlowStage),
+				sr.ShortTermFlowScore, sr.MidTermLabel, sr.TrendLabel, sr.OppScore)
+			if sr.ShortTermFlowStage == scanner.STEarlyRotation && sr.ShortTermFlowDir == scanner.FlowInflow {
+				earlyCandidates = append(earlyCandidates, sr.Name)
+			}
+		}
+		if len(earlyCandidates) > 0 {
+			fmt.Printf("  ▶ 早期輪動候選（資金剛流入、20日尚未反映）：%s\n", strings.Join(earlyCandidates, "、"))
 		}
 	}
 
@@ -443,6 +568,19 @@ th.rotscore{min-width:120px}
 .sub-table td{border-bottom:1px solid #111c2c}
 .yes{color:#4ade80;font-weight:700}
 .no{color:#475569}
+.flow-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.7rem;white-space:nowrap}
+.flow-in{color:#4ade80}
+.flow-out{color:#f87171}
+.flow-neutral{color:#94a3b8}
+.flow-badge.flow-in{background:#052e16;border:1px solid #16a34a66}
+.flow-badge.flow-out{background:#3b0a0a;border:1px solid #dc262666}
+.flow-badge.flow-neutral{background:#1a2436;border:1px solid #33415566}
+.lvl-strong{color:#4ade80;font-weight:700}
+.lvl-mid{color:#fbbf24;font-weight:600}
+.lvl-weak{color:#94a3b8}
+.sector-meta{padding:8px 14px;font-size:.72rem;color:#94a3b8;line-height:1.8;background:#0b1422}
+.meta-concl{display:block;color:#e2e8f0;font-weight:600;font-size:.78rem;margin-bottom:3px}
+.meta-nums b{font-weight:700}
 </style>
 </head>
 <body>
@@ -605,38 +743,44 @@ th.rotscore{min-width:120px}
 {{ if eq (len .Rotation) 0 }}
 <div class="empty">族群輪動無資料。請在 configs/sectors.yaml 設定族群與成員，並確認未加 --no-rotation。</div>
 {{ else }}
-<div class="rot-intro">🔄 <b>輪動</b>：不看「今天最強是誰」，而是找「下一波資金可能去哪裡」。依<b>機會排序</b>，刻意把已過熱（HOT/LATE）的族群往後排，優先呈現 <span class="stage-badge stage-early">醞釀 EARLY</span> 與 <span class="stage-badge stage-confirmed">確認 CONFIRMED</span> 階段。點族群可展開成員股票。</div>
+<div class="rot-intro">🔄 <b>輪動</b>：不看「今天最強是誰」，而是找「下一波資金可能去哪裡」。三層架構 — <b>短線(1~5日)</b> 最早反映資金轉向、<b>20日</b> 中期強度較慢、<b>60日</b> 波段趨勢。排序混合短線流向與中期強度，讓<b>資金剛流入、20日尚未反映</b>的早期輪動族群提早浮上來，再淡化已過熱者。點族群可展開成員與結論。</div>
 <table>
   <thead><tr>
-    <th>#</th><th>族群</th><th>階段</th>
-    <th class="rotscore">Sector Score</th>
-    <th class="r">相對強度</th><th class="r">新高%</th><th class="r">突破%</th>
-    <th class="r">量能放大</th><th class="r">MA60↑%</th>
-    <th class="r">平均20日</th><th class="r">成員</th><th></th>
+    <th>#</th><th>族群</th>
+    <th>短線流向</th><th>短線階段(1~5日)</th><th class="rotscore">短線分數</th>
+    <th class="c">20日</th><th class="c">60日趨勢</th>
+    <th class="rotscore">機會分數</th>
+    <th class="r">新高%</th><th class="r">突破%</th>
+    <th class="r">成員</th><th></th>
   </tr></thead>
   <tbody>
   {{ range $i, $s := .Rotation }}
   <tr class="sector-row" onclick="toggleSector({{ $i }})">
     <td class="neu">{{ inc $i }}</td>
     <td class="sym">{{ $s.Name }}</td>
-    <td><span class="stage-badge {{ stageCSS $s.Stage }}">{{ stageLabel $s.Stage }}</span></td>
+    <td><span class="flow-badge {{ shortDirCSS $s.ShortTermFlowDir }}">{{ shortDirLabel $s.ShortTermFlowDir }}</span></td>
+    <td><span class="stage-badge {{ shortStageCSS $s.ShortTermFlowStage }}">{{ shortStageLabel $s.ShortTermFlowStage }}</span></td>
+    <td class="rotscore">{{ sectorScoreBar $s.ShortTermFlowScore }}</td>
+    <td class="c {{ midCSS $s.MidTermLabel }}">{{ $s.MidTermLabel }}</td>
+    <td class="c {{ trendCSS $s.TrendLabel }}">{{ $s.TrendLabel }}</td>
     <td class="rotscore">{{ sectorScoreBar $s.Score }}</td>
-    <td class="r">{{ f0pct $s.RelStrength }}</td>
     <td class="r">{{ f0pct $s.NewHighRatio }}</td>
     <td class="r">{{ f0pct $s.BreakoutRatio }}</td>
-    <td class="r">{{ f0pct $s.VolExpansion }}</td>
-    <td class="r">{{ f0pct $s.MA60Slope }}</td>
-    <td class="r {{ pnlCSS $s.AvgReturn20 }}">{{ pctSign1 $s.AvgReturn20 }}</td>
     <td class="r">{{ len $s.Stocks }}</td>
     <td class="exp-caret"><span id="caret-{{ $i }}">▸</span></td>
   </tr>
   <tr class="sector-detail" id="detail-{{ $i }}">
     <td colspan="12">
+      <div class="sector-meta">
+        <span class="meta-concl">📌 {{ $s.ShortTermNote }}</span>
+        <span class="meta-nums">短線 1/3/5日：<b class="{{ pnlCSS $s.Avg1dGain }}">{{ pctSign1 $s.Avg1dGain }}</b> / <b class="{{ pnlCSS $s.Avg3dGain }}">{{ pctSign1 $s.Avg3dGain }}</b> / <b class="{{ pnlCSS $s.Avg5dGain }}">{{ pctSign1 $s.Avg5dGain }}</b>　上漲家數 {{ f0pct $s.UpRatio }}　站上5/10MA {{ f0pct $s.AboveShortMARatio }}　創20日高 {{ f0pct $s.NewHigh20Ratio }}　量能放大 {{ f0pct $s.VolExpansion }}　｜　中期：相對強度 {{ f0pct $s.RelStrength }}　平均20日 <b class="{{ pnlCSS $s.AvgReturn20 }}">{{ pctSign1 $s.AvgReturn20 }}</b>　｜　趨勢：MA60↑ {{ f0pct $s.MA60Slope }}　站上MA60 {{ f0pct $s.AboveMA60Ratio }}</span>
+      </div>
       <table class="sub-table">
         <thead><tr>
           <th>代號</th><th>名稱</th><th class="r">現價</th>
-          <th class="r">20日報酬</th><th class="c">新高</th><th class="c">突破</th>
-          <th class="r">量比</th><th class="c">MA60↑</th><th>建議</th>
+          <th class="r">5日</th><th class="r">20日報酬</th>
+          <th class="c">20日高</th><th class="c">突破</th><th class="c">新高60</th>
+          <th class="r">量比</th><th class="c">MA60↑</th><th class="c">資金</th><th>建議</th>
         </tr></thead>
         <tbody>
         {{ range $s.Stocks }}
@@ -644,11 +788,14 @@ th.rotscore{min-width:120px}
           <td class="sym">{{ .Symbol }}</td>
           <td class="name-col">{{ .Name }}</td>
           <td class="r">{{ f2 .Close }}</td>
+          <td class="r {{ pnlCSS .Gain5 }}">{{ pctSign1 .Gain5 }}</td>
           <td class="r {{ pnlCSS .Return20 }}">{{ pctSign1 .Return20 }}</td>
-          <td class="c">{{ boolMark .NewHigh }}</td>
+          <td class="c">{{ boolMark .NewHigh20 }}</td>
           <td class="c">{{ boolMark .Breakout }}</td>
+          <td class="c">{{ boolMark .NewHigh }}</td>
           <td class="r {{ volCSS .VolumeRatio }}">{{ f1 .VolumeRatio }}x</td>
           <td class="c">{{ if .MA60Valid }}{{ boolMark .MA60Up }}{{ else }}<span class="no">—</span>{{ end }}</td>
+          <td class="c">{{ flowArrow .MoneyFlow }}</td>
           <td><span class="action-badge {{ actionCSS .Action }}">{{ .Action }}</span></td>
         </tr>
         {{ end }}
