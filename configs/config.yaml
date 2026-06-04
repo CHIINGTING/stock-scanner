@@ -37,6 +37,26 @@ scanner:
   rs_leadership_threshold: 80                  # 領導股門檻（C2 僅讀取，尚未接入決策）
   rs_watch_threshold: 70                       # 觀察門檻（C2 僅讀取，尚未接入決策）
 
+  # ── 52 週高 / 多週期新高（C3）─────────────────────────────────────────────
+  # enable_new_high=false（預設）時完全不計算、不影響既有 scoring / report /
+  # watchlist / rotation。如何納入飆股分數屬後續 C6。新高一律以還原收盤比價。
+  enable_new_high: false                       # 總開關，預設 false
+  nh_lookbacks: [20, 60, 120, 250]             # 多週期新高視窗（固定 4 檔 → H20/H60/H120/H250）
+  nh_min_history_days: 60                       # 不足此歷史長度不計算
+
+  # 距 52 週高三段門檻（距離以「低於高點的百分比」計，越小越接近高點）
+  nh_leader_within_pct: 25                      # 距 52 週高 ≤ 此% → new_high_leadership_eligible
+  nh_near_52w_high_pct: 15                      # 距 52 週高 ≤ 此% → near_52w_high
+  nh_breakout_watch_pct: 5                      # 距 52 週高 ≤ 此% → breakout_watch
+
+  # 以下兩者「僅供 NewHighScore 分級」，不參與上面三個布林旗標的定義
+  nh_leader_strong_pct: 10                      # 距 52 週高 ≤ 此% → NewHighScore 最高分級
+  nh_leader_far_pct: 50                         # 距 52 週高 > 此% → 非領漲，壓低 NewHighScore
+
+  nh_vol_confirm_ratio: 1.5                     # 60 日新高量增確認門檻（NewHighScore 用）
+  nh_overext_rsi: 75                            # 創 250 日高且 RSI ≥ 此值 → 過熱抑制 ×0.6
+  nh_use_adjusted_close: false                  # 與 use_adjusted_close 取 OR
+
   kdj:
     k_period: 9
     d_smooth: 3

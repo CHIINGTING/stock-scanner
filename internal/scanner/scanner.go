@@ -34,6 +34,23 @@ type Config struct {
 	RSLeadershipThreshold           float64 `yaml:"rs_leadership_threshold"`             // config-only in C2 (not wired)
 	RSWatchThreshold                float64 `yaml:"rs_watch_threshold"`                  // config-only in C2 (not wired)
 
+	// ── New High / 52-week high (C3) ─────────────────────────────────────────
+	// EnableNewHigh gates the whole feature. Default false → never computed in the
+	// pipeline; cannot affect existing scoring / report / watchlist / rotation.
+	// newhigh.go helpers are pure and only run when explicitly called. Wiring into
+	// rocket_candidate_score is C6.
+	EnableNewHigh       bool    `yaml:"enable_new_high"`
+	NHLookbacks         []int   `yaml:"nh_lookbacks"`           // default [20,60,120,250]
+	NHMinHistoryDays    int     `yaml:"nh_min_history_days"`    // default 60
+	NHLeaderWithinPct  float64 `yaml:"nh_leader_within_pct"`  // default 25 → leadership-eligible band
+	NHNear52wHighPct   float64 `yaml:"nh_near_52w_high_pct"`  // default 15 → near_52w_high band
+	NHBreakoutWatchPct float64 `yaml:"nh_breakout_watch_pct"` // default 5  → breakout_watch band
+	NHLeaderStrongPct  float64 `yaml:"nh_leader_strong_pct"`  // default 10 → NewHighScore top tier only
+	NHLeaderFarPct     float64 `yaml:"nh_leader_far_pct"`     // default 50 → NewHighScore cap only
+	NHVolConfirmRatio  float64 `yaml:"nh_vol_confirm_ratio"`  // default 1.5 (60d new-high volume)
+	NHOverextRSI       float64 `yaml:"nh_overext_rsi"`        // default 75 (overextension dampener)
+	NHUseAdjustedClose bool    `yaml:"nh_use_adjusted_close"` // OR'd with UseAdjustedClose
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`
