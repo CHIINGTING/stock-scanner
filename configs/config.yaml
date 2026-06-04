@@ -22,6 +22,10 @@ scanner:
   min_avg_volume: 500000  # MA20 量能門檻
   top_n: 50               # 市場掃描頁顯示前 N 名（--top 旗標可覆蓋）
 
+  # 還原收盤（AdjClose）總開關。預設 false → 所有計算沿用原始 Close，輸出與今日完全一致。
+  # 設 true 後，後續 RS / 新高 / VCP / 回測才會改用還原收盤（AdjClose 缺值時自動 fallback Close）。
+  use_adjusted_close: false
+
   kdj:
     k_period: 9
     d_smooth: 3

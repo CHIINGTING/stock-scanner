@@ -15,6 +15,12 @@ type Config struct {
 	MinAvgVolume float64 `yaml:"min_avg_volume"`
 	TopN         int     `yaml:"top_n"`
 
+	// UseAdjustedClose toggles split/dividend-adjusted close for adjusted-aware
+	// calculations (RS / new high / VCP / backtest — added in later commits).
+	// Default false: every calculation keeps using raw Close, preserving today's
+	// output exactly. Read prices via fetcher.PriceForCalc(candle, UseAdjustedClose).
+	UseAdjustedClose bool `yaml:"use_adjusted_close"`
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`
