@@ -90,6 +90,7 @@ func TestEnrichWatchlistSmoke(t *testing.T) {
 		map[string]string{},                  // no sector linkage
 		map[string]*SectorRotation{},
 		map[string][]fetcher.StockData{},
+		nil, // C6a: no RS table
 	)
 	if len(out) != 2 {
 		t.Fatalf("expected 2 entries, got %d", len(out))
@@ -107,6 +108,88 @@ func TestEnrichWatchlistSmoke(t *testing.T) {
 		}
 		if e.Backtest.PatternName == "" {
 			t.Errorf("%s missing backtest pattern", e.A.Symbol)
+		}
+	}
+}
+
+// TestC6aShadowDoesNotAffectScoring is the C6a golden-regression guard: turning all
+// four shadow flags on must NOT change RocketScore / WatchAction / ExplosionProb or
+// the output order — it only attaches shadow data (nil when off, populated when on).
+func TestC6aShadowDoesNotAffectScoring(t *testing.T) {
+	items := []fetcher.StockData{
+		{Symbol: "2222", Name: "Flat", Source: "watchlist", Candles: makeCandles(260, 50, 0.0, 1_000_000)},
+		{Symbol: "1111", Name: "Strong", Source: "watchlist", Candles: makeCandles(260, 50, 0.4, 2_000_000)},
+	}
+	sectorOf := map[string]string{}
+	rot := map[string]*SectorRotation{}
+	members := map[string][]fetcher.StockData{}
+
+	off := New(Config{}) // all shadow flags false
+	resOff := off.EnrichWatchlist(items, sectorOf, rot, members, nil)
+
+	on := New(Config{EnableRSRank: true, EnableNewHigh: true, EnableVCP: true, EnableMomentumFlow: true})
+	resOn := on.EnrichWatchlist(items, sectorOf, rot, members, on.BuildRSTable(items))
+
+	if len(resOff) != len(resOn) {
+		t.Fatalf("length differs: off=%d on=%d", len(resOff), len(resOn))
+	}
+	for i := range resOff {
+		if resOff[i].A.Symbol != resOn[i].A.Symbol {
+			t.Errorf("order changed at %d: %s vs %s", i, resOff[i].A.Symbol, resOn[i].A.Symbol)
+		}
+		if resOff[i].RocketScore != resOn[i].RocketScore {
+			t.Errorf("%s RocketScore changed: %d vs %d", resOff[i].A.Symbol, resOff[i].RocketScore, resOn[i].RocketScore)
+		}
+		if resOff[i].WatchAction != resOn[i].WatchAction {
+			t.Errorf("%s WatchAction changed: %s vs %s", resOff[i].A.Symbol, resOff[i].WatchAction, resOn[i].WatchAction)
+		}
+		if resOff[i].ExplosionProb != resOn[i].ExplosionProb {
+			t.Errorf("%s ExplosionProb changed: %s vs %s", resOff[i].A.Symbol, resOff[i].ExplosionProb, resOn[i].ExplosionProb)
+		}
+		// flags off → the whole shadow container is nil.
+		if resOff[i].Shadow != nil {
+			t.Errorf("%s: expected Shadow to be nil when all flags are disabled", resOff[i].A.Symbol)
+		}
+	}
+	// flags on → container non-nil and per-stock shadows attached (260 candles suffice).
+	for i := range resOn {
+		s := resOn[i].Shadow
+		if s == nil {
+			t.Fatalf("%s: expected Shadow non-nil when flags are enabled", resOn[i].A.Symbol)
+		}
+		if s.NewHigh == nil || s.VCP == nil || s.Momentum == nil || s.RS == nil {
+			t.Errorf("%s: flags on but shadow not fully attached (rs=%v nh=%v vcp=%v mom=%v)",
+				resOn[i].A.Symbol, s.RS != nil, s.NewHigh != nil, s.VCP != nil, s.Momentum != nil)
+		}
+	}
+}
+
+// TestC6aSingleFlagShadow: enabling only one flag attaches only that field, leaves
+// the others nil, and still does not change score/action/probability/order.
+func TestC6aSingleFlagShadow(t *testing.T) {
+	items := []fetcher.StockData{
+		{Symbol: "1111", Name: "Strong", Source: "watchlist", Candles: makeCandles(260, 50, 0.4, 2_000_000)},
+		{Symbol: "2222", Name: "Flat", Source: "watchlist", Candles: makeCandles(260, 50, 0.0, 1_000_000)},
+	}
+	base := New(Config{}).EnrichWatchlist(items, map[string]string{}, map[string]*SectorRotation{}, map[string][]fetcher.StockData{}, nil)
+
+	onlyVCP := New(Config{EnableVCP: true})
+	got := onlyVCP.EnrichWatchlist(items, map[string]string{}, map[string]*SectorRotation{}, map[string][]fetcher.StockData{}, nil)
+
+	for i := range got {
+		if got[i].Shadow == nil {
+			t.Fatalf("%s: expected Shadow non-nil with VCP enabled", got[i].A.Symbol)
+		}
+		if got[i].Shadow.VCP == nil {
+			t.Errorf("%s: VCP shadow should be attached", got[i].A.Symbol)
+		}
+		if got[i].Shadow.RS != nil || got[i].Shadow.NewHigh != nil || got[i].Shadow.Momentum != nil {
+			t.Errorf("%s: only VCP should be attached, others must be nil", got[i].A.Symbol)
+		}
+		// scoring unchanged vs the all-off baseline
+		if got[i].A.Symbol != base[i].A.Symbol || got[i].RocketScore != base[i].RocketScore ||
+			got[i].WatchAction != base[i].WatchAction || got[i].ExplosionProb != base[i].ExplosionProb {
+			t.Errorf("%s: single-flag shadow changed scoring/order", got[i].A.Symbol)
 		}
 	}
 }

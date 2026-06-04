@@ -13,9 +13,22 @@ import (
 // 正在準備發動？型態過去成功率高不高？要等突破還是拉回？失敗跌破哪裡移除？
 // ──────────────────────────────────────────────────────────────────────────────
 
+// ShadowSignals holds C6a "shadow" results: computed & attached for inspection,
+// but NOT consumed by any score / stage / action / sort. Each field is nil unless
+// its feature flag is on. Scoring integration (with double-count guardrails) is C6b.
+type ShadowSignals struct {
+	RS       *RSResult      `json:"rs,omitempty"`       // enable_rs_rank
+	NewHigh  *NewHighResult `json:"new_high,omitempty"` // enable_new_high
+	VCP      *VCPResult     `json:"vcp,omitempty"`      // enable_vcp
+	Momentum *MomentumState `json:"momentum,omitempty"` // enable_momentum_flow
+}
+
 // WatchlistEntry is the full decision sheet for one watchlist stock.
 type WatchlistEntry struct {
 	A StockAnalysis // 重用既有現價/指標/評分
+
+	// Shadow signals (C6a): nil unless at least one shadow flag is on; never scored here.
+	Shadow *ShadowSignals `json:"shadow,omitempty"`
 
 	// ── 族群輪動連動 ─────────────────────────────────────────────────────────
 	Sector         string
@@ -55,6 +68,7 @@ func (s *Scanner) EnrichWatchlist(
 	sectorOf map[string]string, // code → sector name (highest-ranked sector)
 	rot map[string]*SectorRotation, // sector name → rotation
 	members map[string][]fetcher.StockData, // sector name → member candles
+	rsTable map[string]RSResult, // C6a: full-market RS (nil when RS disabled); shadow-only
 ) []WatchlistEntry {
 	out := make([]WatchlistEntry, 0, len(items))
 
@@ -114,11 +128,55 @@ func (s *Scanner) EnrichWatchlist(
 		e.RiskLabel = rk.RiskLabel
 		e.RiskWarning = rk.RiskWarning
 
+		// ── C6a shadow signals: compute + attach only; NEVER read by any score /
+		// stage / action / sort above. The whole container stays nil unless at least
+		// one shadow flag is on, so flag=false output is byte-identical. ──
+		if s.cfg.EnableRSRank || s.cfg.EnableNewHigh || s.cfg.EnableVCP || s.cfg.EnableMomentumFlow {
+			shadow := &ShadowSignals{}
+			if s.cfg.EnableRSRank && rsTable != nil {
+				if r, ok := rsTable[item.Symbol]; ok {
+					shadow.RS = &r
+				}
+			}
+			if s.cfg.EnableNewHigh {
+				nh := computeNewHigh(item.Candles, a.VolumeRatio, a.RSI, newHighConfigFrom(s.cfg))
+				shadow.NewHigh = &nh
+			}
+			if s.cfg.EnableVCP {
+				v := ComputeVCP(item.Candles, vcpConfigFrom(s.cfg))
+				shadow.VCP = &v
+			}
+			if s.cfg.EnableMomentumFlow {
+				m := ComputeMomentum(item.Candles, ind.RSI, a.VolumeRatio, momentumConfigFrom(s.cfg))
+				shadow.Momentum = &m
+			}
+			e.Shadow = shadow
+		}
+
 		out = append(out, e)
 	}
 
 	sort.SliceStable(out, func(i, j int) bool {
 		return out[i].RocketScore > out[j].RocketScore
 	})
+	return out
+}
+
+// BuildRSTable computes full-market RS percentiles keyed by symbol, for C6a shadow
+// attachment. Returns nil when RS is disabled. Shadow-only: callers must not feed
+// the result into any score or ranking (that is C6b).
+func (s *Scanner) BuildRSTable(stocks []fetcher.StockData) map[string]RSResult {
+	if !s.cfg.EnableRSRank {
+		return nil
+	}
+	inputs := make([]RSInput, 0, len(stocks))
+	for _, st := range stocks {
+		inputs = append(inputs, RSInput{Symbol: st.Symbol, Name: st.Name, Candles: st.Candles})
+	}
+	results := CalculateRSRanks(inputs, rsConfigFrom(s.cfg))
+	out := make(map[string]RSResult, len(results))
+	for _, r := range results {
+		out[r.Symbol] = r
+	}
 	return out
 }
