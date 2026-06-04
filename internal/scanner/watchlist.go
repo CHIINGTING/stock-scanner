@@ -128,11 +128,13 @@ func (s *Scanner) EnrichWatchlist(
 			}
 		}
 
-		// C6b-1: VCP may correct g3's base-quality slot, but only when the master
-		// guardrail flag is on (gating happens inside computeRocket).
+		// C6b: shadow signals may influence scoring only when the master guardrail
+		// flag is on (gating happens inside computeRocket).
 		var vcpShadow *VCPResult
+		var nhShadow *NewHighResult
 		if shadow != nil {
-			vcpShadow = shadow.VCP
+			vcpShadow = shadow.VCP // C6b-1: corrects g3 base-quality
+			nhShadow = shadow.NewHigh // C6b-2: replaces g3 NearPreviousHigh sub-score
 		}
 
 		rk := computeRocket(rocketInput{
@@ -146,6 +148,7 @@ func (s *Scanner) EnrichWatchlist(
 			hasSector:         e.HasSector,
 			guardrailScoring:  s.cfg.EnableSignalGuardrailScoring,
 			vcp:               vcpShadow,
+			newHigh:           nhShadow,
 		})
 		e.RocketScore = rk.Score
 		e.RocketStage = rk.Stage

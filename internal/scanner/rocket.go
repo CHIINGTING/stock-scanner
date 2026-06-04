@@ -50,8 +50,9 @@ type rocketInput struct {
 	hasSector         bool
 
 	// ── C6b guardrail scoring (shadow signals; only used when guardrailScoring) ──
-	guardrailScoring bool       // master flag: shadow may influence scoring
-	vcp              *VCPResult // C6b-1: corrects g3 base-quality (nil = no effect)
+	guardrailScoring bool           // master flag: shadow may influence scoring
+	vcp              *VCPResult     // C6b-1: corrects g3 base-quality (nil = no effect)
+	newHigh          *NewHighResult // C6b-2: replaces g3 NearPreviousHigh sub-score
 }
 
 type rocketOutput struct {
@@ -167,9 +168,19 @@ func computeRocket(in rocketInput) rocketOutput {
 	if in.guardrailScoring && in.vcp != nil && in.vcp.Valid {
 		effBQ = math.Max(in.consol.BaseQualityScore, in.vcp.QualityScore)
 	}
-	g3 := effBQ / 100 * 12
-	if in.consol.NearPreviousHigh {
-		g3 += 6
+	// C6b-2: when guardrail scoring is on and a computed NewHigh result exists, the
+	// NewHighScore sub-slot REPLACES NearPreviousHigh (base-quality weight 12→10).
+	// Computed=true with NewHighScore=0 is a deliberate "no leadership" verdict — we
+	// still take the NewHigh branch (no NearPreviousHigh fallback) to avoid mixing logic.
+	var g3 float64
+	useNewHigh := in.guardrailScoring && in.newHigh != nil && in.newHigh.Computed
+	if useNewHigh {
+		g3 = effBQ/100*10 + in.newHigh.NewHighScore/100*8
+	} else {
+		g3 = effBQ / 100 * 12
+		if in.consol.NearPreviousHigh {
+			g3 += 6
+		}
 	}
 	if bullAlign {
 		g3 += 4
