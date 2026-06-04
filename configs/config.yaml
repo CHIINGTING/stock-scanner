@@ -26,6 +26,17 @@ scanner:
   # 設 true 後，後續 RS / 新高 / VCP / 回測才會改用還原收盤（AdjClose 缺值時自動 fallback Close）。
   use_adjusted_close: false
 
+  # ── RS Rank（C2）─────────────────────────────────────────────────────────
+  # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
+  # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
+  enable_rs_rank: false                       # 總開關，預設 false
+  rs_lookback_days: 120                        # RS 報酬回看交易日數
+  rs_min_history_days: 100                     # 不足此歷史長度不計算 RS
+  rs_universe_exclude_non_common_stock: true   # 母體只留普通股（排除 ETF/特別股/DR…）
+  rs_use_adjusted_close: false                 # 與 use_adjusted_close 取 OR；true 時 RS 用 AdjClose
+  rs_leadership_threshold: 80                  # 領導股門檻（C2 僅讀取，尚未接入決策）
+  rs_watch_threshold: 70                       # 觀察門檻（C2 僅讀取，尚未接入決策）
+
   kdj:
     k_period: 9
     d_smooth: 3

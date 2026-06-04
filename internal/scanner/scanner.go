@@ -21,6 +21,19 @@ type Config struct {
 	// output exactly. Read prices via fetcher.PriceForCalc(candle, UseAdjustedClose).
 	UseAdjustedClose bool `yaml:"use_adjusted_close"`
 
+	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
+	// EnableRSRank gates the whole RS feature. Default false → RS is never
+	// computed in the pipeline and cannot affect existing scoring / report /
+	// watchlist / rotation. The RS helpers in relstrength.go are pure and only
+	// run when explicitly called. Wiring RS into rocket_candidate_score is C6.
+	EnableRSRank                    bool    `yaml:"enable_rs_rank"`
+	RSLookbackDays                  int     `yaml:"rs_lookback_days"`                    // default 120
+	RSMinHistoryDays                int     `yaml:"rs_min_history_days"`                 // default 100
+	RSUniverseExcludeNonCommonStock bool    `yaml:"rs_universe_exclude_non_common_stock"`// default true (set in yaml)
+	RSUseAdjustedClose              bool    `yaml:"rs_use_adjusted_close"`               // OR'd with UseAdjustedClose
+	RSLeadershipThreshold           float64 `yaml:"rs_leadership_threshold"`             // config-only in C2 (not wired)
+	RSWatchThreshold                float64 `yaml:"rs_watch_threshold"`                  // config-only in C2 (not wired)
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`
