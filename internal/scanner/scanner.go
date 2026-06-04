@@ -95,6 +95,14 @@ type Config struct {
 	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`   // default 20
 	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"` // OR'd with UseAdjustedClose
 
+	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
+	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
+	MFScoreModifierContinuation float64 `yaml:"mf_score_modifier_continuation"` // default 6
+	MFScoreModifierShiftUp      float64 `yaml:"mf_score_modifier_shift_up"`     // default 8
+	MFScoreModifierFading       float64 `yaml:"mf_score_modifier_fading"`       // default -6
+	MFScoreModifierShiftDown    float64 `yaml:"mf_score_modifier_shift_down"`   // default -12
+	MFScoreModifierCap          float64 `yaml:"mf_score_modifier_cap"`          // default 12
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

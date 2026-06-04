@@ -98,6 +98,14 @@ scanner:
   mf_rsi_div_lookback: 20                         # 背離比較視窗
   mf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
 
+  # MomentumFlow 分數修正（C6b-4，最後修正層；僅 master flag 開時生效）；待 R5 校準
+  mf_score_modifier_building: 5
+  mf_score_modifier_continuation: 6
+  mf_score_modifier_shift_up: 8
+  mf_score_modifier_fading: -6
+  mf_score_modifier_shift_down: -12
+  mf_score_modifier_cap: 12
+
   kdj:
     k_period: 9
     d_smooth: 3

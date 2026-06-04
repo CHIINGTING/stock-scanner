@@ -259,6 +259,194 @@ func TestC6b3MasterFlagOffGolden(t *testing.T) {
 	}
 }
 
+// ── C6b-4: MomentumFlow modifier + joint watch_action + prob guardrail ──────
+
+func defaultMods() momentumModifiers {
+	return momentumModifiers{Building: 5, Continuation: 6, ShiftUp: 8, Fading: -6, ShiftDown: -12, Cap: 12}
+}
+
+func flatRocketInput() rocketInput {
+	candles := makeCandles(60, 50, 0.0, 1_000_000)
+	s := New(Config{})
+	ind := s.calcIndicators(candles)
+	consol := analyzeConsolidation(candles, ind, false)
+	return rocketInput{candles: candles, ind: ind, consol: consol, bt: Backtest{}, flowDir: FlowNeutral}
+}
+
+func TestC6b4ScoreModifier(t *testing.T) {
+	m := defaultMods()
+	for _, c := range []struct {
+		flow MomentumFlow
+		want float64
+	}{
+		{MomentumBuilding, 5}, {MomentumContinuation, 6}, {StructuralShiftUp, 8},
+		{MomentumFading, -6}, {StructuralShiftDown, -12}, {MomentumNeutral, 0},
+	} {
+		if got := momentumScoreModifier(c.flow, m); got != c.want {
+			t.Errorf("modifier(%s)=%.0f want %.0f", c.flow, got, c.want)
+		}
+	}
+	// cap: huge configured value is clamped to ±Cap; Cap<=0 falls back to 12.
+	if got := momentumScoreModifier(MomentumBuilding, momentumModifiers{Building: 999, Cap: 12}); got != 12 {
+		t.Errorf("cap positive: got %.0f want 12", got)
+	}
+	if got := momentumScoreModifier(StructuralShiftDown, momentumModifiers{ShiftDown: -999, Cap: 12}); got != -12 {
+		t.Errorf("cap negative: got %.0f want -12", got)
+	}
+	if got := momentumScoreModifier(MomentumBuilding, momentumModifiers{Building: 999, Cap: 0}); got != 12 {
+		t.Errorf("cap<=0 default 12: got %.0f want 12", got)
+	}
+}
+
+func TestC6b4JointWatchAction(t *testing.T) {
+	fb := ActWait
+	cases := []struct {
+		stage RocketStage
+		flow  MomentumFlow
+		want  WatchAction
+	}{
+		{StageMainRun, StructuralShiftDown, ActRemove},       // SHIFT_DOWN top priority
+		{StageFailed, MomentumBuilding, ActRemove},           // FAILED top priority
+		{StagePreBreakout, MomentumBuilding, ActPrepare},
+		{StagePreBreakout, StructuralShiftUp, ActPrepare},
+		{StagePreBreakout, MomentumFading, ActWait},
+		{StageBreakoutStart, MomentumBuilding, ActBreakoutBuy},
+		{StageBreakoutStart, MomentumContinuation, ActWatchClose},
+		{StageMainRun, MomentumFading, ActTakeProfit},
+		{StageOverheated, MomentumFading, ActTakeProfit},
+		{StageBaseBuilding, StructuralShiftUp, ActWatchClose},
+		{StageMainRun, MomentumNeutral, fb},                  // NEUTRAL → fallback
+		{StageNotReady, MomentumBuilding, fb},                // unlisted → fallback
+	}
+	for _, c := range cases {
+		if got := jointWatchAction(c.stage, c.flow, fb); got != c.want {
+			t.Errorf("joint(%s,%s)=%s want %s", c.stage, c.flow, got, c.want)
+		}
+	}
+}
+
+func TestC6b4ProbabilityGuardrail(t *testing.T) {
+	validVCP := &VCPResult{Valid: true}
+	// hard downgrades
+	if got := applyMomentumProbabilityGuardrail("HIGH", StageMainRun, StructuralShiftDown, validVCP); got != "LOW" {
+		t.Errorf("SHIFT_DOWN should be LOW, got %s", got)
+	}
+	if got := applyMomentumProbabilityGuardrail("HIGH", StageMainRun, MomentumFading, validVCP); got != "LOW" {
+		t.Errorf("MAIN_RUN+FADING should be LOW, got %s", got)
+	}
+	if got := applyMomentumProbabilityGuardrail("HIGH", StageOverheated, MomentumFading, validVCP); got != "LOW" {
+		t.Errorf("OVERHEATED+FADING should be LOW, got %s", got)
+	}
+	// conditional upgrade requires a VALID VCP and non-LOW base
+	if got := applyMomentumProbabilityGuardrail("MEDIUM", StagePreBreakout, MomentumBuilding, validVCP); got != "HIGH" {
+		t.Errorf("PRE_BREAKOUT+BUILDING+validVCP should upgrade to HIGH, got %s", got)
+	}
+	if got := applyMomentumProbabilityGuardrail("MEDIUM", StagePreBreakout, MomentumBuilding, nil); got != "MEDIUM" {
+		t.Errorf("nil VCP must NOT upgrade, got %s", got)
+	}
+	if got := applyMomentumProbabilityGuardrail("MEDIUM", StagePreBreakout, MomentumBuilding, &VCPResult{Valid: false}); got != "MEDIUM" {
+		t.Errorf("invalid VCP must NOT upgrade, got %s", got)
+	}
+	if got := applyMomentumProbabilityGuardrail("LOW", StagePreBreakout, MomentumBuilding, validVCP); got != "LOW" {
+		t.Errorf("base LOW must not be upgraded, got %s", got)
+	}
+}
+
+// A. Momentum HIGH-upgrade must NOT bypass a low-RS leadership cap (RS gate is last).
+func TestC6b4UpgradeCannotBypassRSCap(t *testing.T) {
+	prob := applyMomentumProbabilityGuardrail("MEDIUM", StagePreBreakout, MomentumBuilding, &VCPResult{Valid: true})
+	if prob != "HIGH" {
+		t.Fatalf("precondition: momentum should upgrade to HIGH, got %s", prob)
+	}
+	// RS rank 60 < 70 applied LAST → capped back to MEDIUM.
+	if got := applyRSLeadershipGate(prob, true, 60, 70); got != "MEDIUM" {
+		t.Errorf("low RS must cap momentum HIGH to MEDIUM, got %s", got)
+	}
+	// RS rank 80 ≥ 70 → stays HIGH.
+	if got := applyRSLeadershipGate(prob, true, 80, 70); got != "HIGH" {
+		t.Errorf("high RS should keep HIGH, got %s", got)
+	}
+}
+
+// B. SHIFT_DOWN → LOW + REMOVE even with very high RS (cap never lifts LOW).
+func TestC6b4ShiftDownEndToEnd(t *testing.T) {
+	in := flatRocketInput()
+	in.guardrailScoring = true
+	in.momentumActive = true
+	in.momentum = &MomentumState{Computed: true, Flow: StructuralShiftDown}
+	in.mfMod = defaultMods()
+	in.rs = &RSResult{Computed: true, RSRankPercentile: 95}
+	in.rsWatchThreshold = 70
+	out := computeRocket(in)
+	if out.ExplosionProb != "LOW" {
+		t.Errorf("SHIFT_DOWN should force LOW even with RS 95, got %s", out.ExplosionProb)
+	}
+	if out.WatchAction != ActRemove {
+		t.Errorf("SHIFT_DOWN should force REMOVE, got %s", out.WatchAction)
+	}
+}
+
+// C6b-4 score modifier is wired through computeRocket (single final channel).
+func TestC6b4ScoreModifierWired(t *testing.T) {
+	base := computeRocket(flatRocketInput()).Score // momentum inactive
+
+	mk := func(flow MomentumFlow) int {
+		in := flatRocketInput()
+		in.guardrailScoring = true
+		in.momentumActive = true
+		in.momentum = &MomentumState{Computed: true, Flow: flow}
+		in.mfMod = defaultMods()
+		return computeRocket(in).Score
+	}
+	if got := mk(MomentumNeutral); got != base {
+		t.Errorf("NEUTRAL must not change score: got %d base %d", got, base)
+	}
+	if got := mk(MomentumBuilding); got != base+5 {
+		t.Errorf("BUILDING should add 5: got %d base %d", got, base)
+	}
+	if got := mk(MomentumFading); got != base-6 {
+		t.Errorf("FADING should subtract 6: got %d base %d", got, base)
+	}
+}
+
+// D. NEUTRAL fully falls back (score/action/prob unchanged vs momentum inactive).
+func TestC6b4NeutralFallback(t *testing.T) {
+	baseIn := flatRocketInput()
+	base := computeRocket(baseIn)
+
+	in := flatRocketInput()
+	in.guardrailScoring = true
+	in.momentumActive = true
+	in.momentum = &MomentumState{Computed: true, Flow: MomentumNeutral}
+	in.mfMod = defaultMods()
+	got := computeRocket(in)
+
+	if got.Score != base.Score || got.WatchAction != base.WatchAction || got.ExplosionProb != base.ExplosionProb {
+		t.Errorf("NEUTRAL must fully fall back: score %d/%d action %s/%s prob %s/%s",
+			got.Score, base.Score, got.WatchAction, base.WatchAction, got.ExplosionProb, base.ExplosionProb)
+	}
+}
+
+// TestC6b4MasterFlagOffGolden: master off + mf on → only shadow attached, scoring unchanged.
+func TestC6b4MasterFlagOffGolden(t *testing.T) {
+	items := []fetcher.StockData{
+		{Symbol: "1111", Name: "Strong", Source: "watchlist", Candles: makeCandles(260, 50, 0.4, 2_000_000)},
+		{Symbol: "2222", Name: "Flat", Source: "watchlist", Candles: makeCandles(260, 50, 0.0, 1_000_000)},
+	}
+	so, rt, mb := map[string]string{}, map[string]*SectorRotation{}, map[string][]fetcher.StockData{}
+	base := New(Config{}).EnrichWatchlist(items, so, rt, mb, nil)
+	got := New(Config{EnableMomentumFlow: true}).EnrichWatchlist(items, so, rt, mb, nil) // master off
+	for i := range base {
+		if got[i].A.Symbol != base[i].A.Symbol || got[i].RocketScore != base[i].RocketScore ||
+			got[i].WatchAction != base[i].WatchAction || got[i].ExplosionProb != base[i].ExplosionProb {
+			t.Errorf("%s: master-off Momentum changed scoring/order", base[i].A.Symbol)
+		}
+		if got[i].Shadow == nil || got[i].Shadow.Momentum == nil {
+			t.Errorf("%s: Momentum shadow should be attached", base[i].A.Symbol)
+		}
+	}
+}
+
 // 8. VCP + NewHigh together: effBQ still VCP-corrected, fed through the NewHigh ×10 slot.
 func TestC6b2VCPAndNewHighTogether(t *testing.T) {
 	vHigh := &VCPResult{Computed: true, Valid: true, QualityScore: 90}

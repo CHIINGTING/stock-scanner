@@ -133,10 +133,12 @@ func (s *Scanner) EnrichWatchlist(
 		var vcpShadow *VCPResult
 		var nhShadow *NewHighResult
 		var rsShadow *RSResult
+		var momShadow *MomentumState
 		if shadow != nil {
-			vcpShadow = shadow.VCP    // C6b-1: corrects g3 base-quality
-			nhShadow = shadow.NewHigh // C6b-2: replaces g3 NearPreviousHigh sub-score
-			rsShadow = shadow.RS      // C6b-3: replaces g2 relative-strength sub-score
+			vcpShadow = shadow.VCP      // C6b-1: corrects g3 base-quality
+			nhShadow = shadow.NewHigh   // C6b-2: replaces g3 NearPreviousHigh sub-score
+			rsShadow = shadow.RS        // C6b-3: replaces g2 relative-strength sub-score
+			momShadow = shadow.Momentum // C6b-4: final modifier + joint action + prob guardrail
 		}
 
 		rk := computeRocket(rocketInput{
@@ -153,6 +155,16 @@ func (s *Scanner) EnrichWatchlist(
 			newHigh:           nhShadow,
 			rs:                rsShadow,
 			rsWatchThreshold:  s.cfg.RSWatchThreshold,
+			momentum:          momShadow,
+			momentumActive:    s.cfg.EnableSignalGuardrailScoring && s.cfg.EnableMomentumFlow,
+			mfMod: momentumModifiers{
+				Building:     s.cfg.MFScoreModifierBuilding,
+				Continuation: s.cfg.MFScoreModifierContinuation,
+				ShiftUp:      s.cfg.MFScoreModifierShiftUp,
+				Fading:       s.cfg.MFScoreModifierFading,
+				ShiftDown:    s.cfg.MFScoreModifierShiftDown,
+				Cap:          s.cfg.MFScoreModifierCap,
+			},
 		})
 		e.RocketScore = rk.Score
 		e.RocketStage = rk.Stage
