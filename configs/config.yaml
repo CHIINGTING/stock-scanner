@@ -57,6 +57,25 @@ scanner:
   nh_overext_rsi: 75                            # 創 250 日高且 RSI ≥ 此值 → 過熱抑制 ×0.6
   nh_use_adjusted_close: false                  # 與 use_adjusted_close 取 OR
 
+  # ── VCP / 波動收縮型態（C4）──────────────────────────────────────────────
+  # enable_vcp=false（預設）時完全不計算、不影響既有 scoring / report / watchlist /
+  # rotation。如何納入飆股分數屬後續 C6。價格一律以還原收盤計算（close-based）。
+  enable_vcp: false                             # 總開關，預設 false
+  vcp_lookback_days: 60                         # VCP 偵測視窗（交易日）
+  vcp_min_history_days: 40                      # 不足此歷史長度不計算
+  vcp_min_contractions: 2                       # 最少收縮段數（成立門檻）
+  vcp_min_quality_score: 70                     # 品質分門檻（valid = 段數達標 && 品質≥此值）
+  vcp_use_adjusted_close: false                 # 與 use_adjusted_close 取 OR
+
+  # 品質分權重（和 = 100）
+  vcp_tightness_weight: 30                       # 末段收緊程度
+  vcp_volume_dryup_weight: 25                    # 後段量縮
+  vcp_monotonic_weight: 20                       # 收縮幅度逐段遞減
+  vcp_support_hold_weight: 15                    # 低點守住 / 無爆量長黑
+  vcp_near_breakout_weight: 10                   # 接近區間上緣（僅計算，不給建議）
+
+  vcp_zigzag_reversal_pct: 1.5                   # swing 高/低反轉門檻（%）；待校準
+
   kdj:
     k_period: 9
     d_smooth: 3

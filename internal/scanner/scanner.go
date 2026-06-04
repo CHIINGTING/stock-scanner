@@ -51,6 +51,24 @@ type Config struct {
 	NHOverextRSI       float64 `yaml:"nh_overext_rsi"`        // default 75 (overextension dampener)
 	NHUseAdjustedClose bool    `yaml:"nh_use_adjusted_close"` // OR'd with UseAdjustedClose
 
+	// ── VCP / Volatility Contraction Pattern (C4) ────────────────────────────
+	// EnableVCP gates the whole feature. Default false → never computed in the
+	// pipeline; cannot affect existing scoring / report / watchlist / rotation.
+	// vcp.go helpers are pure and only run when explicitly called. Wiring VCP into
+	// rocket_candidate_score is C6.
+	EnableVCP             bool    `yaml:"enable_vcp"`
+	VCPLookbackDays       int     `yaml:"vcp_lookback_days"`        // default 60
+	VCPMinHistoryDays     int     `yaml:"vcp_min_history_days"`     // default 40
+	VCPMinContractions    int     `yaml:"vcp_min_contractions"`     // default 2
+	VCPMinQualityScore    float64 `yaml:"vcp_min_quality_score"`    // default 70
+	VCPUseAdjustedClose   bool    `yaml:"vcp_use_adjusted_close"`   // OR'd with UseAdjustedClose
+	VCPTightnessWeight    float64 `yaml:"vcp_tightness_weight"`     // default 30
+	VCPVolumeDryUpWeight  float64 `yaml:"vcp_volume_dryup_weight"`  // default 25
+	VCPMonotonicWeight    float64 `yaml:"vcp_monotonic_weight"`     // default 20
+	VCPSupportHoldWeight  float64 `yaml:"vcp_support_hold_weight"`  // default 15
+	VCPNearBreakoutWeight float64 `yaml:"vcp_near_breakout_weight"` // default 10
+	VCPZigzagReversalPct  float64 `yaml:"vcp_zigzag_reversal_pct"`  // default 1.5 (swing reversal)
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`
