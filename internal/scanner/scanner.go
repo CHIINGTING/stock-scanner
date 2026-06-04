@@ -69,6 +69,24 @@ type Config struct {
 	VCPNearBreakoutWeight float64 `yaml:"vcp_near_breakout_weight"` // default 10
 	VCPZigzagReversalPct  float64 `yaml:"vcp_zigzag_reversal_pct"`  // default 1.5 (swing reversal)
 
+	// ── MomentumFlow (C5) ────────────────────────────────────────────────────
+	// EnableMomentumFlow gates the whole feature. Default false → never computed
+	// in the pipeline; cannot affect existing scoring / report / watchlist /
+	// rotation. momentum.go helpers are pure and only run when explicitly called.
+	// The RocketStage × MomentumFlow joint decision + RocketScore modifier are C6.
+	EnableMomentumFlow  bool    `yaml:"enable_momentum_flow"`
+	MFMinHistoryDays    int     `yaml:"mf_min_history_days"`    // default 30
+	MFAccelShortWindow  int     `yaml:"mf_accel_short_window"`  // default 3
+	MFAccelLongWindow   int     `yaml:"mf_accel_long_window"`   // default 20
+	MFAccelPosThresh    float64 `yaml:"mf_accel_pos_thresh"`   // default 0.0008 (待校準)
+	MFAccelNegThresh    float64 `yaml:"mf_accel_neg_thresh"`   // default -0.0008 (待校準)
+	MFAccelScale        float64 `yaml:"mf_accel_scale"`        // default 12000 (待校準)
+	MFKeyMA             int     `yaml:"mf_key_ma"`             // default 20
+	MFReclaimLookback   int     `yaml:"mf_reclaim_lookback"`   // default 5
+	MFZigzagReversalPct float64 `yaml:"mf_zigzag_reversal_pct"`// default 1.5
+	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`   // default 20
+	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"` // OR'd with UseAdjustedClose
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

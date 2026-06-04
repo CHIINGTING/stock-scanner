@@ -76,6 +76,22 @@ scanner:
 
   vcp_zigzag_reversal_pct: 1.5                   # swing 高/低反轉門檻（%）；待校準
 
+  # ── MomentumFlow（C5）────────────────────────────────────────────────────
+  # 個股動能方向。enable_momentum_flow=false（預設）時完全不計算、不影響既有 scoring /
+  # report / watchlist / rotation。RocketStage×MomentumFlow 聯合決策與分數修正屬後續 C6。
+  enable_momentum_flow: false                    # 總開關，預設 false
+  mf_min_history_days: 30                         # 不足此歷史長度不計算
+  mf_accel_short_window: 3                        # 短步調視窗
+  mf_accel_long_window: 20                        # 長步調視窗
+  mf_accel_pos_thresh: 0.0008                     # accel > 此 → 加速（待校準）
+  mf_accel_neg_thresh: -0.0008                    # accel < 此 → 減速（待校準）
+  mf_accel_scale: 12000                           # SlopeAccel→分數縮放（待校準）
+  mf_key_ma: 20                                   # 結構關鍵均線
+  mf_reclaim_lookback: 5                          # 站回 / 跌破關鍵均線的「先前」視窗
+  mf_zigzag_reversal_pct: 1.5                     # swing 反轉門檻（與 VCP 同源預設）
+  mf_rsi_div_lookback: 20                         # 背離比較視窗
+  mf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+
   kdj:
     k_period: 9
     d_smooth: 3
