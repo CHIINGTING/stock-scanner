@@ -48,6 +48,10 @@ type rocketInput struct {
 	sectorStage       RotationStage
 	sectorAvgReturn20 float64
 	hasSector         bool
+
+	// ── C6b guardrail scoring (shadow signals; only used when guardrailScoring) ──
+	guardrailScoring bool       // master flag: shadow may influence scoring
+	vcp              *VCPResult // C6b-1: corrects g3 base-quality (nil = no effect)
 }
 
 type rocketOutput struct {
@@ -157,7 +161,13 @@ func computeRocket(in rocketInput) rocketOutput {
 	g2 = clampFloat(g2, 0, 20)
 
 	// 3) 技術接近噴出（max 25）
-	g3 := in.consol.BaseQualityScore / 100 * 12
+	// C6b-1: VCP may CORRECT (raise) the base-quality input — never a new group and
+	// never lowering an already-good base. Gated by the master flag + valid VCP.
+	effBQ := in.consol.BaseQualityScore
+	if in.guardrailScoring && in.vcp != nil && in.vcp.Valid {
+		effBQ = math.Max(in.consol.BaseQualityScore, in.vcp.QualityScore)
+	}
+	g3 := effBQ / 100 * 12
 	if in.consol.NearPreviousHigh {
 		g3 += 6
 	}

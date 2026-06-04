@@ -100,39 +100,15 @@ func (s *Scanner) EnrichWatchlist(
 			e.SectorFlowDir = FlowNeutral
 		}
 
-		// Consolidation + backtest + rocket.
+		// Consolidation + backtest.
 		e.Consol = analyzeConsolidation(item.Candles, ind, flowDir == FlowInflow)
 		e.Backtest = s.runBacktest(item.Candles, ind, members[e.Sector])
 
-		rk := computeRocket(rocketInput{
-			candles:           item.Candles,
-			ind:               ind,
-			consol:            e.Consol,
-			bt:                e.Backtest,
-			flowDir:           flowDir,
-			sectorStage:       e.SectorStage,
-			sectorAvgReturn20: sectorAvg,
-			hasSector:         e.HasSector,
-		})
-		e.RocketScore = rk.Score
-		e.RocketStage = rk.Stage
-		e.ExplosionProb = rk.ExplosionProb
-		e.DaysToWatch = rk.DaysToWatch
-		e.BreakoutPrice = rk.BreakoutPrice
-		e.SupportPrice = rk.SupportPrice
-		e.StopLossPrice = rk.StopLossPrice
-		e.EntryZone = rk.EntryZone
-		e.TakeProfitZone = rk.TakeProfitZone
-		e.WatchAction = rk.WatchAction
-		e.Reasons = rk.Reasons
-		e.RiskLabel = rk.RiskLabel
-		e.RiskWarning = rk.RiskWarning
-
-		// ── C6a shadow signals: compute + attach only; NEVER read by any score /
-		// stage / action / sort above. The whole container stays nil unless at least
-		// one shadow flag is on, so flag=false output is byte-identical. ──
+		// ── Shadow signals: computed BEFORE rocket so C6b guardrail scoring can
+		// consume them. The whole container stays nil unless a shadow flag is on. ──
+		var shadow *ShadowSignals
 		if s.cfg.EnableRSRank || s.cfg.EnableNewHigh || s.cfg.EnableVCP || s.cfg.EnableMomentumFlow {
-			shadow := &ShadowSignals{}
+			shadow = &ShadowSignals{}
 			if s.cfg.EnableRSRank && rsTable != nil {
 				if r, ok := rsTable[item.Symbol]; ok {
 					shadow.RS = &r
@@ -150,8 +126,43 @@ func (s *Scanner) EnrichWatchlist(
 				m := ComputeMomentum(item.Candles, ind.RSI, a.VolumeRatio, momentumConfigFrom(s.cfg))
 				shadow.Momentum = &m
 			}
-			e.Shadow = shadow
 		}
+
+		// C6b-1: VCP may correct g3's base-quality slot, but only when the master
+		// guardrail flag is on (gating happens inside computeRocket).
+		var vcpShadow *VCPResult
+		if shadow != nil {
+			vcpShadow = shadow.VCP
+		}
+
+		rk := computeRocket(rocketInput{
+			candles:           item.Candles,
+			ind:               ind,
+			consol:            e.Consol,
+			bt:                e.Backtest,
+			flowDir:           flowDir,
+			sectorStage:       e.SectorStage,
+			sectorAvgReturn20: sectorAvg,
+			hasSector:         e.HasSector,
+			guardrailScoring:  s.cfg.EnableSignalGuardrailScoring,
+			vcp:               vcpShadow,
+		})
+		e.RocketScore = rk.Score
+		e.RocketStage = rk.Stage
+		e.ExplosionProb = rk.ExplosionProb
+		e.DaysToWatch = rk.DaysToWatch
+		e.BreakoutPrice = rk.BreakoutPrice
+		e.SupportPrice = rk.SupportPrice
+		e.StopLossPrice = rk.StopLossPrice
+		e.EntryZone = rk.EntryZone
+		e.TakeProfitZone = rk.TakeProfitZone
+		e.WatchAction = rk.WatchAction
+		e.Reasons = rk.Reasons
+		e.RiskLabel = rk.RiskLabel
+		e.RiskWarning = rk.RiskWarning
+
+		// Attach shadow for inspection (still never scored beyond the gated VCP path).
+		e.Shadow = shadow
 
 		out = append(out, e)
 	}

@@ -21,6 +21,14 @@ type Config struct {
 	// output exactly. Read prices via fetcher.PriceForCalc(candle, UseAdjustedClose).
 	UseAdjustedClose bool `yaml:"use_adjusted_close"`
 
+	// EnableSignalGuardrailScoring is the C6b MASTER switch: only when true may the
+	// shadow signals (RS / NewHigh / VCP / MomentumFlow) actually influence scoring.
+	// Default false → even with all four signal flags on, behaviour stays C6a
+	// shadow-only (compute+attach, no scoring change). Two-layer gating:
+	//   signal flags     = whether the shadow is computed
+	//   this master flag = whether the shadow may affect score / action / probability
+	EnableSignalGuardrailScoring bool `yaml:"enable_signal_guardrail_scoring"`
+
 	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
 	// EnableRSRank gates the whole RS feature. Default false → RS is never
 	// computed in the pipeline and cannot affect existing scoring / report /

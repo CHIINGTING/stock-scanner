@@ -26,6 +26,12 @@ scanner:
   # 設 true 後，後續 RS / 新高 / VCP / 回測才會改用還原收盤（AdjClose 缺值時自動 fallback Close）。
   use_adjusted_close: false
 
+  # ── 訊號 guardrail scoring 總開關（C6b）────────────────────────────────────
+  # 雙層 flag 的第二層：下方四個 enable_* 只決定「是否計算 shadow」；唯有此 master
+  # flag=true 時，shadow（RS/NewHigh/VCP/MomentumFlow）才可影響 rocket 分數/動作/機率。
+  # 預設 false → 即使四個訊號全開，也維持 C6a shadow-only，不改任何既有分數。
+  enable_signal_guardrail_scoring: false
+
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
   # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
   # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
