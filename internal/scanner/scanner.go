@@ -29,6 +29,12 @@ type Config struct {
 	//   this master flag = whether the shadow may affect score / action / probability
 	EnableSignalGuardrailScoring bool `yaml:"enable_signal_guardrail_scoring"`
 
+	// ShowGuardrailSignals is a DISPLAY-ONLY flag (C7): when true the watchlist card
+	// shows a "Guardrail Signals" section explaining the shadow signals & guardrails.
+	// Default false → report/UI unchanged. Never affects score / action / probability
+	// / sorting — it is independent of EnableSignalGuardrailScoring.
+	ShowGuardrailSignals bool `yaml:"show_guardrail_signals"`
+
 	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
 	// EnableRSRank gates the whole RS feature. Default false → RS is never
 	// computed in the pipeline and cannot affect existing scoring / report /

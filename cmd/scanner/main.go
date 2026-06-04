@@ -179,7 +179,17 @@ func main() {
 	// ── 4. Report ─────────────────────────────────────────────────────────────
 	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
-	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate); err != nil {
+	gv := report.GuardrailViewOptions{
+		Show:                        cfg.Scanner.ShowGuardrailSignals,
+		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
+		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
+		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
+		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
+		MFScoreModifierShiftUp:      cfg.Scanner.MFScoreModifierShiftUp,
+		MFScoreModifierFading:       cfg.Scanner.MFScoreModifierFading,
+		MFScoreModifierShiftDown:    cfg.Scanner.MFScoreModifierShiftDown,
+	}
+	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv); err != nil {
 		log.Fatalf("report: %v", err)
 	}
 }

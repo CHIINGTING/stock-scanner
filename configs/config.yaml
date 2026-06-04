@@ -32,6 +32,10 @@ scanner:
   # 預設 false → 即使四個訊號全開，也維持 C6a shadow-only，不改任何既有分數。
   enable_signal_guardrail_scoring: false
 
+  # 純顯示開關（C7）：true 時 Watchlist 卡片顯示 Guardrail Signals 解釋區塊（實驗性）。
+  # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
+  show_guardrail_signals: false
+
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
   # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
   # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。

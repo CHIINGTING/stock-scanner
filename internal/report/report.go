@@ -47,6 +47,54 @@ func calcSummary(items []scanner.StockAnalysis) PortfolioSummary {
 	return s
 }
 
+// GuardrailViewOptions carries the minimal data report.go needs to DISPLAY the
+// C6a/C6b shadow signals & guardrails. It is display-only: report never scores.
+type GuardrailViewOptions struct {
+	Show                    bool
+	GuardrailScoringEnabled bool
+	RSWatchThreshold        float64
+
+	MFScoreModifierBuilding     float64
+	MFScoreModifierContinuation float64
+	MFScoreModifierShiftUp      float64
+	MFScoreModifierFading       float64
+	MFScoreModifierShiftDown    float64
+}
+
+// vcpDepths renders a contraction-depth slice as "18→10→5".
+func vcpDepths(d []float64) string {
+	if len(d) == 0 {
+		return "—"
+	}
+	parts := make([]string, len(d))
+	for i, x := range d {
+		parts[i] = fmt.Sprintf("%.0f", x)
+	}
+	return strings.Join(parts, "→")
+}
+
+// mfModifier renders the configured score modifier for a momentum flow, e.g. "+5".
+// Returns template.HTML so the leading "+" is not escaped to "&#43;" (content is
+// only a sign and a number — no injection risk).
+func mfModifier(flow scanner.MomentumFlow, gv GuardrailViewOptions) template.HTML {
+	var v float64
+	switch flow {
+	case scanner.MomentumBuilding:
+		v = gv.MFScoreModifierBuilding
+	case scanner.MomentumContinuation:
+		v = gv.MFScoreModifierContinuation
+	case scanner.StructuralShiftUp:
+		v = gv.MFScoreModifierShiftUp
+	case scanner.MomentumFading:
+		v = gv.MFScoreModifierFading
+	case scanner.StructuralShiftDown:
+		v = gv.MFScoreModifierShiftDown
+	default:
+		return "0"
+	}
+	return template.HTML(fmt.Sprintf("%+.0f", v))
+}
+
 type reportData struct {
 	Date         string
 	MarketLabel  string
@@ -55,6 +103,7 @@ type reportData struct {
 	Watchlist    []scanner.WatchlistEntry
 	Rotation     []scanner.SectorRotation
 	PortfolioSum PortfolioSummary
+	GV           GuardrailViewOptions
 }
 
 func (r *Report) Generate(
@@ -63,6 +112,7 @@ func (r *Report) Generate(
 	rotation []scanner.SectorRotation,
 	marketLabel string,
 	date time.Time,
+	gv GuardrailViewOptions,
 ) error {
 	if err := os.MkdirAll(r.cfg.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
@@ -78,6 +128,7 @@ func (r *Report) Generate(
 		Watchlist:    watchlist,
 		Rotation:     rotation,
 		PortfolioSum: calcSummary(portfolio),
+		GV:           gv,
 	}
 
 	fname := filepath.Join(r.cfg.OutputDir, fmt.Sprintf("report_%s.html", date.Format("20060102")))
@@ -468,6 +519,8 @@ func (r *Report) Generate(
 				return "lvl-weak"
 			}
 		},
+		"vcpDepths":  vcpDepths,
+		"mfModifier": mfModifier,
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -969,6 +1022,38 @@ th.rotscore{min-width:120px}
             <div class="risk-tag">{{ $e.RiskLabel }}</div>
             <div class="wl-note">{{ $e.RiskWarning }}</div>
           </div>
+          {{- if $.GV.Show }}
+          <div class="wl-sec wl-guardrail">
+            <h4>⑦ Guardrail Signals（實驗性）</h4>
+            <div class="wl-note">此區為實驗性輔助訊號，參數尚待實機校準。</div>
+            {{- if $.GV.GuardrailScoringEnabled }}
+            <div class="wl-note">scoring 已啟用：以下訊號若符合條件，可能已影響分數／動作／機率（依規則為「符合觸發條件」，非保證已套用）。</div>
+            {{- else }}
+            <div class="wl-note">scoring 未啟用，以下僅為 shadow 訊號，不參與分數。</div>
+            {{- end }}
+            {{- with $e.Shadow }}
+              {{- with .RS }}
+              <div>RS Rank：{{ f1 .RSRankPercentile }}　RS Score：{{ f1 .RSScore }}　gate threshold：{{ f1 $.GV.RSWatchThreshold }}</div>
+              {{- if lt .RSRankPercentile $.GV.RSWatchThreshold }}<div><b>符合 RS gate 觸發條件（ExplosionProb 上限 MEDIUM）</b></div>{{- end }}
+              {{- if not $.GV.GuardrailScoringEnabled }}<div class="wl-note">僅顯示，不參與分數</div>{{- end }}
+              {{- end }}
+              {{- with .NewHigh }}
+              <div>距 52 週高：{{ f1 .DistanceFrom52wHighPct }}%　NewHighScore：{{ f1 .NewHighScore }}</div>
+              <div>Near52wHigh：{{ .Near52wHigh }}　BreakoutWatch：{{ .BreakoutWatch }}　H20/H60/H120/H250：{{ .H20 }}/{{ .H60 }}/{{ .H120 }}/{{ .H250 }}</div>
+              {{- end }}
+              {{- with .VCP }}
+              <div>VCP Valid：{{ .Valid }}　Grade：{{ .Grade }}　QualityScore：{{ f1 .QualityScore }}　Depths：{{ vcpDepths .Depths }}</div>
+              {{- if and .Valid (gt .QualityScore $e.Consol.BaseQualityScore) }}<div><b>符合 base quality 上修條件</b></div>{{- end }}
+              {{- end }}
+              {{- with .Momentum }}
+              <div>Flow：{{ .Flow }}　Score：{{ f1 .Score }}　Structure：{{ .StructureTrend }}　Divergence：{{ .Divergence }}</div>
+              <div>modifier：{{ mfModifier .Flow $.GV }}{{- if not $.GV.GuardrailScoringEnabled }}（僅供參考，未套用）{{- end }}</div>
+              {{- end }}
+            {{- else }}
+            <div class="wl-note">未啟用訊號計算（無 shadow）。</div>
+            {{- end }}
+          </div>
+          {{- end }}
         </div>
       </div>
     </td>
