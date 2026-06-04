@@ -28,6 +28,15 @@ type yahooResponse struct {
 				Symbol    string `json:"symbol"`
 				ShortName string `json:"shortName"`
 				LongName  string `json:"longName"`
+				// Latest session snapshot. Yahoo sometimes returns the most recent
+				// daily bar with null OHLCV in the quote arrays while the real values
+				// live here — used to backfill the latest bar (see parse loop).
+				RegularMarketPrice   *float64 `json:"regularMarketPrice"`
+				RegularMarketTime    int64    `json:"regularMarketTime"`
+				RegularMarketOpen    *float64 `json:"regularMarketOpen"`
+				RegularMarketDayHigh *float64 `json:"regularMarketDayHigh"`
+				RegularMarketDayLow  *float64 `json:"regularMarketDayLow"`
+				RegularMarketVolume  *int64   `json:"regularMarketVolume"`
 			} `json:"meta"`
 			Timestamp  []int64 `json:"timestamp"`
 			Indicators struct {
@@ -253,6 +262,14 @@ func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (S
 			return candles[i].Date.Before(candles[j].Date)
 		})
 
+		// Yahoo quirk: the most recent daily bar can come back with null OHLCV in the
+		// quote arrays even after the session has closed; the real values live in meta.
+		// Backfill that bar from meta so the latest close isn't silently dropped
+		// (otherwise the report shows yesterday's price).
+		candles = backfillLatestFromMeta(candles, res.Meta.RegularMarketPrice, res.Meta.RegularMarketTime,
+			res.Meta.RegularMarketOpen, res.Meta.RegularMarketDayHigh, res.Meta.RegularMarketDayLow,
+			res.Meta.RegularMarketVolume)
+
 		result := StockData{Symbol: code, Name: name, Market: market, Candles: candles}
 
 		// 6. Store in cache on success
@@ -263,4 +280,61 @@ func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (S
 
 	return StockData{Symbol: code}, fmt.Errorf("yahoo %s failed after %d attempts: %w",
 		ticker, maxAttempts, lastErr)
+}
+
+// taipeiLoc is UTC+8, used to bucket timestamps into Taiwan trading days.
+var taipeiLoc = time.FixedZone("CST", 8*3600)
+
+// tradingDay returns a comparable YYYYMMDD integer for t in Taiwan time.
+func tradingDay(t time.Time) int {
+	y, m, d := t.In(taipeiLoc).Date()
+	return y*10000 + int(m)*100 + d
+}
+
+// backfillLatestFromMeta appends a synthesized latest bar from Yahoo's meta snapshot
+// when it represents a newer trading day than the last parsed candle. This recovers
+// the most recent session, which Yahoo sometimes returns with null OHLCV in the
+// quote arrays. No-op if meta is missing/older/same day.
+func backfillLatestFromMeta(candles []Candle, price *float64, mktTime int64,
+	open, high, low *float64, vol *int64) []Candle {
+	if price == nil || *price <= 0 || mktTime <= 0 {
+		return candles
+	}
+	metaDate := time.Unix(mktTime, 0).UTC()
+	if len(candles) > 0 && tradingDay(metaDate) <= tradingDay(candles[len(candles)-1].Date) {
+		return candles // quote arrays already include this (or a newer) session
+	}
+	p := *price
+	bar := Candle{
+		Date:   metaDate,
+		Open:   derefOrF(open, p),
+		High:   derefOrF(high, p),
+		Low:    derefOrF(low, p),
+		Close:  p,
+		Volume: derefOrI(vol, 0),
+	}
+	if bar.High < bar.Close {
+		bar.High = bar.Close
+	}
+	if bar.Low <= 0 || bar.Low > bar.Close {
+		bar.Low = bar.Close
+	}
+	if bar.Open <= 0 {
+		bar.Open = bar.Close
+	}
+	return append(candles, bar)
+}
+
+func derefOrF(p *float64, fallback float64) float64 {
+	if p == nil || math.IsNaN(*p) {
+		return fallback
+	}
+	return *p
+}
+
+func derefOrI(p *int64, fallback int64) int64 {
+	if p == nil {
+		return fallback
+	}
+	return *p
 }

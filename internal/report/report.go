@@ -354,6 +354,67 @@ func (r *Report) Generate(
 				return "act-wait"
 			}
 		},
+		// stagePriority：階段排序優先級（數字越大＝越接近噴出，DESC 時排最前）
+		"stagePriority": func(st scanner.RocketStage) int {
+			switch st {
+			case scanner.StageBreakoutStart:
+				return 7 // 起漲 — 最可能噴
+			case scanner.StagePreBreakout:
+				return 6 // 突破前 — 最接近突破
+			case scanner.StageMainRun:
+				return 5 // 主升
+			case scanner.StageBaseBuilding:
+				return 4 // 築底 — 需要準備
+			case scanner.StageOverheated:
+				return 3 // 過熱
+			case scanner.StageNotReady:
+				return 2 // 未就緒
+			case scanner.StageFailed:
+				return 1 // 失敗
+			default:
+				return 0
+			}
+		},
+		// actionPriority：操作建議排序優先級（數字越大＝越該出手，DESC 時排最前）
+		"actionPriority": func(a scanner.WatchAction) int {
+			switch a {
+			case scanner.ActBreakoutBuy:
+				return 7 // 突破買進
+			case scanner.ActPullbackBuy:
+				return 6 // 回拉買進
+			case scanner.ActPrepare:
+				return 5 // 準備進場
+			case scanner.ActWatchClose:
+				return 4 // 密切觀察
+			case scanner.ActTakeProfit:
+				return 3 // 停利
+			case scanner.ActWait:
+				return 2 // 等待
+			case scanner.ActRemove:
+				return 1 // 移除
+			default:
+				return 0
+			}
+		},
+		// riskPriority：風險排序優先級（數字越大＝風險越高，DESC 時排最前）
+		"riskPriority": func(label string) int {
+			switch label {
+			case "跌破支撐":
+				return 7
+			case "追高":
+				return 6
+			case "族群轉弱":
+				return 5
+			case "假突破":
+				return 4
+			case "量不足":
+				return 3
+			case "上影/收弱":
+				return 2
+			default: // "—" 或無風險
+				return 1
+			}
+		},
 		"bucketLabel": func(b scanner.ConsolBucket) string {
 			switch b {
 			case scanner.MicroBase:
@@ -635,6 +696,10 @@ h1 small{font-size:.78rem;color:#64748b;font-weight:400;margin-left:8px}
 table{width:100%;border-collapse:collapse;background:#111827;border-radius:10px;overflow:hidden;margin-bottom:6px}
 thead{background:#0c1220}
 th{padding:8px 10px;text-align:left;font-weight:600;color:#475569;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #1e3a5f;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:#93c5fd}
+th.sort-active{color:#60a5fa}
+.sort-ico{display:inline-block;width:.8em;color:#60a5fa;font-size:.85em}
 th.r,td.r{text-align:right}
 td{padding:7px 10px;border-bottom:1px solid #131e2e;vertical-align:top}
 tr:last-child td{border-bottom:none}
@@ -838,14 +903,19 @@ th.rotscore{min-width:120px}
 <div class="rot-intro">🚀 <b>飆股候選追蹤</b>：Scanner 找標的，Watchlist 判斷它是不是<b>快變飆股</b>。點任一檔展開決策卡片，回答：要等突破還是拉回？失敗跌破哪裡移除？型態過去成功率高不高？</div>
 <table>
   <thead><tr>
-    <th>#</th><th>股票</th><th>族群</th>
-    <th class="rotscore">飆股分數</th><th>階段</th>
-    <th>操作建議</th><th class="r">噴出</th><th>風險</th><th></th>
+    <th>#</th><th>股票</th>
+    <th class="sortable" onclick="sortWatch('sector',this)">族群 <span class="sort-ico"></span></th>
+    <th class="rotscore sortable" onclick="sortWatch('score',this)">飆股分數 <span class="sort-ico"></span></th>
+    <th class="sortable" onclick="sortWatch('stage',this)">階段 <span class="sort-ico"></span></th>
+    <th class="sortable" onclick="sortWatch('action',this)">操作建議 <span class="sort-ico"></span></th>
+    <th class="r">噴出</th>
+    <th class="sortable" onclick="sortWatch('risk',this)">風險 <span class="sort-ico"></span></th>
+    <th></th>
   </tr></thead>
   <tbody>
   {{ range $i, $e := .Watchlist }}
-  <tr class="sector-row" onclick="toggleWatch({{ $i }})">
-    <td class="neu">{{ inc $i }}</td>
+  <tr class="sector-row" onclick="toggleWatch({{ $i }})" data-score="{{ $e.RocketScore }}" data-sector="{{ $e.Sector }}" data-stage="{{ stagePriority $e.RocketStage }}" data-action="{{ actionPriority $e.WatchAction }}" data-risk="{{ riskPriority $e.RiskLabel }}">
+    <td class="neu wl-num">{{ inc $i }}</td>
     <td><span class="sym">{{ $e.A.Symbol }}</span> <span class="name-col">{{ $e.A.Name }}</span></td>
     <td class="name-col">{{ if $e.Sector }}{{ $e.Sector }}{{ else }}—{{ end }}</td>
     <td class="rotscore">{{ rocketGauge $e.RocketScore }}</td>
@@ -1045,6 +1115,48 @@ function toggleWatch(i){
   if(!row)return;
   var open=row.classList.toggle('open');
   if(caret)caret.textContent=open?'▾':'▸';
+}
+// 飆股候選表格排序：第一次點 DESC，再點 ASC。
+// score 用數字；stage/action/risk 用自訂優先級；sector 用字串（同族群內再依分數高到低）。
+var wlSort={key:null,dir:null};
+function sortWatch(key,th){
+  var tbody=th.closest('table').querySelector('tbody');
+  // 同欄再點則反向，否則預設 DESC（高到低／優先級高到低）
+  var dir=(wlSort.key===key&&wlSort.dir==='desc')?'asc':'desc';
+  wlSort={key:key,dir:dir};
+  // 收集主列＋明細列成對
+  var pairs=[];
+  tbody.querySelectorAll('tr.sector-row').forEach(function(main){
+    pairs.push([main,main.nextElementSibling]);
+  });
+  var sign=(dir==='desc')?-1:1;
+  pairs.sort(function(a,b){
+    var ra=a[0],rb=b[0],c;
+    if(key==='sector'){
+      var sa=ra.getAttribute('data-sector')||'',sb=rb.getAttribute('data-sector')||'';
+      c=sa.localeCompare(sb,'zh-Hant');
+      if(c!==0)return sign*c;
+      // 同族群：分數高到低，方便看「某族群裡誰最強」
+      return (+rb.getAttribute('data-score'))-(+ra.getAttribute('data-score'));
+    }
+    c=(+ra.getAttribute('data-'+key))-(+rb.getAttribute('data-'+key));
+    return sign*c;
+  });
+  pairs.forEach(function(p,idx){
+    tbody.appendChild(p[0]);
+    if(p[1])tbody.appendChild(p[1]);
+    var num=p[0].querySelector('.wl-num');
+    if(num)num.textContent=idx+1;
+  });
+  // 更新表頭排序方向 icon
+  th.closest('tr').querySelectorAll('th').forEach(function(h){
+    h.classList.remove('sort-active');
+    var ico=h.querySelector('.sort-ico');
+    if(ico)ico.textContent='';
+  });
+  th.classList.add('sort-active');
+  var ico=th.querySelector('.sort-ico');
+  if(ico)ico.textContent=(dir==='desc')?'▼':'▲';
 }
 </script>
 </body>
