@@ -151,6 +151,114 @@ func TestC6b2MasterFlagOffGolden(t *testing.T) {
 	}
 }
 
+// ── C6b-3: RS replaces the g2 relative-strength sub-score + leadership gate ──
+
+// rsRocketInput builds a rocketInput with a controllable RS shadow. hasSector=false
+// so the fallback relative-strength sub-score is a fixed +5, and SupportHoldScore is
+// forced ≥60 so the support sub always fires → score deltas isolate g2 exactly.
+func rsRocketInput(rs *RSResult, guardrail bool, rsWatch float64) rocketInput {
+	candles := makeCandles(60, 50, 0.0, 1_000_000)
+	s := New(Config{})
+	ind := s.calcIndicators(candles)
+	consol := analyzeConsolidation(candles, ind, false)
+	consol.BaseQualityScore = 50
+	consol.SupportHoldScore = 80
+	return rocketInput{
+		candles: candles, ind: ind, consol: consol, bt: Backtest{},
+		flowDir: FlowNeutral, hasSector: false,
+		guardrailScoring: guardrail, rs: rs, rsWatchThreshold: rsWatch,
+	}
+}
+
+func rsResult(rank float64, computed bool) *RSResult {
+	return &RSResult{Computed: computed, RSRankPercentile: rank, RSScore: rank}
+}
+
+func TestC6b3RSRankScoreBoundaries(t *testing.T) {
+	for _, c := range []struct {
+		p    float64
+		want float64
+	}{{95, 10}, {90, 10}, {89, 7}, {80, 7}, {70, 4}, {69, 1}, {1, 1}, {0, 0}, {-3, 0}} {
+		if got := rsRankScore(c.p); got != c.want {
+			t.Errorf("rsRankScore(%.0f)=%.0f want %.0f", c.p, got, c.want)
+		}
+	}
+}
+
+func TestC6b3RSLeadershipGate(t *testing.T) {
+	cases := []struct {
+		prob      string
+		useRS     bool
+		rank, thr float64
+		want      string
+	}{
+		{"HIGH", true, 60, 70, "MEDIUM"},  // below threshold → capped
+		{"HIGH", true, 80, 70, "HIGH"},    // at/above → unchanged
+		{"MEDIUM", true, 60, 70, "MEDIUM"}, // medium stays medium
+		{"LOW", true, 60, 70, "LOW"},      // never pushed to/from LOW
+		{"HIGH", false, 60, 70, "HIGH"},   // RS inactive → unchanged
+		{"HIGH", true, 0, 70, "HIGH"},     // invalid rank → unchanged
+		{"HIGH", true, 60, 0, "MEDIUM"},   // threshold≤0 → default 70 → capped
+	}
+	for _, c := range cases {
+		if got := applyRSLeadershipGate(c.prob, c.useRS, c.rank, c.thr); got != c.want {
+			t.Errorf("gate(%s,useRS=%v,rank=%.0f,thr=%.0f)=%s want %s", c.prob, c.useRS, c.rank, c.thr, got, c.want)
+		}
+	}
+}
+
+// RS replaces the g2 relative-strength sub-score (no new group, g2≤20). Score delta
+// vs the all-off baseline equals exactly the g2 sub-score change (RS only touches g2).
+func TestC6b3RSReplacesG2RelStrength(t *testing.T) {
+	off := computeRocket(rsRocketInput(rsResult(95, true), false, 70)).Score        // master off → fallback
+	baseFallback := computeRocket(rsRocketInput(nil, true, 70)).Score               // RS nil → fallback (==off semantics)
+	if off != baseFallback {
+		t.Fatalf("master-off and nil-RS should both use fallback: %d vs %d", off, baseFallback)
+	}
+	// RS on, rank 95: g2 sub change = (rsRankScore10 + support4) − (relstr5 + support6) = +3.
+	on95 := computeRocket(rsRocketInput(rsResult(95, true), true, 70)).Score
+	if on95-baseFallback != 3 {
+		t.Errorf("rank95 expected +3 vs fallback (g2-only), got delta %d", on95-baseFallback)
+	}
+	// RS on, rank 60: g2 sub change = (1 + 4) − (5 + 6) = −6.
+	on60 := computeRocket(rsRocketInput(rsResult(60, true), true, 70)).Score
+	if on60-baseFallback != -6 {
+		t.Errorf("rank60 expected -6 vs fallback (g2-only), got delta %d", on60-baseFallback)
+	}
+}
+
+// RS invalid paths → fallback, no panic, no cap.
+func TestC6b3RSFallbackPaths(t *testing.T) {
+	baseFallback := computeRocket(rsRocketInput(nil, true, 70)).Score
+	if got := computeRocket(rsRocketInput(rsResult(95, false), true, 70)).Score; got != baseFallback {
+		t.Errorf("Computed=false must fall back: got %d want %d", got, baseFallback)
+	}
+	if got := computeRocket(rsRocketInput(rsResult(0, true), true, 70)).Score; got != baseFallback {
+		t.Errorf("RSRankPercentile<=0 must fall back: got %d want %d", got, baseFallback)
+	}
+}
+
+// TestC6b3MasterFlagOffGolden: master off + rs on → only shadow attached, scoring/order unchanged.
+func TestC6b3MasterFlagOffGolden(t *testing.T) {
+	items := []fetcher.StockData{
+		{Symbol: "1111", Name: "Strong", Source: "watchlist", Candles: makeCandles(260, 50, 0.4, 2_000_000)},
+		{Symbol: "2222", Name: "Flat", Source: "watchlist", Candles: makeCandles(260, 50, 0.0, 1_000_000)},
+	}
+	so, rt, mb := map[string]string{}, map[string]*SectorRotation{}, map[string][]fetcher.StockData{}
+	base := New(Config{}).EnrichWatchlist(items, so, rt, mb, nil)
+	on := New(Config{EnableRSRank: true}) // master off
+	got := on.EnrichWatchlist(items, so, rt, mb, on.BuildRSTable(items))
+	for i := range base {
+		if got[i].A.Symbol != base[i].A.Symbol || got[i].RocketScore != base[i].RocketScore ||
+			got[i].WatchAction != base[i].WatchAction || got[i].ExplosionProb != base[i].ExplosionProb {
+			t.Errorf("%s: master-off RS changed scoring/order", base[i].A.Symbol)
+		}
+		if got[i].Shadow == nil || got[i].Shadow.RS == nil {
+			t.Errorf("%s: RS shadow should be attached", base[i].A.Symbol)
+		}
+	}
+}
+
 // 8. VCP + NewHigh together: effBQ still VCP-corrected, fed through the NewHigh ×10 slot.
 func TestC6b2VCPAndNewHighTogether(t *testing.T) {
 	vHigh := &VCPResult{Computed: true, Valid: true, QualityScore: 90}

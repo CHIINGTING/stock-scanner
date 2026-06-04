@@ -132,9 +132,11 @@ func (s *Scanner) EnrichWatchlist(
 		// flag is on (gating happens inside computeRocket).
 		var vcpShadow *VCPResult
 		var nhShadow *NewHighResult
+		var rsShadow *RSResult
 		if shadow != nil {
-			vcpShadow = shadow.VCP // C6b-1: corrects g3 base-quality
+			vcpShadow = shadow.VCP    // C6b-1: corrects g3 base-quality
 			nhShadow = shadow.NewHigh // C6b-2: replaces g3 NearPreviousHigh sub-score
+			rsShadow = shadow.RS      // C6b-3: replaces g2 relative-strength sub-score
 		}
 
 		rk := computeRocket(rocketInput{
@@ -149,6 +151,8 @@ func (s *Scanner) EnrichWatchlist(
 			guardrailScoring:  s.cfg.EnableSignalGuardrailScoring,
 			vcp:               vcpShadow,
 			newHigh:           nhShadow,
+			rs:                rsShadow,
+			rsWatchThreshold:  s.cfg.RSWatchThreshold,
 		})
 		e.RocketScore = rk.Score
 		e.RocketStage = rk.Stage

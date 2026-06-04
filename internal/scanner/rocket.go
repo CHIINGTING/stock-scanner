@@ -53,6 +53,8 @@ type rocketInput struct {
 	guardrailScoring bool           // master flag: shadow may influence scoring
 	vcp              *VCPResult     // C6b-1: corrects g3 base-quality (nil = no effect)
 	newHigh          *NewHighResult // C6b-2: replaces g3 NearPreviousHigh sub-score
+	rs               *RSResult      // C6b-3: replaces g2 relative-strength sub-score
+	rsWatchThreshold float64        // C6b-3: RS leadership gate (≤0 → default 70)
 }
 
 type rocketOutput struct {
@@ -138,8 +140,13 @@ func computeRocket(in rocketInput) rocketOutput {
 	g1 = clampFloat(g1, 0, 25)
 
 	// 2) 個股相對強勢（max 20）
+	// C6b-3: full-market RS rank REPLACES the sector-relative sub-score (no new group;
+	// Support rescaled 6→4 so the cap stays 20). Gated by master flag + valid RS.
 	g2 := 0.0
-	if in.hasSector {
+	useRS := in.guardrailScoring && in.rs != nil && in.rs.Computed && in.rs.RSRankPercentile > 0
+	if useRS {
+		g2 += rsRankScore(in.rs.RSRankPercentile) // max 10
+	} else if in.hasSector {
 		if ret20 > in.sectorAvgReturn20 {
 			g2 += 8
 		} else {
@@ -157,7 +164,11 @@ func computeRocket(in rocketInput) rocketOutput {
 		g2 += 2
 	}
 	if in.consol.SupportHoldScore >= 60 {
-		g2 += 6
+		if useRS {
+			g2 += 4
+		} else {
+			g2 += 6
+		}
 	}
 	g2 = clampFloat(g2, 0, 20)
 
@@ -252,6 +263,13 @@ func computeRocket(in rocketInput) rocketOutput {
 
 	// ── 衍生 ──────────────────────────────────────────────────────────────────
 	out.ExplosionProb = explosionProb(out.Stage, out.Score)
+	// C6b-3: RS leadership gate — non-leaders cannot rate HIGH probability. Caps to
+	// MEDIUM only (never LOW); affects ExplosionProb category only, nothing else.
+	rsRank := 0.0
+	if useRS {
+		rsRank = in.rs.RSRankPercentile
+	}
+	out.ExplosionProb = applyRSLeadershipGate(out.ExplosionProb, useRS, rsRank, in.rsWatchThreshold)
 	out.DaysToWatch = daysToWatch(out.Stage)
 	out.WatchAction = watchActionFor(out.Stage, ret1, volRatio)
 
@@ -292,6 +310,46 @@ func explosionProb(stage RocketStage, score int) string {
 	default:
 		return "LOW"
 	}
+}
+
+// rsRankScore maps an RS percentile (1–99) to the g2 relative-strength sub-score
+// (max 10). p<=0 returns 0 (caller treats RS as invalid and uses the fallback).
+func rsRankScore(p float64) float64 {
+	switch {
+	case p >= 90:
+		return 10
+	case p >= 80:
+		return 7
+	case p >= 70:
+		return 4
+	case p > 0:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// capProbAtMedium lowers a HIGH explosion probability to MEDIUM; MEDIUM/LOW unchanged.
+func capProbAtMedium(prob string) string {
+	if prob == "HIGH" {
+		return "MEDIUM"
+	}
+	return prob
+}
+
+// applyRSLeadershipGate caps ExplosionProb to MEDIUM when RS is active and the rank
+// is below the watch threshold (default 70). No-op when RS inactive or rank invalid.
+func applyRSLeadershipGate(prob string, useRS bool, rsRank, threshold float64) string {
+	if !useRS || rsRank <= 0 {
+		return prob
+	}
+	if threshold <= 0 {
+		threshold = 70
+	}
+	if rsRank < threshold {
+		return capProbAtMedium(prob)
+	}
+	return prob
 }
 
 func daysToWatch(stage RocketStage) string {
