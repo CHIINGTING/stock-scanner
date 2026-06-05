@@ -15,6 +15,122 @@ type Config struct {
 	MinAvgVolume float64 `yaml:"min_avg_volume"`
 	TopN         int     `yaml:"top_n"`
 
+	// UseAdjustedClose toggles split/dividend-adjusted close for adjusted-aware
+	// calculations (RS / new high / VCP / backtest — added in later commits).
+	// Default false: every calculation keeps using raw Close, preserving today's
+	// output exactly. Read prices via fetcher.PriceForCalc(candle, UseAdjustedClose).
+	UseAdjustedClose bool `yaml:"use_adjusted_close"`
+
+	// EnableSignalGuardrailScoring is the C6b MASTER switch: only when true may the
+	// shadow signals (RS / NewHigh / VCP / MomentumFlow) actually influence scoring.
+	// Default false → even with all four signal flags on, behaviour stays C6a
+	// shadow-only (compute+attach, no scoring change). Two-layer gating:
+	//   signal flags     = whether the shadow is computed
+	//   this master flag = whether the shadow may affect score / action / probability
+	EnableSignalGuardrailScoring bool `yaml:"enable_signal_guardrail_scoring"`
+
+	// ShowGuardrailSignals is a DISPLAY-ONLY flag (C7): when true the watchlist card
+	// shows a "Guardrail Signals" section explaining the shadow signals & guardrails.
+	// Default false → report/UI unchanged. Never affects score / action / probability
+	// / sorting — it is independent of EnableSignalGuardrailScoring.
+	ShowGuardrailSignals bool `yaml:"show_guardrail_signals"`
+
+	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
+	// EnableRSRank gates the whole RS feature. Default false → RS is never
+	// computed in the pipeline and cannot affect existing scoring / report /
+	// watchlist / rotation. The RS helpers in relstrength.go are pure and only
+	// run when explicitly called. Wiring RS into rocket_candidate_score is C6.
+	EnableRSRank                    bool    `yaml:"enable_rs_rank"`
+	RSLookbackDays                  int     `yaml:"rs_lookback_days"`                    // default 120
+	RSMinHistoryDays                int     `yaml:"rs_min_history_days"`                 // default 100
+	RSUniverseExcludeNonCommonStock bool    `yaml:"rs_universe_exclude_non_common_stock"`// default true (set in yaml)
+	RSUseAdjustedClose              bool    `yaml:"rs_use_adjusted_close"`               // OR'd with UseAdjustedClose
+	RSLeadershipThreshold           float64 `yaml:"rs_leadership_threshold"`             // config-only in C2 (not wired)
+	RSWatchThreshold                float64 `yaml:"rs_watch_threshold"`                  // config-only in C2 (not wired)
+
+	// ── New High / 52-week high (C3) ─────────────────────────────────────────
+	// EnableNewHigh gates the whole feature. Default false → never computed in the
+	// pipeline; cannot affect existing scoring / report / watchlist / rotation.
+	// newhigh.go helpers are pure and only run when explicitly called. Wiring into
+	// rocket_candidate_score is C6.
+	EnableNewHigh       bool    `yaml:"enable_new_high"`
+	NHLookbacks         []int   `yaml:"nh_lookbacks"`           // default [20,60,120,250]
+	NHMinHistoryDays    int     `yaml:"nh_min_history_days"`    // default 60
+	NHLeaderWithinPct  float64 `yaml:"nh_leader_within_pct"`  // default 25 → leadership-eligible band
+	NHNear52wHighPct   float64 `yaml:"nh_near_52w_high_pct"`  // default 15 → near_52w_high band
+	NHBreakoutWatchPct float64 `yaml:"nh_breakout_watch_pct"` // default 5  → breakout_watch band
+	NHLeaderStrongPct  float64 `yaml:"nh_leader_strong_pct"`  // default 10 → NewHighScore top tier only
+	NHLeaderFarPct     float64 `yaml:"nh_leader_far_pct"`     // default 50 → NewHighScore cap only
+	NHVolConfirmRatio  float64 `yaml:"nh_vol_confirm_ratio"`  // default 1.5 (60d new-high volume)
+	NHOverextRSI       float64 `yaml:"nh_overext_rsi"`        // default 75 (overextension dampener)
+	NHUseAdjustedClose bool    `yaml:"nh_use_adjusted_close"` // OR'd with UseAdjustedClose
+
+	// ── VCP / Volatility Contraction Pattern (C4) ────────────────────────────
+	// EnableVCP gates the whole feature. Default false → never computed in the
+	// pipeline; cannot affect existing scoring / report / watchlist / rotation.
+	// vcp.go helpers are pure and only run when explicitly called. Wiring VCP into
+	// rocket_candidate_score is C6.
+	EnableVCP             bool    `yaml:"enable_vcp"`
+	VCPLookbackDays       int     `yaml:"vcp_lookback_days"`        // default 60
+	VCPMinHistoryDays     int     `yaml:"vcp_min_history_days"`     // default 40
+	VCPMinContractions    int     `yaml:"vcp_min_contractions"`     // default 2
+	VCPMinQualityScore    float64 `yaml:"vcp_min_quality_score"`    // default 70
+	VCPUseAdjustedClose   bool    `yaml:"vcp_use_adjusted_close"`   // OR'd with UseAdjustedClose
+	VCPTightnessWeight    float64 `yaml:"vcp_tightness_weight"`     // default 30
+	VCPVolumeDryUpWeight  float64 `yaml:"vcp_volume_dryup_weight"`  // default 25
+	VCPMonotonicWeight    float64 `yaml:"vcp_monotonic_weight"`     // default 20
+	VCPSupportHoldWeight  float64 `yaml:"vcp_support_hold_weight"`  // default 15
+	VCPNearBreakoutWeight float64 `yaml:"vcp_near_breakout_weight"` // default 10
+	VCPZigzagReversalPct  float64 `yaml:"vcp_zigzag_reversal_pct"`  // default 2.5 (R5-2: raised from 1.5)
+	// R5-2 contraction refinement
+	VCPMinContractionDepthPct float64 `yaml:"vcp_min_contraction_depth_pct"` // default 2 (last leg always kept)
+	VCPMaxContractions        int     `yaml:"vcp_max_contractions"`          // default 5
+
+	// ── MomentumFlow (C5) ────────────────────────────────────────────────────
+	// EnableMomentumFlow gates the whole feature. Default false → never computed
+	// in the pipeline; cannot affect existing scoring / report / watchlist /
+	// rotation. momentum.go helpers are pure and only run when explicitly called.
+	// The RocketStage × MomentumFlow joint decision + RocketScore modifier are C6.
+	EnableMomentumFlow  bool    `yaml:"enable_momentum_flow"`
+	MFMinHistoryDays    int     `yaml:"mf_min_history_days"`    // default 30
+	MFAccelShortWindow  int     `yaml:"mf_accel_short_window"`  // default 3
+	MFAccelLongWindow   int     `yaml:"mf_accel_long_window"`   // default 20
+	MFAccelPosThresh    float64 `yaml:"mf_accel_pos_thresh"`   // default 0.0008 (待校準)
+	MFAccelNegThresh    float64 `yaml:"mf_accel_neg_thresh"`   // default -0.0008 (待校準)
+	MFAccelScale        float64 `yaml:"mf_accel_scale"`        // default 12000 (待校準)
+	MFKeyMA             int     `yaml:"mf_key_ma"`             // default 20
+	MFReclaimLookback   int     `yaml:"mf_reclaim_lookback"`   // default 5
+	MFZigzagReversalPct float64 `yaml:"mf_zigzag_reversal_pct"`// default 1.5
+	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`   // default 20
+	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"` // OR'd with UseAdjustedClose
+
+	// R5-1: tighten STRUCTURAL_SHIFT_UP so it means a genuine structural turn.
+	MFShiftUpMinBelowDays int `yaml:"mf_shift_up_min_below_days"` // default 2 (sustained dip below key)
+	MFShiftUpConfirmDays  int `yaml:"mf_shift_up_confirm_days"`   // default 2 (consecutive closes back above key)
+
+	// ── Multi-Timeframe (R4-2) ───────────────────────────────────────────────
+	// EnableMultiTimeframe gates Daily+Weekly shadow computation. Default false →
+	// never computed; cannot affect existing scoring / action / probability / sort /
+	// report. Shadow-only (R4-2); scoring influence is R4-3 behind the master flag.
+	EnableMultiTimeframe bool `yaml:"enable_multi_timeframe"`
+	MTFUseAdjustedClose  bool `yaml:"mtf_use_adjusted_close"` // OR'd with UseAdjustedClose
+	// R4-2b: STRONG SignalStrength score thresholds (per timeframe; default 85).
+	MTFStrongDailyScoreThreshold  float64 `yaml:"mtf_strong_daily_score_threshold"`
+	MTFStrongWeeklyScoreThreshold float64 `yaml:"mtf_strong_weekly_score_threshold"`
+	// R4-3: MTF risk note + sort tie-breaker. Sub-toggles default true but the whole
+	// feature stays gated behind EnableMultiTimeframe && EnableSignalGuardrailScoring.
+	MTFRiskWarningEnabled       bool `yaml:"mtf_risk_warning_enabled"`
+	MTFSortTieBreakerEnabled    bool `yaml:"mtf_sort_tiebreaker_enabled"`
+	MTFSortTieBreakerScoreGap   int  `yaml:"mtf_sort_tiebreaker_score_gap"` // default 3
+
+	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
+	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
+	MFScoreModifierContinuation float64 `yaml:"mf_score_modifier_continuation"` // default 6
+	MFScoreModifierShiftUp      float64 `yaml:"mf_score_modifier_shift_up"`     // default 8
+	MFScoreModifierFading       float64 `yaml:"mf_score_modifier_fading"`       // default -6
+	MFScoreModifierShiftDown    float64 `yaml:"mf_score_modifier_shift_down"`   // default -12
+	MFScoreModifierCap          float64 `yaml:"mf_score_modifier_cap"`          // default 12
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

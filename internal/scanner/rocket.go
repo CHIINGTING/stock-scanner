@@ -48,6 +48,27 @@ type rocketInput struct {
 	sectorStage       RotationStage
 	sectorAvgReturn20 float64
 	hasSector         bool
+
+	// ── C6b guardrail scoring (shadow signals; only used when guardrailScoring) ──
+	guardrailScoring bool           // master flag: shadow may influence scoring
+	vcp              *VCPResult     // C6b-1: corrects g3 base-quality (nil = no effect)
+	newHigh          *NewHighResult // C6b-2: replaces g3 NearPreviousHigh sub-score
+	rs               *RSResult      // C6b-3: replaces g2 relative-strength sub-score
+	rsWatchThreshold float64        // C6b-3: RS leadership gate (≤0 → default 70)
+	momentum         *MomentumState // C6b-4: final score modifier + joint action + prob guardrail
+	momentumActive   bool           // C6b-4: master flag && enable_momentum_flow
+	mfMod            momentumModifiers
+}
+
+// momentumModifiers carries the resolved MomentumFlow score-modifier weights so
+// rocket.go does not depend on Config. Built by watchlist.go from the scanner Config.
+type momentumModifiers struct {
+	Building     float64
+	Continuation float64
+	ShiftUp      float64
+	Fading       float64
+	ShiftDown    float64
+	Cap          float64
 }
 
 type rocketOutput struct {
@@ -133,8 +154,13 @@ func computeRocket(in rocketInput) rocketOutput {
 	g1 = clampFloat(g1, 0, 25)
 
 	// 2) 個股相對強勢（max 20）
+	// C6b-3: full-market RS rank REPLACES the sector-relative sub-score (no new group;
+	// Support rescaled 6→4 so the cap stays 20). Gated by master flag + valid RS.
 	g2 := 0.0
-	if in.hasSector {
+	useRS := in.guardrailScoring && in.rs != nil && in.rs.Computed && in.rs.RSRankPercentile > 0
+	if useRS {
+		g2 += rsRankScore(in.rs.RSRankPercentile) // max 10
+	} else if in.hasSector {
 		if ret20 > in.sectorAvgReturn20 {
 			g2 += 8
 		} else {
@@ -152,14 +178,34 @@ func computeRocket(in rocketInput) rocketOutput {
 		g2 += 2
 	}
 	if in.consol.SupportHoldScore >= 60 {
-		g2 += 6
+		if useRS {
+			g2 += 4
+		} else {
+			g2 += 6
+		}
 	}
 	g2 = clampFloat(g2, 0, 20)
 
 	// 3) 技術接近噴出（max 25）
-	g3 := in.consol.BaseQualityScore / 100 * 12
-	if in.consol.NearPreviousHigh {
-		g3 += 6
+	// C6b-1: VCP may CORRECT (raise) the base-quality input — never a new group and
+	// never lowering an already-good base. Gated by the master flag + valid VCP.
+	effBQ := in.consol.BaseQualityScore
+	if in.guardrailScoring && in.vcp != nil && in.vcp.Valid {
+		effBQ = math.Max(in.consol.BaseQualityScore, in.vcp.QualityScore)
+	}
+	// C6b-2: when guardrail scoring is on and a computed NewHigh result exists, the
+	// NewHighScore sub-slot REPLACES NearPreviousHigh (base-quality weight 12→10).
+	// Computed=true with NewHighScore=0 is a deliberate "no leadership" verdict — we
+	// still take the NewHigh branch (no NearPreviousHigh fallback) to avoid mixing logic.
+	var g3 float64
+	useNewHigh := in.guardrailScoring && in.newHigh != nil && in.newHigh.Computed
+	if useNewHigh {
+		g3 = effBQ/100*10 + in.newHigh.NewHighScore/100*8
+	} else {
+		g3 = effBQ / 100 * 12
+		if in.consol.NearPreviousHigh {
+			g3 += 6
+		}
 	}
 	if bullAlign {
 		g3 += 4
@@ -198,7 +244,14 @@ func computeRocket(in rocketInput) rocketOutput {
 	}
 	g5 = clampFloat(g5, 0, 15)
 
-	out.Score = int(clampFloat(g1+g2+g3+g4+g5, 0, 100) + 0.5)
+	// C6b-4: MomentumFlow is the FINAL score modifier (single channel) — never inside
+	// g1..g5, so it cannot double-count with sector short_term_flow (which lives in g1/g5).
+	useMomentum := in.momentumActive && in.momentum != nil && in.momentum.Computed
+	sum := g1 + g2 + g3 + g4 + g5
+	if useMomentum {
+		sum += momentumScoreModifier(in.momentum.Flow, in.mfMod)
+	}
+	out.Score = int(clampFloat(sum, 0, 100) + 0.5)
 
 	// ── Stage 決策樹 ──────────────────────────────────────────────────────────
 	extended := extFrom5 > 12 || ret5 > 25
@@ -230,9 +283,24 @@ func computeRocket(in rocketInput) rocketOutput {
 	}
 
 	// ── 衍生 ──────────────────────────────────────────────────────────────────
-	out.ExplosionProb = explosionProb(out.Stage, out.Score)
+	// ExplosionProb order (deliberate): base → momentum guardrail → RS leadership cap.
+	// RS cap is LAST so a low-RS cap is the final word — a momentum HIGH-upgrade can
+	// never bypass it; a momentum LOW-downgrade is never lifted by the RS cap (cap only).
+	prob := explosionProb(out.Stage, out.Score)
+	if useMomentum {
+		prob = applyMomentumProbabilityGuardrail(prob, out.Stage, in.momentum.Flow, in.vcp)
+	}
+	rsRank := 0.0
+	if useRS {
+		rsRank = in.rs.RSRankPercentile
+	}
+	out.ExplosionProb = applyRSLeadershipGate(prob, useRS, rsRank, in.rsWatchThreshold)
+
 	out.DaysToWatch = daysToWatch(out.Stage)
 	out.WatchAction = watchActionFor(out.Stage, ret1, volRatio)
+	if useMomentum {
+		out.WatchAction = jointWatchAction(out.Stage, in.momentum.Flow, out.WatchAction)
+	}
 
 	// ── 價位計畫 ──────────────────────────────────────────────────────────────
 	_, stop, t1, t2 := priceTargets(latest.Close, ind.ATR[n-1], ind.BB)
@@ -271,6 +339,122 @@ func explosionProb(stage RocketStage, score int) string {
 	default:
 		return "LOW"
 	}
+}
+
+// rsRankScore maps an RS percentile (1–99) to the g2 relative-strength sub-score
+// (max 10). p<=0 returns 0 (caller treats RS as invalid and uses the fallback).
+func rsRankScore(p float64) float64 {
+	switch {
+	case p >= 90:
+		return 10
+	case p >= 80:
+		return 7
+	case p >= 70:
+		return 4
+	case p > 0:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// capProbAtMedium lowers a HIGH explosion probability to MEDIUM; MEDIUM/LOW unchanged.
+func capProbAtMedium(prob string) string {
+	if prob == "HIGH" {
+		return "MEDIUM"
+	}
+	return prob
+}
+
+// applyRSLeadershipGate caps ExplosionProb to MEDIUM when RS is active and the rank
+// is below the watch threshold (default 70). No-op when RS inactive or rank invalid.
+func applyRSLeadershipGate(prob string, useRS bool, rsRank, threshold float64) string {
+	if !useRS || rsRank <= 0 {
+		return prob
+	}
+	if threshold <= 0 {
+		threshold = 70
+	}
+	if rsRank < threshold {
+		return capProbAtMedium(prob)
+	}
+	return prob
+}
+
+// momentumScoreModifier maps a MomentumFlow to its (capped) score modifier. The
+// cap defaults to 12 when not configured. NEUTRAL (and anything unlisted) → 0.
+func momentumScoreModifier(flow MomentumFlow, m momentumModifiers) float64 {
+	cap := m.Cap
+	if cap <= 0 {
+		cap = 12
+	}
+	var v float64
+	switch flow {
+	case MomentumBuilding:
+		v = m.Building
+	case MomentumContinuation:
+		v = m.Continuation
+	case StructuralShiftUp:
+		v = m.ShiftUp
+	case MomentumFading:
+		v = m.Fading
+	case StructuralShiftDown:
+		v = m.ShiftDown
+	default:
+		v = 0
+	}
+	return clampFloat(v, -cap, cap)
+}
+
+// jointWatchAction combines RocketStage with MomentumFlow. NEUTRAL (or anything not
+// listed) returns the existing fallback. SHIFT_DOWN and FAILED take top priority.
+func jointWatchAction(stage RocketStage, flow MomentumFlow, fallback WatchAction) WatchAction {
+	if flow == StructuralShiftDown || stage == StageFailed {
+		return ActRemove
+	}
+	switch {
+	case stage == StagePreBreakout && flow == MomentumBuilding:
+		return ActPrepare
+	case stage == StagePreBreakout && flow == StructuralShiftUp:
+		return ActPrepare
+	case stage == StagePreBreakout && flow == MomentumFading:
+		return ActWait
+	case stage == StageBreakoutStart && flow == MomentumBuilding:
+		return ActBreakoutBuy
+	case stage == StageBreakoutStart && flow == MomentumContinuation:
+		return ActWatchClose
+	case stage == StageBreakoutStart && flow == MomentumFading:
+		return ActWait
+	case stage == StageBaseBuilding && (flow == StructuralShiftUp || flow == MomentumBuilding):
+		return ActWatchClose
+	case stage == StageMainRun && flow == MomentumContinuation:
+		return ActWatchClose
+	case stage == StageMainRun && flow == MomentumFading:
+		return ActTakeProfit
+	case stage == StageOverheated && flow == MomentumFading:
+		return ActTakeProfit
+	default:
+		return fallback
+	}
+}
+
+// applyMomentumProbabilityGuardrail adjusts ExplosionProb by momentum (category only,
+// no points). Hard downgrades to LOW take priority; a conditional HIGH upgrade needs
+// a valid VCP and an existing non-LOW base. The later RS gate may still cap a HIGH.
+func applyMomentumProbabilityGuardrail(prob string, stage RocketStage, flow MomentumFlow, vcp *VCPResult) string {
+	switch {
+	case flow == StructuralShiftDown:
+		return "LOW"
+	case stage == StageMainRun && flow == MomentumFading:
+		return "LOW"
+	case stage == StageOverheated && flow == MomentumFading:
+		return "LOW"
+	case (stage == StagePreBreakout || stage == StageBreakoutStart) &&
+		(flow == MomentumBuilding || flow == StructuralShiftUp) &&
+		vcp != nil && vcp.Valid && prob != "LOW":
+		return "HIGH"
+	}
+	return prob
 }
 
 func daysToWatch(stage RocketStage) string {

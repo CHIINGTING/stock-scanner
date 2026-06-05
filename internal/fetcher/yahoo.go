@@ -47,6 +47,9 @@ type yahooResponse struct {
 					Close  []*float64 `json:"close"`
 					Volume []*int64   `json:"volume"`
 				} `json:"quote"`
+				Adjclose []struct {
+					Adjclose []*float64 `json:"adjclose"`
+				} `json:"adjclose"`
 			} `json:"indicators"`
 		} `json:"result"`
 		Error *struct {
@@ -228,6 +231,12 @@ func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (S
 		}
 		q := res.Indicators.Quote[0]
 
+		// Adjusted close is optional; when absent each candle falls back to Close.
+		var adj []*float64
+		if len(res.Indicators.Adjclose) > 0 {
+			adj = res.Indicators.Adjclose[0].Adjclose
+		}
+
 		name := providedName
 		if name == "" {
 			name = res.Meta.ShortName
@@ -255,6 +264,12 @@ func (f *Fetcher) fetchYahooTicker(code, providedName, ticker, market string) (S
 			}
 			if math.IsNaN(c.Open) || math.IsNaN(c.High) || math.IsNaN(c.Low) || math.IsNaN(c.Close) {
 				continue
+			}
+			// Adjusted close: use it only when present and valid, else fall back to
+			// the raw close so AdjClose is never a misleading zero.
+			c.AdjClose = c.Close
+			if i < len(adj) && adj[i] != nil && !math.IsNaN(*adj[i]) && *adj[i] > 0 {
+				c.AdjClose = *adj[i]
 			}
 			candles = append(candles, c)
 		}
@@ -312,6 +327,8 @@ func backfillLatestFromMeta(candles []Candle, price *float64, mktTime int64,
 		Low:    derefOrF(low, p),
 		Close:  p,
 		Volume: derefOrI(vol, 0),
+		// Meta snapshot has no adjusted price; fall back to the raw close.
+		AdjClose: p,
 	}
 	if bar.High < bar.Close {
 		bar.High = bar.Close

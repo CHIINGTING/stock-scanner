@@ -18,6 +18,26 @@ type Candle struct {
 	Low    float64
 	Close  float64
 	Volume int64
+	// AdjClose is the split/dividend-adjusted close. When the data source does not
+	// provide it (or it is invalid), it falls back to Close at parse time, so it is
+	// never a misleading zero. Read it via PriceForCalc, never decide on AdjClose
+	// being zero by itself.
+	AdjClose float64
+}
+
+// PriceForCalc returns the price a calculation should use for a candle.
+//
+//   - useAdjusted == false            → always Close (preserves existing behaviour).
+//   - useAdjusted == true, AdjClose>0 → AdjClose.
+//   - useAdjusted == true, AdjClose<=0 (missing/invalid) → fallback to Close.
+//
+// This is the single entry point every adjusted-price-aware calculation (RS, new
+// high, VCP, backtest …) should call, so the fallback rule lives in exactly one place.
+func PriceForCalc(c Candle, useAdjusted bool) float64 {
+	if useAdjusted && c.AdjClose > 0 {
+		return c.AdjClose
+	}
+	return c.Close
 }
 
 // StockData holds the full history for one stock, sorted oldest-first.

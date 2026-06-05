@@ -119,11 +119,13 @@ func main() {
 
 	// ── 2. Full Market Scan ───────────────────────────────────────────────────
 	var marketResults []scanner.StockAnalysis
+	var marketStocks []fetcher.StockData // retained for full-market RS table (C6a)
 	if !*skipMarket {
 		fmt.Println("[2/4] 取得台股清單 (TWSE)...")
-		marketStocks, err := f.FetchAll()
-		if err != nil {
-			log.Fatalf("market fetch: %v", err)
+		var ferr error
+		marketStocks, ferr = f.FetchAll()
+		if ferr != nil {
+			log.Fatalf("market fetch: %v", ferr)
 		}
 		fmt.Printf("      掃描 %d 支股票...\n", len(marketStocks))
 		marketResults = s.ScanMarket(marketStocks)
@@ -169,13 +171,25 @@ func main() {
 		for i := range rotationResults {
 			rotMap[rotationResults[i].Name] = &rotationResults[i]
 		}
-		watchlistResults = s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped)
+		// C6a: full-market RS table (nil when RS disabled); attached as shadow only.
+		rsTable := s.BuildRSTable(marketStocks)
+		watchlistResults = s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped, rsTable)
 	}
 
 	// ── 4. Report ─────────────────────────────────────────────────────────────
 	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
-	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate); err != nil {
+	gv := report.GuardrailViewOptions{
+		Show:                        cfg.Scanner.ShowGuardrailSignals,
+		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
+		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
+		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
+		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
+		MFScoreModifierShiftUp:      cfg.Scanner.MFScoreModifierShiftUp,
+		MFScoreModifierFading:       cfg.Scanner.MFScoreModifierFading,
+		MFScoreModifierShiftDown:    cfg.Scanner.MFScoreModifierShiftDown,
+	}
+	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv); err != nil {
 		log.Fatalf("report: %v", err)
 	}
 }

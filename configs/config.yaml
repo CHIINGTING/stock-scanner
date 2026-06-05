@@ -22,6 +22,113 @@ scanner:
   min_avg_volume: 500000  # MA20 量能門檻
   top_n: 50               # 市場掃描頁顯示前 N 名（--top 旗標可覆蓋）
 
+  # 還原收盤（AdjClose）總開關。預設 false → 所有計算沿用原始 Close，輸出與今日完全一致。
+  # 設 true 後，後續 RS / 新高 / VCP / 回測才會改用還原收盤（AdjClose 缺值時自動 fallback Close）。
+  use_adjusted_close: false
+
+  # ── 訊號 guardrail scoring 總開關（C6b）────────────────────────────────────
+  # 雙層 flag 的第二層：下方四個 enable_* 只決定「是否計算 shadow」；唯有此 master
+  # flag=true 時，shadow（RS/NewHigh/VCP/MomentumFlow）才可影響 rocket 分數/動作/機率。
+  # 預設 false → 即使四個訊號全開，也維持 C6a shadow-only，不改任何既有分數。
+  enable_signal_guardrail_scoring: false
+
+  # 純顯示開關（C7）：true 時 Watchlist 卡片顯示 Guardrail Signals 解釋區塊（實驗性）。
+  # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
+  show_guardrail_signals: false
+
+  # ── RS Rank（C2）─────────────────────────────────────────────────────────
+  # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
+  # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
+  enable_rs_rank: false                       # 總開關，預設 false
+  rs_lookback_days: 120                        # RS 報酬回看交易日數
+  rs_min_history_days: 100                     # 不足此歷史長度不計算 RS
+  rs_universe_exclude_non_common_stock: true   # 母體只留普通股（排除 ETF/特別股/DR…）
+  rs_use_adjusted_close: false                 # 與 use_adjusted_close 取 OR；true 時 RS 用 AdjClose
+  rs_leadership_threshold: 80                  # 領導股門檻（C2 僅讀取，尚未接入決策）
+  rs_watch_threshold: 70                       # 觀察門檻（C2 僅讀取，尚未接入決策）
+
+  # ── 52 週高 / 多週期新高（C3）─────────────────────────────────────────────
+  # enable_new_high=false（預設）時完全不計算、不影響既有 scoring / report /
+  # watchlist / rotation。如何納入飆股分數屬後續 C6。新高一律以還原收盤比價。
+  enable_new_high: false                       # 總開關，預設 false
+  nh_lookbacks: [20, 60, 120, 250]             # 多週期新高視窗（固定 4 檔 → H20/H60/H120/H250）
+  nh_min_history_days: 60                       # 不足此歷史長度不計算
+
+  # 距 52 週高三段門檻（距離以「低於高點的百分比」計，越小越接近高點）
+  nh_leader_within_pct: 25                      # 距 52 週高 ≤ 此% → new_high_leadership_eligible
+  nh_near_52w_high_pct: 15                      # 距 52 週高 ≤ 此% → near_52w_high
+  nh_breakout_watch_pct: 5                      # 距 52 週高 ≤ 此% → breakout_watch
+
+  # 以下兩者「僅供 NewHighScore 分級」，不參與上面三個布林旗標的定義
+  nh_leader_strong_pct: 10                      # 距 52 週高 ≤ 此% → NewHighScore 最高分級
+  nh_leader_far_pct: 50                         # 距 52 週高 > 此% → 非領漲，壓低 NewHighScore
+
+  nh_vol_confirm_ratio: 1.5                     # 60 日新高量增確認門檻（NewHighScore 用）
+  nh_overext_rsi: 75                            # 創 250 日高且 RSI ≥ 此值 → 過熱抑制 ×0.6
+  nh_use_adjusted_close: false                  # 與 use_adjusted_close 取 OR
+
+  # ── VCP / 波動收縮型態（C4）──────────────────────────────────────────────
+  # enable_vcp=false（預設）時完全不計算、不影響既有 scoring / report / watchlist /
+  # rotation。如何納入飆股分數屬後續 C6。價格一律以還原收盤計算（close-based）。
+  enable_vcp: false                             # 總開關，預設 false
+  vcp_lookback_days: 60                         # VCP 偵測視窗（交易日）
+  vcp_min_history_days: 40                      # 不足此歷史長度不計算
+  vcp_min_contractions: 2                       # 最少收縮段數（成立門檻）
+  vcp_min_quality_score: 70                     # 品質分門檻（valid = 段數達標 && 品質≥此值）
+  vcp_use_adjusted_close: false                 # 與 use_adjusted_close 取 OR
+
+  # 品質分權重（和 = 100）
+  vcp_tightness_weight: 30                       # 末段收緊程度
+  vcp_volume_dryup_weight: 25                    # 後段量縮
+  vcp_monotonic_weight: 20                       # 收縮幅度逐段遞減
+  vcp_support_hold_weight: 15                    # 低點守住 / 無爆量長黑
+  vcp_near_breakout_weight: 10                   # 接近區間上緣（僅計算，不給建議）
+
+  vcp_zigzag_reversal_pct: 2.5                   # swing 高/低反轉門檻（%）；R5-2 由 1.5 提高
+  vcp_min_contraction_depth_pct: 2              # R5-2：過濾深度 < 此% 的中間雜訊段（末段一律保留）
+  vcp_max_contractions: 5                       # R5-2：最多保留最近 N 段主要收縮
+
+  # ── MomentumFlow（C5）────────────────────────────────────────────────────
+  # 個股動能方向。enable_momentum_flow=false（預設）時完全不計算、不影響既有 scoring /
+  # report / watchlist / rotation。RocketStage×MomentumFlow 聯合決策與分數修正屬後續 C6。
+  enable_momentum_flow: false                    # 總開關，預設 false
+  mf_min_history_days: 30                         # 不足此歷史長度不計算
+  mf_accel_short_window: 3                        # 短步調視窗
+  mf_accel_long_window: 20                        # 長步調視窗
+  mf_accel_pos_thresh: 0.0008                     # accel > 此 → 加速（待校準）
+  mf_accel_neg_thresh: -0.0008                    # accel < 此 → 減速（待校準）
+  mf_accel_scale: 12000                           # SlopeAccel→分數縮放（待校準）
+  mf_key_ma: 20                                   # 結構關鍵均線
+  mf_reclaim_lookback: 5                          # 站回 / 跌破關鍵均線的「先前」視窗
+  mf_zigzag_reversal_pct: 1.5                     # swing 反轉門檻（與 VCP 同源預設）
+  mf_rsi_div_lookback: 20                         # 背離比較視窗
+  mf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+
+  # R5-1：收緊 STRUCTURAL_SHIFT_UP，避免普通拉回站回均線被誤判為結構翻多
+  mf_shift_up_min_below_days: 2                    # 先前需在 key MA 下至少幾日
+  mf_shift_up_confirm_days: 2                      # 連續收上 key MA 幾日才確認（排除單日假收復）
+
+  # ── 多週期 Multi-Timeframe（R4-2，shadow-only）──────────────────────────────
+  # enable_multi_timeframe=false（預設）時完全不計算、不影響任何既有 scoring / action /
+  # probability / sort / report。週線由日線聚合（不新增抓取、不用盤中/逐筆/五檔）。
+  enable_multi_timeframe: false
+  mtf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+  # R4-2b：SignalStrength 達 STRONG 所需的 Daily/Weekly TrendScore 門檻（離散值，85≈100）
+  mtf_strong_daily_score_threshold: 85
+  mtf_strong_weekly_score_threshold: 85
+  # R4-3：MTF 風險提示 + 排序 tie-breaker（子開關，預設 true，但仍被外層兩個 flag 擋住）
+  mtf_risk_warning_enabled: true
+  mtf_sort_tiebreaker_enabled: true
+  mtf_sort_tiebreaker_score_gap: 3                # 僅 RocketScore 差距 ≤ 此值時用 MTF 排序
+
+  # MomentumFlow 分數修正（C6b-4，最後修正層；僅 master flag 開時生效）；待 R5 校準
+  mf_score_modifier_building: 5
+  mf_score_modifier_continuation: 6
+  mf_score_modifier_shift_up: 8
+  mf_score_modifier_fading: -6
+  mf_score_modifier_shift_down: -12
+  mf_score_modifier_cap: 12
+
   kdj:
     k_period: 9
     d_smooth: 3
