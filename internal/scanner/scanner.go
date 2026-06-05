@@ -81,7 +81,10 @@ type Config struct {
 	VCPMonotonicWeight    float64 `yaml:"vcp_monotonic_weight"`     // default 20
 	VCPSupportHoldWeight  float64 `yaml:"vcp_support_hold_weight"`  // default 15
 	VCPNearBreakoutWeight float64 `yaml:"vcp_near_breakout_weight"` // default 10
-	VCPZigzagReversalPct  float64 `yaml:"vcp_zigzag_reversal_pct"`  // default 1.5 (swing reversal)
+	VCPZigzagReversalPct  float64 `yaml:"vcp_zigzag_reversal_pct"`  // default 2.5 (R5-2: raised from 1.5)
+	// R5-2 contraction refinement
+	VCPMinContractionDepthPct float64 `yaml:"vcp_min_contraction_depth_pct"` // default 2 (last leg always kept)
+	VCPMaxContractions        int     `yaml:"vcp_max_contractions"`          // default 5
 
 	// ── MomentumFlow (C5) ────────────────────────────────────────────────────
 	// EnableMomentumFlow gates the whole feature. Default false → never computed

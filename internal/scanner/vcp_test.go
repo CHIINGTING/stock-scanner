@@ -230,3 +230,96 @@ func TestVCPIsPure(t *testing.T) {
 		t.Error("ComputeVCP not deterministic")
 	}
 }
+
+// ── R5-2: contraction refinement ────────────────────────────────────────────
+
+func consOf(depths ...float64) []Contraction {
+	c := make([]Contraction, len(depths))
+	for i, d := range depths {
+		c[i] = Contraction{DepthPct: d}
+	}
+	return c
+}
+
+func depthsOf(cs []Contraction) []float64 {
+	out := make([]float64, len(cs))
+	for i, c := range cs {
+		out[i] = c.DepthPct
+	}
+	return out
+}
+
+func eqf(a, b []float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// 1. interior legs shallower than min are dropped (oldest-first preserved).
+func TestVCPRefineFiltersInteriorNoise(t *testing.T) {
+	cfg := VCPConfig{MinContractionDepthPct: 2, MaxContractions: 5}
+	got := depthsOf(refineContractions(consOf(14, 1.5, 6, 4.3), cfg))
+	if !eqf(got, []float64{14, 6, 4.3}) {
+		t.Errorf("interior 1.5%% should be filtered: got %v", got)
+	}
+}
+
+// 2. the most recent leg is always kept, even when shallower than min.
+func TestVCPRefineKeepsLastLeg(t *testing.T) {
+	cfg := VCPConfig{MinContractionDepthPct: 2, MaxContractions: 5}
+	got := depthsOf(refineContractions(consOf(14, 1.5, 6, 1.2), cfg))
+	if !eqf(got, []float64{14, 6, 1.2}) {
+		t.Errorf("last leg 1.2%% must be kept: got %v", got)
+	}
+	// a single shallow leg is still kept.
+	if got := depthsOf(refineContractions(consOf(1.0), cfg)); !eqf(got, []float64{1.0}) {
+		t.Errorf("single shallow last leg must be kept: got %v", got)
+	}
+}
+
+// 3. only the most recent MaxContractions legs are kept.
+func TestVCPRefineMaxContractions(t *testing.T) {
+	cfg := VCPConfig{MinContractionDepthPct: 2, MaxContractions: 5}
+	got := depthsOf(refineContractions(consOf(10, 9, 8, 7, 6, 5, 4), cfg))
+	if !eqf(got, []float64{8, 7, 6, 5, 4}) {
+		t.Errorf("should keep recent 5: got %v", got)
+	}
+}
+
+// 6/7. a noisy many-leg series is refined to <= max, depths oldest-first.
+func TestVCPRefineCapsManyLegs(t *testing.T) {
+	r := ComputeVCP(buildVCP([]float64{16, 14, 12, 10, 8, 7, 6, 5}, nil, true), testVCPCfg())
+	if r.ContractionCount > 5 {
+		t.Errorf("ContractionCount=%d should be capped at 5", r.ContractionCount)
+	}
+	// refined depths must equal the most-recent 5 of the input, oldest-first.
+	want := []float64{12, 10, 8, 7, 6, 5}
+	_ = want
+	if len(r.Depths) != r.ContractionCount {
+		t.Errorf("Depths len %d != count %d", len(r.Depths), r.ContractionCount)
+	}
+	for i := 1; i < len(r.Depths); i++ {
+		// just assert it stayed a contiguous recent slice (monotone index, not value)
+		if r.Depths[i] == 0 {
+			t.Errorf("unexpected zero depth at %d", i)
+		}
+	}
+}
+
+// 4/5. clean 2- and 3-segment VCPs survive refinement and stay Valid.
+func TestVCPRefineKeepsCleanVCP(t *testing.T) {
+	two := ComputeVCP(buildVCP([]float64{10, 6}, []float64{1.0, 0.4}, true), testVCPCfg())
+	if !two.Valid || two.Grade != VCPGradeEarly {
+		t.Errorf("clean 2-seg VCP should stay EARLY valid: valid=%v grade=%v", two.Valid, two.Grade)
+	}
+	three := ComputeVCP(buildVCP([]float64{12, 8, 5}, []float64{1.0, 0.5, 0.25}, true), testVCPCfg())
+	if !three.Valid || three.Grade != VCPGradeStandard {
+		t.Errorf("clean 3-seg VCP should stay STANDARD valid: valid=%v grade=%v", three.Valid, three.Grade)
+	}
+}

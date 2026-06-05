@@ -84,7 +84,9 @@ scanner:
   vcp_support_hold_weight: 15                    # 低點守住 / 無爆量長黑
   vcp_near_breakout_weight: 10                   # 接近區間上緣（僅計算，不給建議）
 
-  vcp_zigzag_reversal_pct: 1.5                   # swing 高/低反轉門檻（%）；待校準
+  vcp_zigzag_reversal_pct: 2.5                   # swing 高/低反轉門檻（%）；R5-2 由 1.5 提高
+  vcp_min_contraction_depth_pct: 2              # R5-2：過濾深度 < 此% 的中間雜訊段（末段一律保留）
+  vcp_max_contractions: 5                       # R5-2：最多保留最近 N 段主要收縮
 
   # ── MomentumFlow（C5）────────────────────────────────────────────────────
   # 個股動能方向。enable_momentum_flow=false（預設）時完全不計算、不影響既有 scoring /

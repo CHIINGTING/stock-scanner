@@ -39,7 +39,9 @@ const (
 	defaultVCPMonotonicW      = 20
 	defaultVCPSupportHoldW    = 15
 	defaultVCPNearBreakoutW   = 10
-	defaultVCPZigzagRevPct    = 1.5
+	defaultVCPZigzagRevPct    = 2.5 // R5-2: raised from 1.5 (1.5 over-segmented daily noise)
+	defaultVCPMinDepthPct     = 2   // R5-2: drop interior contractions shallower than this
+	defaultVCPMaxContractions = 5   // R5-2: keep only the most recent N significant legs
 
 	// Internal scoring bounds (待 R5 校準).
 	vcpTightTargetPct = 5.0  // final contraction ≤ this → full tightness
@@ -63,6 +65,10 @@ type VCPConfig struct {
 	UseAdjustedClose bool
 	ZigzagReversal   float64
 
+	// R5-2 contraction refinement.
+	MinContractionDepthPct float64 // drop interior legs shallower than this (last leg always kept)
+	MaxContractions        int     // keep only the most recent N legs
+
 	WTightness    float64
 	WVolumeDryUp  float64
 	WMonotonic    float64
@@ -78,9 +84,11 @@ func vcpConfigFrom(cfg Config) VCPConfig {
 		MinHistoryDays:   cfg.VCPMinHistoryDays,
 		MinContractions:  cfg.VCPMinContractions,
 		MinQualityScore:  cfg.VCPMinQualityScore,
-		UseAdjustedClose: cfg.UseAdjustedClose || cfg.VCPUseAdjustedClose,
-		ZigzagReversal:   cfg.VCPZigzagReversalPct,
-		WTightness:       cfg.VCPTightnessWeight,
+		UseAdjustedClose:       cfg.UseAdjustedClose || cfg.VCPUseAdjustedClose,
+		ZigzagReversal:         cfg.VCPZigzagReversalPct,
+		MinContractionDepthPct: cfg.VCPMinContractionDepthPct,
+		MaxContractions:        cfg.VCPMaxContractions,
+		WTightness:             cfg.VCPTightnessWeight,
 		WVolumeDryUp:     cfg.VCPVolumeDryUpWeight,
 		WMonotonic:       cfg.VCPMonotonicWeight,
 		WSupportHold:     cfg.VCPSupportHoldWeight,
@@ -100,6 +108,12 @@ func vcpConfigFrom(cfg Config) VCPConfig {
 	}
 	if vc.ZigzagReversal <= 0 {
 		vc.ZigzagReversal = defaultVCPZigzagRevPct
+	}
+	if vc.MinContractionDepthPct <= 0 {
+		vc.MinContractionDepthPct = defaultVCPMinDepthPct
+	}
+	if vc.MaxContractions <= 0 {
+		vc.MaxContractions = defaultVCPMaxContractions
 	}
 	if vc.WTightness <= 0 {
 		vc.WTightness = defaultVCPTightnessW
@@ -177,6 +191,7 @@ func ComputeVCP(candles []fetcher.Candle, cfg VCPConfig) VCPResult {
 	}
 
 	cons := detectContractions(candles, cfg)
+	cons = refineContractions(cons, cfg) // R5-2: drop interior noise, keep recent legs
 	r.Computed = true
 	r.ContractionCount = len(cons)
 	for _, c := range cons {
@@ -240,6 +255,29 @@ func detectContractions(candles []fetcher.Candle, cfg VCPConfig) []Contraction {
 		}
 	}
 	return out
+}
+
+// refineContractions (R5-2) trims noisy detection to the meaningful recent legs:
+//  1. drop interior legs shallower than MinContractionDepthPct — but ALWAYS keep the
+//     most recent leg (the final tight compression is the VCP signal, even if small);
+//  2. keep only the most recent MaxContractions legs.
+//
+// Order (oldest-first) is preserved for monotonic / volume-dry-up / UI.
+func refineContractions(cons []Contraction, cfg VCPConfig) []Contraction {
+	if len(cons) == 0 {
+		return cons
+	}
+	last := len(cons) - 1
+	filtered := make([]Contraction, 0, len(cons))
+	for i, c := range cons {
+		if i == last || c.DepthPct >= cfg.MinContractionDepthPct {
+			filtered = append(filtered, c)
+		}
+	}
+	if cfg.MaxContractions > 0 && len(filtered) > cfg.MaxContractions {
+		filtered = filtered[len(filtered)-cfg.MaxContractions:]
+	}
+	return filtered
 }
 
 // zigzagPivots returns alternating swing highs/lows over prices[lo..hi] (inclusive),
