@@ -113,6 +113,9 @@ scanner:
   # probability / sort / report。週線由日線聚合（不新增抓取、不用盤中/逐筆/五檔）。
   enable_multi_timeframe: false
   mtf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+  # R4-2b：SignalStrength 達 STRONG 所需的 Daily/Weekly TrendScore 門檻（離散值，85≈100）
+  mtf_strong_daily_score_threshold: 85
+  mtf_strong_weekly_score_threshold: 85
 
   # MomentumFlow 分數修正（C6b-4，最後修正層；僅 master flag 開時生效）；待 R5 校準
   mf_score_modifier_building: 5

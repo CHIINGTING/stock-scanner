@@ -10,6 +10,11 @@ func tv(state, momo string, valid, partial bool) TimeframeView {
 	return TimeframeView{Valid: valid, Partial: partial, TrendState: state, MomentumState: momo, TrendScore: 80}
 }
 
+// tvs is like tv but with an explicit TrendScore (for STRONG-threshold tests).
+func tvs(state, momo string, score float64, valid, partial bool) TimeframeView {
+	return TimeframeView{Valid: valid, Partial: partial, TrendState: state, MomentumState: momo, TrendScore: score}
+}
+
 // 1. longTermFilter: >MA200 BULLISH, <MA200 BEARISH, <200 bars UNKNOWN (never bearish).
 func TestMTFLongTermFilter(t *testing.T) {
 	up := make([]float64, 250)
@@ -48,28 +53,42 @@ func TestMTFAlignment(t *testing.T) {
 	}
 }
 
-// 3. mtfSignalStrength: STRONG needs FULL_BULL + positive momentum + weekly NOT partial.
+// 3. R4-2b mtfSignalStrength: STRONG requires FULL_BULL + both scores >= threshold +
+// both momentum ACCELERATING + weekly not partial; otherwise FULL_BULL → MODERATE.
 func TestMTFSignalStrength(t *testing.T) {
-	d := tv("UPTREND", "ACCELERATING", true, false)
-	wFull := tv("UPTREND", "STEADY", true, false)
-	if got := mtfSignalStrength(d, wFull, "FULL_BULL"); got != "STRONG" {
-		t.Errorf("complete FULL_BULL with momentum → STRONG, got %s", got)
+	cfg := MTFConfig{StrongDailyScore: 85, StrongWeeklyScore: 85}
+	accel := mtfMomoAccelerating
+
+	// score 100/100 + both ACCELERATING + not partial → STRONG
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 100, true, false), tvs("UPTREND", accel, 100, true, false), "FULL_BULL", cfg); got != "STRONG" {
+		t.Errorf("full-aligned accelerating → STRONG, got %s", got)
 	}
-	// weekly partial → must NOT be STRONG.
-	wPartial := tv("UPTREND", "STEADY", true, true)
-	if got := mtfSignalStrength(d, wPartial, "FULL_BULL"); got == "STRONG" {
+	// score 100/100 but only STEADY → MODERATE (動能普通)
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 100, true, false), tvs("UPTREND", mtfMomoSteady, 100, true, false), "FULL_BULL", cfg); got != "MODERATE" {
+		t.Errorf("steady momentum → MODERATE, got %s", got)
+	}
+	// score 75/75 (below threshold) → MODERATE
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 75, true, false), tvs("UPTREND", accel, 75, true, false), "FULL_BULL", cfg); got != "MODERATE" {
+		t.Errorf("score 75 below threshold → MODERATE, got %s", got)
+	}
+	// weekly partial (even 100/100/accel) → NOT STRONG
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 100, true, false), tvs("UPTREND", accel, 100, true, true), "FULL_BULL", cfg); got == "STRONG" {
 		t.Errorf("partial weekly must not be STRONG, got %s", got)
 	}
-	if got := mtfSignalStrength(d, wFull, "CONFLICT"); got != "CONFLICTED" {
-		t.Errorf("CONFLICT → CONFLICTED, got %s", got)
-	}
-	if got := mtfSignalStrength(d, wFull, "DAILY_LEADS"); got != "MODERATE" {
+	// DAILY_LEADS → MODERATE
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 100, true, false), tvs("RANGE", mtfMomoSteady, 50, true, false), "DAILY_LEADS", cfg); got != "MODERATE" {
 		t.Errorf("DAILY_LEADS → MODERATE, got %s", got)
 	}
-	if got := mtfSignalStrength(d, wFull, "FULL_BEAR"); got != "WEAK" {
+	// CONFLICT → CONFLICTED
+	if got := mtfSignalStrength(tvs("UPTREND", accel, 100, true, false), tvs("DOWNTREND", mtfMomoNegative, 0, true, false), "CONFLICT", cfg); got != "CONFLICTED" {
+		t.Errorf("CONFLICT → CONFLICTED, got %s", got)
+	}
+	// FULL_BEAR → WEAK
+	if got := mtfSignalStrength(tvs("DOWNTREND", mtfMomoNegative, 0, true, false), tvs("DOWNTREND", mtfMomoNegative, 0, true, false), "FULL_BEAR", cfg); got != "WEAK" {
 		t.Errorf("FULL_BEAR → WEAK, got %s", got)
 	}
-	if got := mtfSignalStrength(tv("UNKNOWN", "UNKNOWN", false, false), wFull, "UNKNOWN"); got != "UNKNOWN" {
+	// invalid view → UNKNOWN
+	if got := mtfSignalStrength(tvs("UNKNOWN", mtfMomoUnknown, 0, false, false), tvs("UPTREND", accel, 100, true, false), "UNKNOWN", cfg); got != "UNKNOWN" {
 		t.Errorf("invalid → UNKNOWN, got %s", got)
 	}
 }

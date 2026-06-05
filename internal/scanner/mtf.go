@@ -34,19 +34,42 @@ const (
 
 	mtfSlopeLookback   = 5 // bars used to measure the long-MA slope
 	mtfMomoShortWindow = 5 // bars used for the momentum return-slope
+
+	defaultMTFStrongScore = 85 // R4-2b: STRONG needs both timeframes at/above this
+)
+
+// MTF momentum-state labels (this timeframe's own momentum; NOT the C5 MomentumFlow).
+const (
+	mtfMomoAccelerating = "ACCELERATING"
+	mtfMomoSteady       = "STEADY"
+	mtfMomoDecelerating = "DECELERATING"
+	mtfMomoNegative     = "NEGATIVE"
+	mtfMomoUnknown      = "UNKNOWN"
 )
 
 // MTFConfig is the resolved multi-timeframe config.
 type MTFConfig struct {
 	Enable           bool
 	UseAdjustedClose bool
+	// R4-2b: STRONG SignalStrength score thresholds (per timeframe).
+	StrongDailyScore  float64
+	StrongWeeklyScore float64
 }
 
 func mtfConfigFrom(cfg Config) MTFConfig {
-	return MTFConfig{
-		Enable:           cfg.EnableMultiTimeframe,
-		UseAdjustedClose: cfg.UseAdjustedClose || cfg.MTFUseAdjustedClose,
+	mc := MTFConfig{
+		Enable:            cfg.EnableMultiTimeframe,
+		UseAdjustedClose:  cfg.UseAdjustedClose || cfg.MTFUseAdjustedClose,
+		StrongDailyScore:  cfg.MTFStrongDailyScoreThreshold,
+		StrongWeeklyScore: cfg.MTFStrongWeeklyScoreThreshold,
 	}
+	if mc.StrongDailyScore <= 0 {
+		mc.StrongDailyScore = defaultMTFStrongScore
+	}
+	if mc.StrongWeeklyScore <= 0 {
+		mc.StrongWeeklyScore = defaultMTFStrongScore
+	}
+	return mc
 }
 
 // TimeframeView is one timeframe's trend + momentum read.
@@ -85,7 +108,7 @@ func ComputeMultiTimeframe(candles []fetcher.Candle, cfg MTFConfig) MultiTimefra
 
 	out.LongTermFilter = longTermFilter(dPrices)
 	out.AlignmentScore, out.AlignmentLabel = mtfAlignment(out.Daily, out.Weekly)
-	out.SignalStrength = mtfSignalStrength(out.Daily, out.Weekly, out.AlignmentLabel)
+	out.SignalStrength = mtfSignalStrength(out.Daily, out.Weekly, out.AlignmentLabel, cfg)
 	return out
 }
 
@@ -145,13 +168,13 @@ func computeTimeframeView(label string, prices []float64, short, mid, long int, 
 	v.MomentumScore = mscore
 	switch {
 	case mscore >= 60:
-		v.MomentumState = "ACCELERATING"
+		v.MomentumState = mtfMomoAccelerating
 	case mscore >= 45:
-		v.MomentumState = "STEADY"
+		v.MomentumState = mtfMomoSteady
 	case mscore >= 30:
-		v.MomentumState = "DECELERATING"
+		v.MomentumState = mtfMomoDecelerating
 	default:
-		v.MomentumState = "NEGATIVE"
+		v.MomentumState = mtfMomoNegative
 	}
 	v.Valid = true
 	return v
@@ -196,9 +219,13 @@ func mtfAlignment(d, w TimeframeView) (float64, string) {
 	}
 }
 
-// mtfSignalStrength is shadow-only in R4-2 (never used for scoring/sort/action/prob).
-// A partial weekly bar can never yield STRONG.
-func mtfSignalStrength(d, w TimeframeView, label string) string {
+// mtfSignalStrength is shadow-only (never used for scoring/sort/action/prob).
+//
+// R4-2b calibration: STRONG is now reserved for a genuinely strong, fully-aligned
+// setup — FULL_BULL with BOTH timeframes at/above the strong score threshold, BOTH
+// timeframes' momentum ACCELERATING, and the weekly NOT partial. A merely-steady or
+// score-75 FULL_BULL is MODERATE. CONFLICT stays CONFLICTED (never bearish).
+func mtfSignalStrength(d, w TimeframeView, label string, cfg MTFConfig) string {
 	if !d.Valid || !w.Valid || label == "UNKNOWN" {
 		return "UNKNOWN"
 	}
@@ -206,7 +233,11 @@ func mtfSignalStrength(d, w TimeframeView, label string) string {
 	case "CONFLICT":
 		return "CONFLICTED"
 	case "FULL_BULL":
-		if mtfMomentumPositive(d.MomentumState) && mtfMomentumPositive(w.MomentumState) && !w.Partial {
+		if d.TrendScore >= cfg.StrongDailyScore &&
+			w.TrendScore >= cfg.StrongWeeklyScore &&
+			d.MomentumState == mtfMomoAccelerating &&
+			w.MomentumState == mtfMomoAccelerating &&
+			!w.Partial {
 			return "STRONG"
 		}
 		return "MODERATE"
@@ -215,8 +246,4 @@ func mtfSignalStrength(d, w TimeframeView, label string) string {
 	default: // FULL_BEAR / weak
 		return "WEAK"
 	}
-}
-
-func mtfMomentumPositive(s string) bool {
-	return s == "ACCELERATING" || s == "STEADY"
 }

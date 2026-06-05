@@ -114,6 +114,9 @@ type Config struct {
 	// report. Shadow-only (R4-2); scoring influence is R4-3 behind the master flag.
 	EnableMultiTimeframe bool `yaml:"enable_multi_timeframe"`
 	MTFUseAdjustedClose  bool `yaml:"mtf_use_adjusted_close"` // OR'd with UseAdjustedClose
+	// R4-2b: STRONG SignalStrength score thresholds (per timeframe; default 85).
+	MTFStrongDailyScoreThreshold  float64 `yaml:"mtf_strong_daily_score_threshold"`
+	MTFStrongWeeklyScoreThreshold float64 `yaml:"mtf_strong_weekly_score_threshold"`
 
 	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
 	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
