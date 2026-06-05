@@ -17,10 +17,11 @@ import (
 // but NOT consumed by any score / stage / action / sort. Each field is nil unless
 // its feature flag is on. Scoring integration (with double-count guardrails) is C6b.
 type ShadowSignals struct {
-	RS       *RSResult      `json:"rs,omitempty"`       // enable_rs_rank
-	NewHigh  *NewHighResult `json:"new_high,omitempty"` // enable_new_high
-	VCP      *VCPResult     `json:"vcp,omitempty"`      // enable_vcp
-	Momentum *MomentumState `json:"momentum,omitempty"` // enable_momentum_flow
+	RS             *RSResult       `json:"rs,omitempty"`              // enable_rs_rank
+	NewHigh        *NewHighResult  `json:"new_high,omitempty"`        // enable_new_high
+	VCP            *VCPResult      `json:"vcp,omitempty"`             // enable_vcp
+	Momentum       *MomentumState  `json:"momentum,omitempty"`        // enable_momentum_flow
+	MultiTimeframe *MultiTimeframe `json:"multi_timeframe,omitempty"` // enable_multi_timeframe (R4-2)
 }
 
 // WatchlistEntry is the full decision sheet for one watchlist stock.
@@ -107,7 +108,7 @@ func (s *Scanner) EnrichWatchlist(
 		// ── Shadow signals: computed BEFORE rocket so C6b guardrail scoring can
 		// consume them. The whole container stays nil unless a shadow flag is on. ──
 		var shadow *ShadowSignals
-		if s.cfg.EnableRSRank || s.cfg.EnableNewHigh || s.cfg.EnableVCP || s.cfg.EnableMomentumFlow {
+		if s.cfg.EnableRSRank || s.cfg.EnableNewHigh || s.cfg.EnableVCP || s.cfg.EnableMomentumFlow || s.cfg.EnableMultiTimeframe {
 			shadow = &ShadowSignals{}
 			if s.cfg.EnableRSRank && rsTable != nil {
 				if r, ok := rsTable[item.Symbol]; ok {
@@ -125,6 +126,10 @@ func (s *Scanner) EnrichWatchlist(
 			if s.cfg.EnableMomentumFlow {
 				m := ComputeMomentum(item.Candles, ind.RSI, a.VolumeRatio, momentumConfigFrom(s.cfg))
 				shadow.Momentum = &m
+			}
+			if s.cfg.EnableMultiTimeframe {
+				mtf := ComputeMultiTimeframe(item.Candles, mtfConfigFrom(s.cfg))
+				shadow.MultiTimeframe = &mtf
 			}
 		}
 

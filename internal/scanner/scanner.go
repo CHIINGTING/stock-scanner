@@ -108,6 +108,13 @@ type Config struct {
 	MFShiftUpMinBelowDays int `yaml:"mf_shift_up_min_below_days"` // default 2 (sustained dip below key)
 	MFShiftUpConfirmDays  int `yaml:"mf_shift_up_confirm_days"`   // default 2 (consecutive closes back above key)
 
+	// ── Multi-Timeframe (R4-2) ───────────────────────────────────────────────
+	// EnableMultiTimeframe gates Daily+Weekly shadow computation. Default false →
+	// never computed; cannot affect existing scoring / action / probability / sort /
+	// report. Shadow-only (R4-2); scoring influence is R4-3 behind the master flag.
+	EnableMultiTimeframe bool `yaml:"enable_multi_timeframe"`
+	MTFUseAdjustedClose  bool `yaml:"mtf_use_adjusted_close"` // OR'd with UseAdjustedClose
+
 	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
 	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
 	MFScoreModifierContinuation float64 `yaml:"mf_score_modifier_continuation"` // default 6

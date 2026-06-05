@@ -108,6 +108,12 @@ scanner:
   mf_shift_up_min_below_days: 2                    # 先前需在 key MA 下至少幾日
   mf_shift_up_confirm_days: 2                      # 連續收上 key MA 幾日才確認（排除單日假收復）
 
+  # ── 多週期 Multi-Timeframe（R4-2，shadow-only）──────────────────────────────
+  # enable_multi_timeframe=false（預設）時完全不計算、不影響任何既有 scoring / action /
+  # probability / sort / report。週線由日線聚合（不新增抓取、不用盤中/逐筆/五檔）。
+  enable_multi_timeframe: false
+  mtf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+
   # MomentumFlow 分數修正（C6b-4，最後修正層；僅 master flag 開時生效）；待 R5 校準
   mf_score_modifier_building: 5
   mf_score_modifier_continuation: 6
