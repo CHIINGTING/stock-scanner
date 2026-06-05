@@ -101,6 +101,10 @@ type Config struct {
 	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`   // default 20
 	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"` // OR'd with UseAdjustedClose
 
+	// R5-1: tighten STRUCTURAL_SHIFT_UP so it means a genuine structural turn.
+	MFShiftUpMinBelowDays int `yaml:"mf_shift_up_min_below_days"` // default 2 (sustained dip below key)
+	MFShiftUpConfirmDays  int `yaml:"mf_shift_up_confirm_days"`   // default 2 (consecutive closes back above key)
+
 	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
 	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
 	MFScoreModifierContinuation float64 `yaml:"mf_score_modifier_continuation"` // default 6

@@ -65,13 +65,83 @@ func TestMomentumFading(t *testing.T) {
 	}
 }
 
-// 4. Structural shift up: price below key MA then reclaims it.
+// genuineShiftUp: sustained dip below key (two higher lows) + confirmed 2-bar reclaim
+// + ret5>0 → a true structural turn.
+func genuineShiftUp() []float64 {
+	return mfConcat(
+		constSlice(10, 110),
+		mfLinear(11, 110, 90), // L1 = 90
+		mfLinear(8, 90, 100),  // bounce high
+		mfLinear(12, 100, 93), // L2 = 93 (higher low)
+		constSlice(8, 94),     // sustained below key (~95)
+		[]float64{99, 101},    // confirmed 2-bar reclaim
+	)
+}
+
+// 4. Structural shift up (R5-1 strict): genuine structural turn → SHIFT_UP.
 func TestMomentumShiftUp(t *testing.T) {
-	closes := mfConcat(constSlice(5, 100), mfLinear(20, 100, 85), mfLinear(5, 85, 100))
-	rsi := constSlice(len(closes), 48)
-	r := ComputeMomentum(mfCandles(closes), rsi, 1.0, testMFCfg())
+	r := ComputeMomentum(mfCandles(genuineShiftUp()), constSlice(len(genuineShiftUp()), 48), 1.0, testMFCfg())
 	if r.Flow != StructuralShiftUp {
-		t.Errorf("want SHIFT_UP, got %s", r.Flow)
+		t.Errorf("genuine structural turn should be SHIFT_UP, got %s (structure=%s)", r.Flow, r.StructureTrend)
+	}
+}
+
+// 4a. Plain V reclaim with only one low (no higher-low structure) → NOT SHIFT_UP.
+func TestMomentumShiftUpRejectsPlainReclaim(t *testing.T) {
+	closes := mfConcat(constSlice(5, 100), mfLinear(20, 100, 85), mfLinear(5, 85, 100))
+	r := ComputeMomentum(mfCandles(closes), constSlice(len(closes), 48), 1.0, testMFCfg())
+	if r.Flow == StructuralShiftUp {
+		t.Errorf("plain V reclaim (single low) must not be SHIFT_UP, got SHIFT_UP (structure=%s)", r.StructureTrend)
+	}
+}
+
+// 4b. Sustained dip + higher lows but only a SINGLE-day reclaim → NOT SHIFT_UP.
+func TestMomentumShiftUpNeedsConfirm(t *testing.T) {
+	closes := mfConcat(
+		constSlice(10, 110), mfLinear(11, 110, 90), mfLinear(8, 90, 100), mfLinear(12, 100, 93),
+		[]float64{94, 93, 94, 94, 101}, // last bar above, but prior bar below → streak=1
+	)
+	r := ComputeMomentum(mfCandles(closes), constSlice(len(closes), 48), 1.0, testMFCfg())
+	if r.Flow == StructuralShiftUp {
+		t.Errorf("single-day reclaim must not be SHIFT_UP, got SHIFT_UP")
+	}
+}
+
+// 4c. Confirmed reclaim + higher lows but ret5 <= 0 (today below the level 5 bars ago)
+// → NOT SHIFT_UP.
+func TestMomentumShiftUpNeedsRet5(t *testing.T) {
+	closes := mfConcat(
+		constSlice(10, 110), mfLinear(11, 110, 90), mfLinear(8, 90, 100), mfLinear(12, 100, 93),
+		[]float64{103, 93, 93, 94, 98, 99}, // bar t-5=103 > today 99 → ret5<=0
+	)
+	r := ComputeMomentum(mfCandles(closes), constSlice(len(closes), 48), 1.0, testMFCfg())
+	if r.Flow == StructuralShiftUp {
+		t.Errorf("ret5<=0 must not be SHIFT_UP, got SHIFT_UP")
+	}
+}
+
+// 4d. R5-1 regression: a steady uptrend must be CONTINUATION, never intercepted by SHIFT_UP.
+func TestMomentumContinuationNotInterceptedByShiftUp(t *testing.T) {
+	r := ComputeMomentum(mfCandles(mfLinear(60, 100, 130)), constSlice(60, 58), 1.0, testMFCfg())
+	if r.Flow == StructuralShiftUp {
+		t.Errorf("steady uptrend must not be SHIFT_UP")
+	}
+	if r.Flow != MomentumContinuation {
+		t.Errorf("steady uptrend should be CONTINUATION, got %s", r.Flow)
+	}
+}
+
+// 4e. R5-1 helpers.
+func TestMomentumShiftUpHelpers(t *testing.T) {
+	prices := []float64{10, 10, 10, 10, 10, 10}
+	key := []float64{9, 9, 11, 11, 9, 9} // price below key (price<key) at idx2,3; above at idx0,1,4,5
+	// belowKeyDays over last lookback=5 (idx0..4, excludes today idx5): below at idx2,3 → 2.
+	if got := belowKeyDays(prices, key, 5); got != 2 {
+		t.Errorf("belowKeyDays=%d want 2", got)
+	}
+	// consecutiveAboveKey from today (idx5 above, idx4 above, idx3 below → stop) = 2.
+	if got := consecutiveAboveKey(prices, key); got != 2 {
+		t.Errorf("consecutiveAboveKey=%d want 2", got)
 	}
 }
 

@@ -52,6 +52,8 @@ const (
 	defaultMFReclaimLookback  = 5
 	defaultMFZigzagRevPct     = 1.5
 	defaultMFRSIDivLookback   = 20
+	defaultMFShiftUpMinBelow  = 2 // R5-1
+	defaultMFShiftUpConfirm   = 2 // R5-1
 
 	mfStructWindow = 60   // bars used for swing-structure / divergence
 	mfRSIMidLow    = 35.0 // BUILDING RSI lower bound
@@ -74,6 +76,9 @@ type MomentumConfig struct {
 	ZigzagReversal   float64
 	RSIDivLookback   int
 	UseAdjustedClose bool
+
+	ShiftUpMinBelowDays int // R5-1
+	ShiftUpConfirmDays  int // R5-1
 }
 
 func momentumConfigFrom(cfg Config) MomentumConfig {
@@ -88,8 +93,10 @@ func momentumConfigFrom(cfg Config) MomentumConfig {
 		KeyMA:            cfg.MFKeyMA,
 		ReclaimLookback:  cfg.MFReclaimLookback,
 		ZigzagReversal:   cfg.MFZigzagReversalPct,
-		RSIDivLookback:   cfg.MFRSIDivLookback,
-		UseAdjustedClose: cfg.UseAdjustedClose || cfg.MFUseAdjustedClose,
+		RSIDivLookback:      cfg.MFRSIDivLookback,
+		UseAdjustedClose:    cfg.UseAdjustedClose || cfg.MFUseAdjustedClose,
+		ShiftUpMinBelowDays: cfg.MFShiftUpMinBelowDays,
+		ShiftUpConfirmDays:  cfg.MFShiftUpConfirmDays,
 	}
 	if mc.MinHistoryDays <= 0 {
 		mc.MinHistoryDays = defaultMFMinHistoryDays
@@ -120,6 +127,12 @@ func momentumConfigFrom(cfg Config) MomentumConfig {
 	}
 	if mc.RSIDivLookback <= 0 {
 		mc.RSIDivLookback = defaultMFRSIDivLookback
+	}
+	if mc.ShiftUpMinBelowDays <= 0 {
+		mc.ShiftUpMinBelowDays = defaultMFShiftUpMinBelow
+	}
+	if mc.ShiftUpConfirmDays <= 0 {
+		mc.ShiftUpConfirmDays = defaultMFShiftUpConfirm
 	}
 	return mc
 }
@@ -166,10 +179,12 @@ func ComputeMomentum(candles []fetcher.Candle, rsi []float64, volRatio float64, 
 	_ = ret1
 
 	aboveKey := keyMA[n-1] > 0 && cur > keyMA[n-1]
-	wasBelowKey := crossedKey(prices, keyMA, cfg.ReclaimLookback, true)  // any recent bar below key
 	wasAboveKey := crossedKey(prices, keyMA, cfg.ReclaimLookback, false) // any recent bar above key
-	reclaim := aboveKey && wasBelowKey
 	loseMA := !aboveKey && wasAboveKey
+	// R5-1: a genuine structural shift-up needs a sustained dip below the key MA and
+	// a confirmed (multi-day) reclaim — not a single-bar wiggle back above it.
+	belowDays := belowKeyDays(prices, keyMA, cfg.ReclaimLookback)
+	aboveStreak := consecutiveAboveKey(prices, keyMA)
 
 	bullAlign := ma5[n-1] > 0 && ma5[n-1] > ma10[n-1] && ma10[n-1] > ma20[n-1]
 	aboveMA20 := ma20[n-1] > 0 && cur > ma20[n-1]
@@ -197,22 +212,28 @@ func ComputeMomentum(candles []fetcher.Candle, rsi []float64, volRatio float64, 
 	rsiMidLow := rsi[n-1] >= mfRSIMidLow && rsi[n-1] <= mfRSIMidHigh
 	volBias := volUpBias(prices, vols, mfVolBiasBars)
 
-	// Classification — priority from most-urgent (regime change) to mild.
+	// Classification priority (R5-1): SHIFT_DOWN → FADING → CONTINUATION → SHIFT_UP →
+	// BUILDING → NEUTRAL. CONTINUATION precedes SHIFT_UP so a steady ongoing uptrend is
+	// not mislabelled a structural turn; SHIFT_UP is now a strict structural-shift test.
 	shiftDown := (loseMA && ret5 < 0) || (out.StructureTrend == structLLLH && !aboveKey)
-	shiftUp := reclaim
 	fading := !locked && (accel < cfg.AccelNegThresh || out.Divergence) && aboveMA20 && ret20 > 0
 	continuation := bullAlign && ret20 > 0 && abs(accel) <= cfg.AccelPosThresh && !out.Divergence && cur > ma10[n-1]
+	shiftUp := aboveKey &&
+		aboveStreak >= cfg.ShiftUpConfirmDays &&
+		belowDays >= cfg.ShiftUpMinBelowDays &&
+		ret5 > 0 &&
+		(out.StructureTrend == structHigherLows || out.StructureTrend == structHHHL)
 	building := accel > cfg.AccelPosThresh && rsiUp && rsiMidLow && volBias && extFrom5 <= mfExtFrom5Pct
 
 	switch {
 	case shiftDown:
 		out.Flow = StructuralShiftDown
-	case shiftUp:
-		out.Flow = StructuralShiftUp
 	case fading:
 		out.Flow = MomentumFading
 	case continuation:
 		out.Flow = MomentumContinuation
+	case shiftUp:
+		out.Flow = StructuralShiftUp
 	case building:
 		out.Flow = MomentumBuilding
 	default:
@@ -257,6 +278,37 @@ func crossedKey(prices, keyMA []float64, lookback int, wantBelow bool) bool {
 		}
 	}
 	return false
+}
+
+// belowKeyDays counts how many of the last `lookback` bars (excluding today) closed
+// below the key MA — a measure of how sustained the dip was (R5-1).
+func belowKeyDays(prices, keyMA []float64, lookback int) int {
+	n := len(prices)
+	start := n - 1 - lookback
+	if start < 0 {
+		start = 0
+	}
+	c := 0
+	for i := start; i < n-1; i++ {
+		if keyMA[i] > 0 && prices[i] < keyMA[i] {
+			c++
+		}
+	}
+	return c
+}
+
+// consecutiveAboveKey counts consecutive bars ending today that closed above the key
+// MA — used to confirm a reclaim is multi-day, not a single-bar wiggle (R5-1).
+func consecutiveAboveKey(prices, keyMA []float64) int {
+	c := 0
+	for i := len(prices) - 1; i >= 0; i-- {
+		if keyMA[i] > 0 && prices[i] > keyMA[i] {
+			c++
+		} else {
+			break
+		}
+	}
+	return c
 }
 
 // detectStructureTrend classifies higher/lower highs & lows from the swing pivots.
