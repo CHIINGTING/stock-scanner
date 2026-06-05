@@ -25,6 +25,11 @@ func sampleEntry(withShadow bool) scanner.WatchlistEntry {
 			NewHigh: &scanner.NewHighResult{Computed: true, NewHighScore: 70, DistanceFrom52wHighPct: -7, Near52wHigh: true, H20: true, H60: true},
 			VCP:     &scanner.VCPResult{Computed: true, Valid: true, Grade: scanner.VCPGradeStandard, QualityScore: 80, Depths: []float64{18, 10, 5}},
 			Momentum: &scanner.MomentumState{Computed: true, Flow: scanner.MomentumBuilding, Score: 70, StructureTrend: "HH_HL"},
+			MultiTimeframe: &scanner.MultiTimeframe{
+				SignalStrength: "STRONG", AlignmentLabel: "FULL_BULL", LongTermFilter: "BULLISH",
+				Daily:  scanner.TimeframeView{Valid: true, TrendState: "UPTREND"},
+				Weekly: scanner.TimeframeView{Valid: true, TrendState: "UPTREND"},
+			},
 		}
 	}
 	return e
@@ -163,5 +168,71 @@ func TestC7GenerateReadOnly(t *testing.T) {
 	_ = genHTML(t, entries, GuardrailViewOptions{Show: true, GuardrailScoringEnabled: true, RSWatchThreshold: 70})
 	if entries[0].RocketScore != before || entries[0].WatchAction != beforeAct || entries[0].ExplosionProb != beforeProb {
 		t.Error("Generate must not mutate entry scoring fields")
+	}
+}
+
+// ── R4-4: Multi-Timeframe display in Guardrail Signals ──────────────────────
+
+// MTF section renders (at the end of the guardrail block) when show=true.
+func TestR44MTFShown(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	for _, m := range []string{"Multi-Timeframe", "SignalStrength STRONG", "FULL_BULL", "200日線上"} {
+		if !strings.Contains(html, m) {
+			t.Errorf("show=true should render MTF %q", m)
+		}
+	}
+}
+
+// show=false → no MTF content (whole guardrail block trimmed).
+func TestR44MTFHiddenWhenShowFalse(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{Show: false})
+	if strings.Contains(html, "Multi-Timeframe") {
+		t.Error("show=false must not render Multi-Timeframe")
+	}
+}
+
+// MTFRiskNote: shown only when non-empty (no empty 多週期提示 line otherwise).
+func TestR44RiskNoteEmptyVsSet(t *testing.T) {
+	empty := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	if strings.Contains(empty, "多週期提示") {
+		t.Error("empty MTFRiskNote must not render the hint line")
+	}
+	e := sampleEntry(true)
+	e.MTFRiskNote = "短線反彈、週線仍弱，追高需謹慎"
+	set := genHTML(t, []scanner.WatchlistEntry{e}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	if !strings.Contains(set, "多週期提示：短線反彈、週線仍弱，追高需謹慎") {
+		t.Error("non-empty MTFRiskNote should render the hint line")
+	}
+}
+
+// partial weekly → 「本週未完成」label.
+func TestR44PartialWeekly(t *testing.T) {
+	e := sampleEntry(true)
+	e.Shadow.MultiTimeframe.Weekly.Partial = true
+	html := genHTML(t, []scanner.WatchlistEntry{e}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	if !strings.Contains(html, "本週未完成") {
+		t.Error("partial weekly should render 本週未完成")
+	}
+}
+
+// No MultiTimeframe shadow → no MTF line, no error (section still renders).
+func TestR44NoMTFNoError(t *testing.T) {
+	e := sampleEntry(true)
+	e.Shadow.MultiTimeframe = nil
+	html := genHTML(t, []scanner.WatchlistEntry{e}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	if strings.Contains(html, "Multi-Timeframe") {
+		t.Error("nil MultiTimeframe must not render the MTF line")
+	}
+	if !strings.Contains(html, "Guardrail Signals") {
+		t.Error("guardrail section should still render")
+	}
+}
+
+func TestR44LTFLabel(t *testing.T) {
+	cases := map[string]string{"BULLISH": "200日線上", "BEARISH": "200日線下", "UNKNOWN": "未知", "": "未知"}
+	for in, want := range cases {
+		if got := mtfLTFLabel(in); got != want {
+			t.Errorf("mtfLTFLabel(%q)=%q want %q", in, got, want)
+		}
 	}
 }

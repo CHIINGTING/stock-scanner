@@ -95,6 +95,18 @@ func mfModifier(flow scanner.MomentumFlow, gv GuardrailViewOptions) template.HTM
 	return template.HTML(fmt.Sprintf("%+.0f", v))
 }
 
+// mtfLTFLabel renders the multi-timeframe long-term (200MA) filter for display.
+func mtfLTFLabel(s string) string {
+	switch s {
+	case "BULLISH":
+		return "200日線上"
+	case "BEARISH":
+		return "200日線下"
+	default:
+		return "未知"
+	}
+}
+
 type reportData struct {
 	Date         string
 	MarketLabel  string
@@ -519,8 +531,9 @@ func (r *Report) Generate(
 				return "lvl-weak"
 			}
 		},
-		"vcpDepths":  vcpDepths,
-		"mfModifier": mfModifier,
+		"vcpDepths":   vcpDepths,
+		"mfModifier":  mfModifier,
+		"mtfLTFLabel": mtfLTFLabel,
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -1048,6 +1061,11 @@ th.rotscore{min-width:120px}
               {{- with .Momentum }}
               <div>Flow：{{ .Flow }}　Score：{{ f1 .Score }}　Structure：{{ .StructureTrend }}　Divergence：{{ .Divergence }}</div>
               <div>modifier：{{ mfModifier .Flow $.GV }}{{- if not $.GV.GuardrailScoringEnabled }}（僅供參考，未套用）{{- end }}</div>
+              {{- end }}
+              {{- with .MultiTimeframe }}
+              <div>Multi-Timeframe：SignalStrength {{ .SignalStrength }}　Daily {{ .Daily.TrendState }}　Weekly {{ .Weekly.TrendState }}{{ if .Weekly.Partial }}（本週未完成）{{ end }}</div>
+              <div>Alignment：{{ .AlignmentLabel }}　LongTermFilter：{{ mtfLTFLabel .LongTermFilter }}</div>
+              {{- if $e.MTFRiskNote }}<div class="wl-note">多週期提示：{{ $e.MTFRiskNote }}</div>{{- end }}
               {{- end }}
             {{- else }}
             <div class="wl-note">未啟用訊號計算（無 shadow）。</div>
