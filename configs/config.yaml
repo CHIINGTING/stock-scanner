@@ -116,6 +116,10 @@ scanner:
   # R4-2b：SignalStrength 達 STRONG 所需的 Daily/Weekly TrendScore 門檻（離散值，85≈100）
   mtf_strong_daily_score_threshold: 85
   mtf_strong_weekly_score_threshold: 85
+  # R4-3：MTF 風險提示 + 排序 tie-breaker（子開關，預設 true，但仍被外層兩個 flag 擋住）
+  mtf_risk_warning_enabled: true
+  mtf_sort_tiebreaker_enabled: true
+  mtf_sort_tiebreaker_score_gap: 3                # 僅 RocketScore 差距 ≤ 此值時用 MTF 排序
 
   # MomentumFlow 分數修正（C6b-4，最後修正層；僅 master flag 開時生效）；待 R5 校準
   mf_score_modifier_building: 5

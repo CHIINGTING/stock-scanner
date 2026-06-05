@@ -36,6 +36,7 @@ const (
 	mtfMomoShortWindow = 5 // bars used for the momentum return-slope
 
 	defaultMTFStrongScore = 85 // R4-2b: STRONG needs both timeframes at/above this
+	defaultMTFSortGap     = 3  // R4-3: tie-break only when RocketScores within this gap
 )
 
 // MTF momentum-state labels (this timeframe's own momentum; NOT the C5 MomentumFlow).
@@ -246,4 +247,59 @@ func mtfSignalStrength(d, w TimeframeView, label string, cfg MTFConfig) string {
 	default: // FULL_BEAR / weak
 		return "WEAK"
 	}
+}
+
+// mtfTieBreakRank ranks the MTF signal for use as a sort tie-breaker (R4-3): higher
+// is better. Used ONLY among near-RocketScore entries; never overturns the primary key.
+func mtfTieBreakRank(m MultiTimeframe) int {
+	switch m.SignalStrength {
+	case "STRONG":
+		return 4
+	case "MODERATE":
+		return 3
+	case "CONFLICTED":
+		return 2
+	case "WEAK":
+		return 1
+	default: // UNKNOWN
+		return 0
+	}
+}
+
+// mtfRiskNote produces a one-line, plain-language multi-timeframe risk hint (R4-3).
+// It is a RISK NOTE, not a trade instruction — no buy/sell wording. Display-only;
+// CONFLICTED is flagged (not condemned) and UNKNOWN is neutral (not penalised).
+func mtfRiskNote(m MultiTimeframe) string {
+	var s string
+	switch m.SignalStrength {
+	case "UNKNOWN":
+		return "週線資料不足，多週期未知"
+	case "CONFLICTED":
+		switch {
+		case m.Daily.TrendState == "UPTREND" && m.Weekly.TrendState == "DOWNTREND":
+			s = "短線反彈、週線仍弱，追高需謹慎"
+		case m.Daily.TrendState == "DOWNTREND" && m.Weekly.TrendState == "UPTREND":
+			s = "週線轉強但日線未跟上，留意拉回"
+		default:
+			s = "多週期不一致"
+		}
+	case "STRONG":
+		s = "日週同步走強"
+	case "WEAK":
+		s = "多週期偏弱"
+	case "MODERATE":
+		if m.AlignmentLabel == "DAILY_LEADS" {
+			s = "日線領先、週線中性，屬早期 / 短線訊號"
+		} else {
+			s = "多週期同向，動能普通"
+		}
+	}
+	if m.LongTermFilter == "BEARISH" {
+		if s != "" {
+			s += "；位於 200 日線下，長期偏空"
+		} else {
+			s = "位於 200 日線下，長期偏空"
+		}
+	}
+	return s
 }

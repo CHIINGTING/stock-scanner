@@ -117,6 +117,11 @@ type Config struct {
 	// R4-2b: STRONG SignalStrength score thresholds (per timeframe; default 85).
 	MTFStrongDailyScoreThreshold  float64 `yaml:"mtf_strong_daily_score_threshold"`
 	MTFStrongWeeklyScoreThreshold float64 `yaml:"mtf_strong_weekly_score_threshold"`
+	// R4-3: MTF risk note + sort tie-breaker. Sub-toggles default true but the whole
+	// feature stays gated behind EnableMultiTimeframe && EnableSignalGuardrailScoring.
+	MTFRiskWarningEnabled       bool `yaml:"mtf_risk_warning_enabled"`
+	MTFSortTieBreakerEnabled    bool `yaml:"mtf_sort_tiebreaker_enabled"`
+	MTFSortTieBreakerScoreGap   int  `yaml:"mtf_sort_tiebreaker_score_gap"` // default 3
 
 	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
 	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5

@@ -60,6 +60,11 @@ type WatchlistEntry struct {
 	Reasons     []string
 	RiskLabel   string
 	RiskWarning string
+
+	// MTFRiskNote (R4-3): a multi-timeframe risk hint. Populated only when MTF
+	// guardrail is active (enable_multi_timeframe && enable_signal_guardrail_scoring
+	// && mtf_risk_warning_enabled). Display-only; never alters score/action/probability.
+	MTFRiskNote string `json:"mtf_risk_note,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,
@@ -191,10 +196,64 @@ func (s *Scanner) EnrichWatchlist(
 		out = append(out, e)
 	}
 
-	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].RocketScore > out[j].RocketScore
-	})
+	// ── R4-3: MTF risk note + sort tie-breaker (display/ordering only, no scoring) ──
+	guardrail := s.cfg.EnableMultiTimeframe && s.cfg.EnableSignalGuardrailScoring
+	if guardrail && s.cfg.MTFRiskWarningEnabled {
+		for i := range out {
+			if out[i].Shadow != nil && out[i].Shadow.MultiTimeframe != nil {
+				out[i].MTFRiskNote = mtfRiskNote(*out[i].Shadow.MultiTimeframe)
+			}
+		}
+	}
+	mtfSortActive := guardrail && s.cfg.MTFSortTieBreakerEnabled
+	if mtfSortActive {
+		gap := s.cfg.MTFSortTieBreakerScoreGap
+		if gap <= 0 {
+			gap = defaultMTFSortGap
+		}
+		sortWatchlistWithMTFTieBreaker(out, gap)
+	} else {
+		sort.SliceStable(out, func(i, j int) bool {
+			return out[i].RocketScore > out[j].RocketScore
+		})
+	}
 	return out
+}
+
+// sortWatchlistWithMTFTieBreaker (R4-3) orders by RocketScore desc, then breaks ties
+// WITHIN clusters using the MTF rank. A cluster is a run of entries whose RocketScore
+// stays within `gap` of the cluster's anchor (its highest score); once a score drops
+// more than `gap` below the anchor, a new cluster begins.
+//
+// This is transitive and deterministic — unlike a pairwise |Δ|<=gap comparator, which
+// can chain through a dense list and float a low score above a clearly-higher one.
+// Guarantees: clusters never swap, so a stock is only reordered among others within
+// `gap` of its anchor → no overturn beyond `gap`. Equal MTF ranks keep stable order.
+func sortWatchlistWithMTFTieBreaker(entries []WatchlistEntry, gap int) {
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].RocketScore > entries[j].RocketScore
+	})
+	start := 0
+	for start < len(entries) {
+		anchor := entries[start].RocketScore
+		end := start + 1
+		for end < len(entries) && anchor-entries[end].RocketScore <= gap {
+			end++
+		}
+		cluster := entries[start:end]
+		sort.SliceStable(cluster, func(i, j int) bool {
+			return mtfRankOf(cluster[i]) > mtfRankOf(cluster[j])
+		})
+		start = end
+	}
+}
+
+// mtfRankOf returns the MTF tie-break rank for an entry (0 when no MTF shadow).
+func mtfRankOf(e WatchlistEntry) int {
+	if e.Shadow == nil || e.Shadow.MultiTimeframe == nil {
+		return 0
+	}
+	return mtfTieBreakRank(*e.Shadow.MultiTimeframe)
 }
 
 // BuildRSTable computes full-market RS percentiles keyed by symbol, for C6a shadow
