@@ -236,3 +236,77 @@ func TestR44LTFLabel(t *testing.T) {
 		}
 	}
 }
+
+// ── Guardrail Summary (human-readable, display-only) ────────────────────────
+
+// Summary renders above the raw data when show=true.
+func TestGuardrailSummaryShown(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{Show: true, RSWatchThreshold: 70})
+	for _, m := range []string{"Guardrail Summary：", "優勢：", "操作解讀：", "以下為原始數據", "空手：", "持有：", "加碼："} {
+		if !strings.Contains(html, m) {
+			t.Errorf("show=true should render summary marker %q", m)
+		}
+	}
+	// raw data must still be present below the summary.
+	if !strings.Contains(html, "18→10→5") {
+		t.Error("raw VCP depths must still render under the summary")
+	}
+}
+
+// show=false → no summary (whole guardrail block trimmed).
+func TestGuardrailSummaryHiddenWhenShowFalse(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{Show: false})
+	if strings.Contains(html, "Guardrail Summary") {
+		t.Error("show=false must not render the summary")
+	}
+}
+
+// FADING momentum → risk line + 不追高 headline + 轉回 BUILDING action.
+func TestGuardrailSummaryFading(t *testing.T) {
+	e := sampleEntry(true)
+	e.Shadow.Momentum = &scanner.MomentumState{Computed: true, Flow: scanner.MomentumFading, Score: 40}
+	v := guardrailSummary(e, 70)
+	if !containsStr(v.Risks, "短線動能轉弱（FADING）") {
+		t.Errorf("FADING should add risk, got %v", v.Risks)
+	}
+	if !strings.Contains(v.Headline, "暫不追高") {
+		t.Errorf("strong base + fading headline should advise 暫不追高, got %q", v.Headline)
+	}
+	if !containsStr(v.Actions, "加碼：等 MomentumFlow 由 FADING 轉回 BUILDING / CONTINUATION") {
+		t.Errorf("fading action missing, got %v", v.Actions)
+	}
+}
+
+// CONFLICT → divergence-of-timeframes headline + conflict action.
+func TestGuardrailSummaryConflict(t *testing.T) {
+	e := sampleEntry(true)
+	e.Shadow.MultiTimeframe = &scanner.MultiTimeframe{SignalStrength: "CONFLICTED", AlignmentLabel: "CONFLICT",
+		LongTermFilter: "BULLISH", Daily: scanner.TimeframeView{TrendState: "UPTREND"}, Weekly: scanner.TimeframeView{TrendState: "DOWNTREND"}}
+	v := guardrailSummary(e, 70)
+	if !strings.Contains(v.Headline, "方向分歧") {
+		t.Errorf("conflict headline expected, got %q", v.Headline)
+	}
+	if !containsStr(v.Risks, "日週多空不一致") {
+		t.Errorf("conflict risk expected, got %v", v.Risks)
+	}
+}
+
+// Nil shadow → neutral headline, no panic.
+func TestGuardrailSummaryNilShadow(t *testing.T) {
+	v := guardrailSummary(sampleEntry(false), 70)
+	if v.Headline == "" {
+		t.Error("nil shadow should still produce a headline")
+	}
+	if len(v.Pros) != 0 || len(v.Risks) != 0 {
+		t.Error("nil shadow should have no pros/risks")
+	}
+}
+
+func containsStr(ss []string, want string) bool {
+	for _, s := range ss {
+		if s == want {
+			return true
+		}
+	}
+	return false
+}

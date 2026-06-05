@@ -95,6 +95,130 @@ func mfModifier(flow scanner.MomentumFlow, gv GuardrailViewOptions) template.HTM
 	return template.HTML(fmt.Sprintf("%+.0f", v))
 }
 
+// guardrailSummaryView is a plain-language reading of the guardrail shadow signals.
+// DISPLAY-ONLY: derived purely for presentation; never feeds score/action/prob/sort.
+// The action lines are decision-support framing (空手/持有/加碼 scenarios), not trade
+// instructions.
+type guardrailSummaryView struct {
+	Headline string
+	Pros     []string
+	Risks    []string
+	Actions  []string
+}
+
+// guardrailSummary derives the human-readable summary from an entry's shadow signals.
+// rsWatch is the RS watch threshold (GV.RSWatchThreshold) used to call RS "合格".
+func guardrailSummary(e scanner.WatchlistEntry, rsWatch float64) guardrailSummaryView {
+	var v guardrailSummaryView
+	s := e.Shadow
+	if s == nil {
+		v.Headline = "尚無多因子訊號（未啟用計算）。"
+		return v
+	}
+
+	var near52, fullBull, strongMTF, fading, shiftDown bool
+
+	if s.RS != nil && s.RS.Computed {
+		if s.RS.RSRankPercentile >= rsWatch {
+			v.Pros = append(v.Pros, fmt.Sprintf("RS 相對強度合格（百分位 %.0f）", s.RS.RSRankPercentile))
+		} else {
+			v.Risks = append(v.Risks, fmt.Sprintf("RS 相對強度偏弱（百分位 %.0f）", s.RS.RSRankPercentile))
+		}
+	}
+	if s.NewHigh != nil && s.NewHigh.Computed && (s.NewHigh.Near52wHigh || s.NewHigh.BreakoutWatch) {
+		near52 = true
+		v.Pros = append(v.Pros, "接近 / 創 52 週高")
+	}
+	if s.VCP != nil && s.VCP.Computed && s.VCP.Valid {
+		v.Pros = append(v.Pros, fmt.Sprintf("VCP 型態有效（品質 %.0f）", s.VCP.QualityScore))
+	}
+	if m := s.MultiTimeframe; m != nil {
+		switch m.AlignmentLabel {
+		case "FULL_BULL":
+			fullBull = true
+			v.Pros = append(v.Pros, "日週趨勢共振（多頭）")
+		case "CONFLICT":
+			v.Risks = append(v.Risks, "日週多空不一致")
+		}
+		if m.SignalStrength == "STRONG" {
+			strongMTF = true
+		}
+		switch m.LongTermFilter {
+		case "BULLISH":
+			v.Pros = append(v.Pros, "站上 200 日線（長期偏多）")
+		case "BEARISH":
+			v.Risks = append(v.Risks, "位於 200 日線下（長期偏空）")
+		}
+	}
+	if s.Momentum != nil && s.Momentum.Computed {
+		switch s.Momentum.Flow {
+		case scanner.MomentumFading:
+			fading = true
+			v.Risks = append(v.Risks, "短線動能轉弱（FADING）")
+		case scanner.StructuralShiftDown:
+			shiftDown = true
+			v.Risks = append(v.Risks, "動能結構轉空（SHIFT_DOWN）")
+		}
+		if s.Momentum.Divergence {
+			v.Risks = append(v.Risks, "出現量價 / 動能背離")
+		}
+	}
+	if near52 && (fading || shiftDown) {
+		v.Risks = append(v.Risks, "高位追價風險")
+	}
+
+	strongBase := len(v.Pros) > 0
+
+	switch {
+	case shiftDown:
+		v.Headline = "動能轉空，優先保護部位、避免追高。"
+	case len(v.Risks) > 0 && containsConflict(s):
+		v.Headline = "多週期方向分歧，宜等待一致性再行動。"
+	case strongBase && fading:
+		v.Headline = "強勢候選，但短線動能轉弱，暫不追高。"
+	case strongBase && strongMTF && fullBull:
+		v.Headline = "日週同步走強，型態與動能偏多。"
+	case strongBase:
+		v.Headline = "具優勢條件，留意風險後再評估介入時點。"
+	case len(v.Risks) > 0:
+		v.Headline = "訊號偏弱，觀望為宜。"
+	default:
+		v.Headline = "訊號中性，資料有限。"
+	}
+
+	switch {
+	case fading || shiftDown:
+		v.Actions = []string{
+			"空手：等回測或重新放量轉強再評估",
+			"持有：可續抱，但提高停利 / 收緊移動停損",
+			"加碼：等 MomentumFlow 由 FADING 轉回 BUILDING / CONTINUATION",
+		}
+	case containsConflict(s):
+		v.Actions = []string{
+			"空手：等日週方向一致再評估",
+			"持有：以較緊停損控管多週期不確定性",
+			"加碼：暫不考慮，待趨勢共振成形",
+		}
+	case strongBase:
+		v.Actions = []string{
+			"空手：可分批觀察進場，依突破 / 量能確認",
+			"持有：續抱，以移動停損保護獲利",
+			"加碼：型態續強且未過熱時再評估",
+		}
+	default:
+		v.Actions = []string{
+			"空手：觀望，等更明確訊號",
+			"持有：依既有停損紀律",
+			"加碼：暫不考慮",
+		}
+	}
+	return v
+}
+
+func containsConflict(s *scanner.ShadowSignals) bool {
+	return s != nil && s.MultiTimeframe != nil && s.MultiTimeframe.AlignmentLabel == "CONFLICT"
+}
+
 // mtfLTFLabel renders the multi-timeframe long-term (200MA) filter for display.
 func mtfLTFLabel(s string) string {
 	switch s {
@@ -531,9 +655,10 @@ func (r *Report) Generate(
 				return "lvl-weak"
 			}
 		},
-		"vcpDepths":   vcpDepths,
-		"mfModifier":  mfModifier,
-		"mtfLTFLabel": mtfLTFLabel,
+		"vcpDepths":        vcpDepths,
+		"mfModifier":       mfModifier,
+		"mtfLTFLabel":      mtfLTFLabel,
+		"guardrailSummary": guardrailSummary,
 	}
 
 	tmpl, err := template.New("report").Funcs(funcs).Parse(htmlTemplate)
@@ -888,6 +1013,11 @@ th.rotscore{min-width:120px}
 .wl-sec ul{margin:0;padding-left:16px}
 .wl-sec li{margin:2px 0}
 .wl-note{color:#94a3b8;font-size:.7rem;margin-top:3px;font-style:italic}
+.wl-gs-summary{background:#0b1626;border-left:3px solid #38bdf8;border-radius:6px;padding:7px 10px;margin:4px 0 6px}
+.wl-gs-headline{color:#e2e8f0;font-size:.78rem;margin-bottom:3px}
+.wl-gs-h{color:#7dd3fc;font-weight:700;margin-top:4px}
+.wl-gs-list{margin:0;padding-left:16px}
+.wl-gs-list li{margin:1px 0}
 .wl-risk{border-color:#3b1414;background:#1a0f12}
 .wl-risk h4{color:#fca5a5}
 @media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
@@ -1045,6 +1175,21 @@ th.rotscore{min-width:120px}
             <div class="wl-note">scoring 未啟用，以下僅為 shadow 訊號，不參與分數。</div>
             {{- end }}
             {{- with $e.Shadow }}
+              {{- $sum := guardrailSummary $e $.GV.RSWatchThreshold }}
+              <div class="wl-gs-summary">
+                <div class="wl-gs-headline"><b>Guardrail Summary：</b>{{ $sum.Headline }}</div>
+                {{- if $sum.Pros }}
+                <div class="wl-gs-h">優勢：</div>
+                <ul class="wl-gs-list">{{- range $sum.Pros }}<li>{{ . }}</li>{{- end }}</ul>
+                {{- end }}
+                {{- if $sum.Risks }}
+                <div class="wl-gs-h">風險：</div>
+                <ul class="wl-gs-list">{{- range $sum.Risks }}<li>{{ . }}</li>{{- end }}</ul>
+                {{- end }}
+                <div class="wl-gs-h">操作解讀：</div>
+                <ul class="wl-gs-list">{{- range $sum.Actions }}<li>{{ . }}</li>{{- end }}</ul>
+              </div>
+              <div class="wl-note">── 以下為原始數據（raw）──</div>
               {{- with .RS }}
               <div>RS Rank：{{ f1 .RSRankPercentile }}　RS Score：{{ f1 .RSScore }}　gate threshold：{{ f1 $.GV.RSWatchThreshold }}</div>
               {{- if lt .RSRankPercentile $.GV.RSWatchThreshold }}<div><b>符合 RS gate 觸發條件（ExplosionProb 上限 MEDIUM）</b></div>{{- end }}

@@ -34,12 +34,12 @@ scanner:
 
   # 純顯示開關（C7）：true 時 Watchlist 卡片顯示 Guardrail Signals 解釋區塊（實驗性）。
   # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
-  show_guardrail_signals: false
+  show_guardrail_signals: true
 
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
   # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
   # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
-  enable_rs_rank: false                       # 總開關，預設 false
+  enable_rs_rank: true                        # 總開關，預設 false（觀察模式暫開）
   rs_lookback_days: 120                        # RS 報酬回看交易日數
   rs_min_history_days: 100                     # 不足此歷史長度不計算 RS
   rs_universe_exclude_non_common_stock: true   # 母體只留普通股（排除 ETF/特別股/DR…）
@@ -50,7 +50,7 @@ scanner:
   # ── 52 週高 / 多週期新高（C3）─────────────────────────────────────────────
   # enable_new_high=false（預設）時完全不計算、不影響既有 scoring / report /
   # watchlist / rotation。如何納入飆股分數屬後續 C6。新高一律以還原收盤比價。
-  enable_new_high: false                       # 總開關，預設 false
+  enable_new_high: true                        # 總開關，預設 false（觀察模式暫開）
   nh_lookbacks: [20, 60, 120, 250]             # 多週期新高視窗（固定 4 檔 → H20/H60/H120/H250）
   nh_min_history_days: 60                       # 不足此歷史長度不計算
 
@@ -70,7 +70,7 @@ scanner:
   # ── VCP / 波動收縮型態（C4）──────────────────────────────────────────────
   # enable_vcp=false（預設）時完全不計算、不影響既有 scoring / report / watchlist /
   # rotation。如何納入飆股分數屬後續 C6。價格一律以還原收盤計算（close-based）。
-  enable_vcp: false                             # 總開關，預設 false
+  enable_vcp: true                              # 總開關，預設 false（觀察模式暫開）
   vcp_lookback_days: 60                         # VCP 偵測視窗（交易日）
   vcp_min_history_days: 40                      # 不足此歷史長度不計算
   vcp_min_contractions: 2                       # 最少收縮段數（成立門檻）
@@ -91,7 +91,7 @@ scanner:
   # ── MomentumFlow（C5）────────────────────────────────────────────────────
   # 個股動能方向。enable_momentum_flow=false（預設）時完全不計算、不影響既有 scoring /
   # report / watchlist / rotation。RocketStage×MomentumFlow 聯合決策與分數修正屬後續 C6。
-  enable_momentum_flow: false                    # 總開關，預設 false
+  enable_momentum_flow: true                     # 總開關，預設 false（觀察模式暫開）
   mf_min_history_days: 30                         # 不足此歷史長度不計算
   mf_accel_short_window: 3                        # 短步調視窗
   mf_accel_long_window: 20                        # 長步調視窗
@@ -111,7 +111,7 @@ scanner:
   # ── 多週期 Multi-Timeframe（R4-2，shadow-only）──────────────────────────────
   # enable_multi_timeframe=false（預設）時完全不計算、不影響任何既有 scoring / action /
   # probability / sort / report。週線由日線聚合（不新增抓取、不用盤中/逐筆/五檔）。
-  enable_multi_timeframe: false
+  enable_multi_timeframe: true
   mtf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
   # R4-2b：SignalStrength 達 STRONG 所需的 Daily/Weekly TrendScore 門檻（離散值，85≈100）
   mtf_strong_daily_score_threshold: 85
