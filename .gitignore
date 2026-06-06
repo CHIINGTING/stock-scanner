@@ -3,4 +3,3 @@ reports/
 .cache/
 *.log
 .DS_Store
-/docs
