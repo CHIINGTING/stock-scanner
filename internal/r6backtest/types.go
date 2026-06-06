@@ -21,6 +21,7 @@ type Stock struct {
 
 	Close, High, Low, Vol         []float64
 	MA5, MA10, MA20, MA60, VolMA20 []float64
+	RSI14                         []float64 // causal Wilder RSI(14); rsi[i] uses bars <= i
 
 	idxOf map[string]int // date(YYYY-MM-DD) → bar index
 }
@@ -110,13 +111,29 @@ type Trade struct {
 	IsWatchlistMember     bool
 	EntryDate             time.Time
 	EntryPrice            float64
-	Exit5dReturn          float64 // NaN when horizon not available
-	Exit10dReturn         float64
-	Exit20dReturn         float64
-	Exit60dReturn         float64
+	SignalDate            time.Time // detection bar (i); entry is i+1
+	SignalClose           float64   // close at detection bar — reference only
+
+	// Stop-adjusted returns (MAIN statistic): if a stop is hit on or before the
+	// horizon, the return uses the stop exit price; otherwise the horizon close.
+	// NaN when neither a stop nor the horizon close is available.
+	Return5d  float64
+	Return10d float64
+	Return20d float64
+	Return60d float64
+
+	// Hold-to-horizon returns (COMPARISON only): ignore stops entirely; NaN when
+	// the horizon close is unavailable.
+	HoldReturn5d  float64
+	HoldReturn10d float64
+	HoldReturn20d float64
+	HoldReturn60d float64
+
 	MaxDrawdownAfterEntry float64
 	HitStop               bool
 	StopReason            string
+	StopDate              time.Time // zero when no stop hit
+	StopPrice             float64   // 0 when no stop hit
 	RSRankAtEntry         float64
 	DistanceFrom52wHigh   float64
 	PullbackPctFromHigh   float64
@@ -134,9 +151,16 @@ type SetupStat struct {
 	SetupName      string
 	Bucket         int
 	SampleCount    int
-	WinRate        map[int]float64 // horizon → win rate %
-	AvgReturn      map[int]float64 // horizon → avg return %
-	MedianReturn   map[int]float64 // horizon → median return %
+	// Main statistics use stop-adjusted return.
+	WinRate      map[int]float64 // horizon → win rate % (stop-adjusted)
+	AvgReturn    map[int]float64 // horizon → avg return % (stop-adjusted)
+	MedianReturn map[int]float64 // horizon → median return % (stop-adjusted)
+	// Comparison statistics use hold-to-horizon return.
+	HoldWinRate   map[int]float64
+	HoldAvgReturn map[int]float64
+	// StopDelta[h] = avg stop-adjusted − avg hold (positive = stop helped).
+	StopDelta map[int]float64
+
 	MaxDrawdownAvg float64
 	MaxDrawdownP90 float64
 	StopHitRate    float64

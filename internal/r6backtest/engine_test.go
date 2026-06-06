@@ -72,14 +72,17 @@ func TestEntryAndForwardReturns(t *testing.T) {
 	if math.Abs(tr.EntryPrice-wantEntry) > 1e-9 {
 		t.Errorf("entry price: got %v want %v", tr.EntryPrice, wantEntry)
 	}
-	// 5d return = close[151+5]/entry - 1.
+	// 5d return = close[151+5]/entry - 1 (no stop → stop-adjusted == hold).
 	want5 := (s.Close[156]/wantEntry - 1) * 100
-	if math.Abs(tr.Exit5dReturn-want5) > 1e-6 {
-		t.Errorf("5d return: got %v want %v", tr.Exit5dReturn, want5)
+	if math.Abs(tr.Return5d-want5) > 1e-6 {
+		t.Errorf("5d return: got %v want %v", tr.Return5d, want5)
+	}
+	if math.Abs(tr.HoldReturn5d-want5) > 1e-6 {
+		t.Errorf("5d hold return: got %v want %v", tr.HoldReturn5d, want5)
 	}
 	want20 := (s.Close[171]/wantEntry - 1) * 100
-	if math.Abs(tr.Exit20dReturn-want20) > 1e-6 {
-		t.Errorf("20d return: got %v want %v", tr.Exit20dReturn, want20)
+	if math.Abs(tr.Return20d-want20) > 1e-6 {
+		t.Errorf("20d return: got %v want %v", tr.Return20d, want20)
 	}
 }
 
@@ -97,34 +100,97 @@ func TestHorizonUnavailable(t *testing.T) {
 	if len(trades) != 1 {
 		t.Fatalf("want 1 trade, got %d", len(trades))
 	}
-	if !math.IsNaN(trades[0].Exit60dReturn) {
-		t.Errorf("60d should be NaN when unavailable, got %v", trades[0].Exit60dReturn)
+	if !math.IsNaN(trades[0].Return60d) {
+		t.Errorf("60d should be NaN when unavailable, got %v", trades[0].Return60d)
 	}
-	if math.IsNaN(trades[0].Exit5dReturn) {
+	if math.IsNaN(trades[0].Return5d) {
 		t.Errorf("5d should be available")
 	}
 }
 
-// 3. stop hit: -10% rule fires and is reported.
-func TestStopHit(t *testing.T) {
-	closes := make([]float64, 200)
-	for i := range closes {
-		closes[i] = 100
+// flat-then helper: 200 bars at 100, entry at bar 151 (==100), caller mutates tail.
+func flatStock(sym string) []float64 {
+	c := make([]float64, 200)
+	for i := range c {
+		c[i] = 100
 	}
-	// entry bar (151) stays at 100; crash 15% strictly AFTER entry.
+	return c
+}
+
+// 3 (stop semantics #1). Stop hit BEFORE 5d → return_5d uses the stop price,
+// and stop_date/stop_price are recorded; hold_return_5d ignores the stop.
+func TestStopBefore5d_UsesStopPrice(t *testing.T) {
+	closes := flatStock("S1")
+	// entry bar 151 = 100; bar 153 crashes to 85 (≤ -10% at bar 153, before 5d=156).
 	for i := 152; i < 200; i++ {
 		closes[i] = 85
 	}
-	s := mkStock("T3", closes)
+	closes[151] = 100 // ensure entry open = 100
+	s := mkStock("S1", closes)
 	p := DefaultParams()
 	p.Warmup = 100
 	p.StopRules = []string{"PCT_-10"}
-	trades := RunSetup(&Universe{Stocks: []*Stock{s}}, emptyPanel(), fixedSetup{at: map[int]bool{150: true}}, p)
-	if len(trades) != 1 {
-		t.Fatalf("want 1 trade, got %d", len(trades))
+	tr := RunSetup(&Universe{Stocks: []*Stock{s}}, emptyPanel(), fixedSetup{at: map[int]bool{150: true}}, p)[0]
+	if !tr.HitStop || tr.StopReason != "PCT_-10" {
+		t.Fatalf("expected PCT_-10 stop, got hit=%v reason=%q", tr.HitStop, tr.StopReason)
 	}
-	if !trades[0].HitStop || trades[0].StopReason != "PCT_-10" {
-		t.Errorf("expected PCT_-10 stop, got hit=%v reason=%q", trades[0].HitStop, trades[0].StopReason)
+	if tr.StopPrice != 85 || tr.StopDate.IsZero() {
+		t.Errorf("stop_price/stop_date: got %v / %v", tr.StopPrice, tr.StopDate)
+	}
+	wantStopRet := (85.0/tr.EntryPrice - 1) * 100
+	if math.Abs(tr.Return5d-wantStopRet) > 1e-9 {
+		t.Errorf("return_5d should use stop price: got %v want %v", tr.Return5d, wantStopRet)
+	}
+	// hold ignores the stop → 5d close is also 85 here, but assert it equals hold math.
+	wantHold := (s.Close[156]/tr.EntryPrice - 1) * 100
+	if math.Abs(tr.HoldReturn5d-wantHold) > 1e-9 {
+		t.Errorf("hold_return_5d should ignore stop: got %v want %v", tr.HoldReturn5d, wantHold)
+	}
+}
+
+// stop semantics #2. Stop hit AFTER 5d but before 10d → return_5d uses the 5d
+// close (no stop yet), return_10d uses the stop price.
+func TestStopBetween5dAnd10d(t *testing.T) {
+	closes := flatStock("S2")
+	// hold flat (100) through bar 156 (5d), then crash at bar 158 (within 10d=161).
+	for i := 158; i < 200; i++ {
+		closes[i] = 80
+	}
+	s := mkStock("S2", closes)
+	p := DefaultParams()
+	p.Warmup = 100
+	p.StopRules = []string{"PCT_-10"}
+	tr := RunSetup(&Universe{Stocks: []*Stock{s}}, emptyPanel(), fixedSetup{at: map[int]bool{150: true}}, p)[0]
+	// 5d (bar 156) is still 100 → ~0% (no stop yet).
+	if math.Abs(tr.Return5d-0) > 1e-9 {
+		t.Errorf("return_5d should be the 5d close (no stop yet): got %v", tr.Return5d)
+	}
+	// 10d uses stop price (80).
+	wantStopRet := (80.0/tr.EntryPrice - 1) * 100
+	if math.Abs(tr.Return10d-wantStopRet) > 1e-9 {
+		t.Errorf("return_10d should use stop price: got %v want %v", tr.Return10d, wantStopRet)
+	}
+}
+
+// stop semantics #3 & #4. No stop → return_Xd == hold close; hold always ignores stop.
+func TestNoStop_ReturnEqualsHold(t *testing.T) {
+	closes := make([]float64, 200)
+	for i := range closes {
+		closes[i] = 100 + float64(i)*0.2 // steady rise, never triggers a -10% stop
+	}
+	s := mkStock("S3", closes)
+	p := DefaultParams()
+	p.Warmup = 100
+	p.StopRules = []string{"PCT_-10"}
+	tr := RunSetup(&Universe{Stocks: []*Stock{s}}, emptyPanel(), fixedSetup{at: map[int]bool{150: true}}, p)[0]
+	if tr.HitStop {
+		t.Fatalf("no stop expected")
+	}
+	for h, got := range map[int]float64{5: tr.Return5d, 20: tr.Return20d} {
+		hold := (s.Close[151+h]/tr.EntryPrice - 1) * 100
+		if math.Abs(got-hold) > 1e-9 {
+			t.Errorf("h=%d no-stop return should equal hold: got %v want %v", h, got, hold)
+		}
 	}
 }
 
@@ -155,8 +221,8 @@ func TestNoLookAhead(t *testing.T) {
 		t.Errorf("entry price must not depend on future bars: %v vs %v", a[0].EntryPrice, b[0].EntryPrice)
 	}
 	// 5d return uses bars within [151,156] (< 160), so must be identical.
-	if a[0].Exit5dReturn != b[0].Exit5dReturn {
-		t.Errorf("5d return changed by future-only mutation: %v vs %v", a[0].Exit5dReturn, b[0].Exit5dReturn)
+	if a[0].Return5d != b[0].Return5d {
+		t.Errorf("5d return changed by future-only mutation: %v vs %v", a[0].Return5d, b[0].Return5d)
 	}
 }
 

@@ -40,15 +40,23 @@ func main() {
 	rs := r6backtest.BuildRSPanel(u, p)
 	fmt.Printf("RS panel: %d dates in %v\n", rs.Dates(), time.Since(tRS))
 
-	// R6-2b…d will register real setups here.
+	// R6-2b: Setup A (MA20/MA60) + Setup B (pullback-depth sweep). C/D arrive later.
 	var setups []r6backtest.Setup
+	setups = append(setups, r6backtest.SetupAVariants()...)
+	setups = append(setups, r6backtest.SetupBBuckets()...)
 
 	var allTrades []r6backtest.Trade
 	var stats []r6backtest.SetupStat
 	for _, s := range setups {
+		tRun := time.Now()
 		trades := r6backtest.RunSetup(u, rs, s, p)
+		bucket := 0
+		if len(trades) > 0 {
+			bucket = trades[0].Bucket
+		}
 		allTrades = append(allTrades, trades...)
-		stats = append(stats, r6backtest.ComputeStats(s.Name(), 0, trades, p.Horizons, p))
+		stats = append(stats, r6backtest.ComputeStats(s.Name(), bucket, trades, p.Horizons, p))
+		fmt.Printf("  %-18s %5d trades  (%v)\n", s.Name(), len(trades), time.Since(tRun))
 	}
 
 	stamp := time.Now().Format("20060102")
@@ -62,7 +70,9 @@ func main() {
 		fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
 		fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
 		fmt.Sprintf("RS panel dates: %d (lookback %dd)", rs.Dates(), p.RSLookbackDays),
-		"R6-2a framework only — no setups (A/B/C/D) wired yet.",
+		fmt.Sprintf("warmup: %d bars (52w) ; horizons: %v ; entry: %s", p.Warmup, p.Horizons, p.EntryMode),
+		"R6-2b: Setup A (MA20/MA60) + Setup B (pullback sweep) wired. Setup C/D not yet.",
+		"60d-horizon samples are fewer than 5/10/20d (forward window limited by data end).",
 	}
 	if err := r6backtest.WriteMarkdown(mdPath, "R6 Pullback Backtest", meta, stats, p.Horizons); err != nil {
 		log.Fatalf("write md: %v", err)
