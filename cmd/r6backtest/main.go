@@ -1,0 +1,71 @@
+// Command r6backtest runs the R6 pullback / crash-low entry backtest off the
+// existing .cache and writes a per-trade CSV + markdown summary into reports/.
+// Decision-support only: no live scanner/report/scoring is touched, no orders.
+//
+// R6-2a: framework skeleton — universe + RS panel + engine + output schema wired
+// end-to-end. No real setups (A/B/C/D) are registered yet; those arrive in
+// R6-2b…d. Running now produces a header-only CSV and a framework summary so the
+// schema and runtime are inspectable.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"path/filepath"
+	"time"
+
+	"github.com/deep-huang/stock-scanner/internal/r6backtest"
+)
+
+func main() {
+	cacheDir := flag.String("cache", ".cache", "OHLCV cache directory (read-only)")
+	outDir := flag.String("out", "reports", "output directory (gitignored)")
+	minBars := flag.Int("min-bars", 130, "drop symbols with fewer bars")
+	flag.Parse()
+
+	t0 := time.Now()
+	u, err := r6backtest.LoadUniverse(*cacheDir, *minBars, nil, nil)
+	if err != nil {
+		log.Fatalf("load universe: %v", err)
+	}
+	if len(u.Stocks) == 0 {
+		log.Fatalf("no cached stocks found in %s — populate .cache first", *cacheDir)
+	}
+	fmt.Printf("universe: %d stocks, axis %s → %s (%d days), loaded in %v\n",
+		len(u.Stocks), u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis), time.Since(t0))
+
+	p := r6backtest.DefaultParams()
+	tRS := time.Now()
+	rs := r6backtest.BuildRSPanel(u, p)
+	fmt.Printf("RS panel: %d dates in %v\n", rs.Dates(), time.Since(tRS))
+
+	// R6-2b…d will register real setups here.
+	var setups []r6backtest.Setup
+
+	var allTrades []r6backtest.Trade
+	var stats []r6backtest.SetupStat
+	for _, s := range setups {
+		trades := r6backtest.RunSetup(u, rs, s, p)
+		allTrades = append(allTrades, trades...)
+		stats = append(stats, r6backtest.ComputeStats(s.Name(), 0, trades, p.Horizons, p))
+	}
+
+	stamp := time.Now().Format("20060102")
+	csvPath := filepath.Join(*outDir, "backtest_pullback_"+stamp+".csv")
+	mdPath := filepath.Join(*outDir, "backtest_pullback_summary_"+stamp+".md")
+
+	if err := r6backtest.WriteCSV(csvPath, allTrades); err != nil {
+		log.Fatalf("write csv: %v", err)
+	}
+	meta := []string{
+		fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+		fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+		fmt.Sprintf("RS panel dates: %d (lookback %dd)", rs.Dates(), p.RSLookbackDays),
+		"R6-2a framework only — no setups (A/B/C/D) wired yet.",
+	}
+	if err := r6backtest.WriteMarkdown(mdPath, "R6 Pullback Backtest", meta, stats, p.Horizons); err != nil {
+		log.Fatalf("write md: %v", err)
+	}
+	fmt.Printf("wrote %s (%d trades) and %s\n", csvPath, len(allTrades), mdPath)
+}
