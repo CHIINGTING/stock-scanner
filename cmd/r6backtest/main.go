@@ -22,6 +22,7 @@ func main() {
 	cacheDir := flag.String("cache", ".cache", "OHLCV cache directory (read-only)")
 	outDir := flag.String("out", "reports", "output directory (gitignored)")
 	minBars := flag.Int("min-bars", 130, "drop symbols with fewer bars")
+	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
 	flag.Parse()
 
 	t0 := time.Now()
@@ -45,6 +46,32 @@ func main() {
 	setups = append(setups, r6backtest.SetupAVariants()...)
 	setups = append(setups, r6backtest.SetupBBuckets()...)
 
+	stamp := time.Now().Format("20060102")
+
+	// ── R6-3 stop-policy benchmark (separate output; baseline unchanged) ──
+	if *stopBench {
+		policies := r6backtest.BenchmarkStopPolicies()
+		tB := time.Now()
+		benchStats := r6backtest.RunStopBenchmark(u, rs, setups, policies, p)
+		csv := filepath.Join(*outDir, "backtest_stop_benchmark_"+stamp+".csv")
+		md := filepath.Join(*outDir, "backtest_stop_benchmark_summary_"+stamp+".md")
+		if err := r6backtest.WriteBenchmarkCSV(csv, benchStats); err != nil {
+			log.Fatalf("write benchmark csv: %v", err)
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+			fmt.Sprintf("warmup: %d ; horizons: %v ; entry: %s", p.Warmup, p.Horizons, p.EntryMode),
+			fmt.Sprintf("policies compared: %d ; setups: %d", len(policies), len(setups)),
+		}
+		if err := r6backtest.WriteBenchmarkMarkdown(md, "R6-3 Stop Policy Benchmark", meta, benchStats); err != nil {
+			log.Fatalf("write benchmark md: %v", err)
+		}
+		fmt.Printf("stop benchmark: %d rows (%d setups × %d policies) in %v\nwrote %s and %s\n",
+			len(benchStats), len(setups), len(policies), time.Since(tB), csv, md)
+		return
+	}
+
 	var allTrades []r6backtest.Trade
 	var stats []r6backtest.SetupStat
 	for _, s := range setups {
@@ -59,7 +86,6 @@ func main() {
 		fmt.Printf("  %-18s %5d trades  (%v)\n", s.Name(), len(trades), time.Since(tRun))
 	}
 
-	stamp := time.Now().Format("20060102")
 	csvPath := filepath.Join(*outDir, "backtest_pullback_"+stamp+".csv")
 	mdPath := filepath.Join(*outDir, "backtest_pullback_summary_"+stamp+".md")
 

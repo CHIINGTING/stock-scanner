@@ -80,6 +80,7 @@ func LoadUniverse(cacheDir string, minBars int, watchlist map[string]bool, secto
 		s.MA60 = sma(s.Close, 60)
 		s.VolMA20 = sma(s.Vol, 20)
 		s.RSI14 = indicator.RSI(s.Close, 14)
+		s.ATR14 = indicator.ATR(s.High, s.Low, s.Close, 14)
 		u.Stocks = append(u.Stocks, s)
 		u.bySym[s.Symbol] = s
 	}
@@ -129,66 +130,105 @@ func minLow(s *Stock, lo, hi int) float64 {
 	return m
 }
 
-// RunSetup backtests one setup over the whole universe and returns the trades.
-// Look-ahead safety: detection reads only bars <= i (setup's responsibility),
-// entry executes at bar i+1 open, and all outcomes are measured strictly after
-// the entry bar. Cooldown de-dups overlapping triggers on the same stock+bucket.
-func RunSetup(u *Universe, rs *RSPanel, setup Setup, p Params) []Trade {
-	var trades []Trade
+// entryPoint is one accepted entry (stop-independent), reusable across stop
+// policies in the R6-3 benchmark.
+type entryPoint struct {
+	s        *Stock
+	i        int // detection bar
+	entryIdx int // entry bar (i+1 in next_open mode)
+	entry    float64
+	trig     Trigger
+}
+
+func maxHorizon(p Params) int {
 	maxH := 0
 	for _, h := range p.Horizons {
 		if h > maxH {
 			maxH = h
 		}
 	}
-	for _, s := range u.Stocks {
-		n := len(s.Candles)
-		cdUntil := map[int]int{}    // bucket → first re-entry-allowed index
-		lastEntry := map[int]int{}  // bucket → last entry detection index
-		hasEntry := map[int]bool{}  // bucket → seen at least one entry
-		for i := p.Warmup; i+1+p.MinForward <= n-1; i++ {
-			trig := setup.Detect(u, rs, s, i, p)
-			if trig == nil {
-				continue
-			}
-			b := trig.Bucket
-			// Cooldown: suppress re-entry within `Cooldown` bars on the same
-			// stock+setup+bucket UNLESS a fresh 20-day high printed since the last
-			// entry (that starts a new pullback leg → reset).
-			if hasEntry[b] && i < cdUntil[b] && !newHighSince(s, lastEntry[b], i) {
-				continue
-			}
-			cdUntil[b] = i + p.Cooldown
-			lastEntry[b] = i
-			hasEntry[b] = true
-
-			t := buildTrade(setup.Name(), rs, s, i, trig, p, maxH)
-			if t != nil {
-				trades = append(trades, *t)
-			}
-		}
-	}
-	return trades
+	return maxH
 }
 
-// buildTrade simulates entry at i+1 open and computes forward returns, drawdown,
-// and the first stop hit. Returns nil if the entry bar does not exist.
-func buildTrade(name string, rs *RSPanel, s *Stock, i int, trig *Trigger, p Params, maxH int) *Trade {
+// entryOf resolves the entry bar/price for detection bar i.
+func entryOf(s *Stock, i int, p Params) (int, float64, bool) {
 	n := len(s.Candles)
 	entryIdx := i + 1
 	if p.EntryMode == "signal_close" {
 		entryIdx = i
 	}
 	if entryIdx >= n {
-		return nil
+		return 0, 0, false
 	}
 	entry := s.Candles[entryIdx].Open
 	if p.EntryMode == "signal_close" {
 		entry = s.Close[entryIdx]
 	}
 	if entry <= 0 {
-		return nil
+		return 0, 0, false
 	}
+	return entryIdx, entry, true
+}
+
+// collectEntries runs detection + cooldown de-dup once and returns the entries
+// (independent of any stop policy). Look-ahead safety: detection reads only bars
+// <= i; cooldown resets on a fresh 20-day high (new pullback leg).
+func collectEntries(u *Universe, rs *RSPanel, setup Setup, p Params) []entryPoint {
+	var eps []entryPoint
+	for _, s := range u.Stocks {
+		n := len(s.Candles)
+		cdUntil := map[int]int{}
+		lastEntry := map[int]int{}
+		hasEntry := map[int]bool{}
+		for i := p.Warmup; i+1+p.MinForward <= n-1; i++ {
+			trig := setup.Detect(u, rs, s, i, p)
+			if trig == nil {
+				continue
+			}
+			b := trig.Bucket
+			if hasEntry[b] && i < cdUntil[b] && !newHighSince(s, lastEntry[b], i) {
+				continue
+			}
+			entryIdx, entry, ok := entryOf(s, i, p)
+			if !ok {
+				continue
+			}
+			cdUntil[b] = i + p.Cooldown
+			lastEntry[b] = i
+			hasEntry[b] = true
+			eps = append(eps, entryPoint{s: s, i: i, entryIdx: entryIdx, entry: entry, trig: *trig})
+		}
+	}
+	return eps
+}
+
+// RunSetup backtests one setup over the universe using the baseline stop derived
+// from p.StopRules (identical to R6-2b). Entry executes at i+1 open; outcomes are
+// measured strictly after the entry bar.
+func RunSetup(u *Universe, rs *RSPanel, setup Setup, p Params) []Trade {
+	maxH := maxHorizon(p)
+	policy := rulesStop{rules: p.StopRules}
+	eps := collectEntries(u, rs, setup, p)
+	trades := make([]Trade, 0, len(eps))
+	for _, ep := range eps {
+		end := ep.entryIdx + maxH
+		if end > len(ep.s.Candles)-1 {
+			end = len(ep.s.Candles) - 1
+		}
+		sr := policy.Eval(ep.s, ep.entryIdx, ep.entry, p, end)
+		if t := buildTrade(setup.Name(), rs, ep, sr, maxH); t != nil {
+			trades = append(trades, *t)
+		}
+	}
+	return trades
+}
+
+// buildTrade computes forward returns / drawdown for an entry under a given stop
+// result. Stop-adjusted returns use the stop exit price when the stop fell on or
+// before the horizon; hold returns ignore the stop entirely.
+func buildTrade(name string, rs *RSPanel, ep entryPoint, sr StopResult, maxH int) *Trade {
+	s, i, entryIdx, entry, trig := ep.s, ep.i, ep.entryIdx, ep.entry, ep.trig
+	n := len(s.Candles)
 
 	d := dateKey(s.Candles[i].Date)
 	rsPct, _ := rs.At(s.Symbol, d)
@@ -205,7 +245,6 @@ func buildTrade(name string, rs *RSPanel, s *Stock, i int, trig *Trigger, p Para
 		ma60d = (s.Close[i] - s.MA60[i]) / s.MA60[i] * 100
 	}
 
-	// scan window = up to the longest horizon (bounded by data end).
 	end := entryIdx + maxH
 	if end > n-1 {
 		end = n - 1
@@ -217,47 +256,24 @@ func buildTrade(name string, rs *RSPanel, s *Stock, i int, trig *Trigger, p Para
 			dd = x
 		}
 	}
-
-	// First stop hit (scanning forward). Records the bar, exit price (= that bar's
-	// close), and reason. swingLow is the entry-time recent low.
-	swingLow := minLow(s, i-p.SwingLowback+1, i)
-	stopBar := -1
-	reason := ""
-	for j := entryIdx + 1; j <= end && stopBar < 0; j++ {
-		for _, rule := range p.StopRules {
-			switch rule {
-			case "BREAK_MA60":
-				if s.MA60[j] > 0 && s.Close[j] < s.MA60[j] {
-					stopBar, reason = j, "BREAK_MA60"
-				}
-			case "BREAK_SWING_LOW":
-				if swingLow > 0 && s.Close[j] < swingLow {
-					stopBar, reason = j, "BREAK_SWING_LOW"
-				}
-			case "PCT_-8":
-				if (s.Close[j]/entry-1)*100 <= -8 {
-					stopBar, reason = j, "PCT_-8"
-				}
-			case "PCT_-10":
-				if (s.Close[j]/entry-1)*100 <= -10 {
-					stopBar, reason = j, "PCT_-10"
-				}
-			}
-			if stopBar >= 0 {
-				break
-			}
+	// stop-aware realized drawdown: only up to the exit (stop bar) — what the
+	// trade actually experienced before being stopped out.
+	lastBar := end
+	if sr.HitStop && sr.StopBar < lastBar {
+		lastBar = sr.StopBar
+	}
+	rdd := 0.0
+	for j := entryIdx + 1; j <= lastBar; j++ {
+		x := (s.Low[j]/entry - 1) * 100
+		if x < rdd {
+			rdd = x
 		}
 	}
-	hitStop := stopBar >= 0
-	stopPrice, stopRet := 0.0, math.NaN()
-	var stopDate time.Time
-	if hitStop {
-		stopPrice = s.Close[stopBar]
-		stopDate = s.Candles[stopBar].Date
-		stopRet = (stopPrice/entry - 1) * 100
-	}
 
-	// hold(h): pure horizon-close return (ignores stop). NaN if not reached.
+	stopRet := math.NaN()
+	if sr.HitStop {
+		stopRet = (sr.StopPrice/entry - 1) * 100
+	}
 	hold := func(h int) float64 {
 		j := entryIdx + h
 		if j > n-1 {
@@ -265,9 +281,8 @@ func buildTrade(name string, rs *RSPanel, s *Stock, i int, trig *Trigger, p Para
 		}
 		return (s.Close[j]/entry - 1) * 100
 	}
-	// stopAdj(h): stop exit if the stop fell on/before the horizon, else hold(h).
 	stopAdj := func(h int) float64 {
-		if hitStop && stopBar <= entryIdx+h {
+		if sr.HitStop && sr.StopBar <= entryIdx+h {
 			return stopRet
 		}
 		return hold(h)
@@ -291,10 +306,11 @@ func buildTrade(name string, rs *RSPanel, s *Stock, i int, trig *Trigger, p Para
 		HoldReturn20d:         hold(20),
 		HoldReturn60d:         hold(60),
 		MaxDrawdownAfterEntry: dd,
-		HitStop:               hitStop,
-		StopReason:            reason,
-		StopDate:              stopDate,
-		StopPrice:             stopPrice,
+		RealizedDrawdown:      rdd,
+		HitStop:               sr.HitStop,
+		StopReason:            sr.Reason,
+		StopDate:              sr.StopDate,
+		StopPrice:             sr.StopPrice,
 		RSRankAtEntry:         rsPct,
 		DistanceFrom52wHigh:   dist52,
 		PullbackPctFromHigh:   trig.PullbackPct,

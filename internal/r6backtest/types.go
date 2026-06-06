@@ -22,8 +22,19 @@ type Stock struct {
 	Close, High, Low, Vol         []float64
 	MA5, MA10, MA20, MA60, VolMA20 []float64
 	RSI14                         []float64 // causal Wilder RSI(14); rsi[i] uses bars <= i
+	ATR14                         []float64 // causal ATR(14); atr[i] uses bars <= i
 
 	idxOf map[string]int // date(YYYY-MM-DD) → bar index
+}
+
+// StopResult is the outcome of applying one stop policy to one entry. StopBar is
+// the absolute bar index where the stop fired (-1 when no stop).
+type StopResult struct {
+	HitStop   bool
+	StopBar   int
+	StopPrice float64
+	StopDate  time.Time
+	Reason    string
 }
 
 // IndexOf returns the bar index for a date key, or (-1,false).
@@ -129,7 +140,8 @@ type Trade struct {
 	HoldReturn20d float64
 	HoldReturn60d float64
 
-	MaxDrawdownAfterEntry float64
+	MaxDrawdownAfterEntry float64 // hold-path max adverse excursion over the maxH window (in CSV)
+	RealizedDrawdown      float64 // stop-aware: min low up to the stop (or horizon) — NOT in CSV; for benchmark dd
 	HitStop               bool
 	StopReason            string
 	StopDate              time.Time // zero when no stop hit
@@ -150,6 +162,7 @@ type Trade struct {
 type SetupStat struct {
 	SetupName      string
 	Bucket         int
+	StopPolicy     string // empty for R6-2b runs; set in the R6-3 benchmark
 	SampleCount    int
 	// Main statistics use stop-adjusted return.
 	WinRate      map[int]float64 // horizon → win rate % (stop-adjusted)
@@ -161,8 +174,10 @@ type SetupStat struct {
 	// StopDelta[h] = avg stop-adjusted − avg hold (positive = stop helped).
 	StopDelta map[int]float64
 
-	MaxDrawdownAvg float64
+	MaxDrawdownAvg float64 // hold-path (R6-2b summary)
 	MaxDrawdownP90 float64
+	RealizedDDAvg  float64 // stop-aware realized drawdown (R6-3 benchmark)
+	RealizedDDP90  float64
 	StopHitRate    float64
 	Confidence     string // HIGH | MEDIUM | LOW
 	BestCases      []string

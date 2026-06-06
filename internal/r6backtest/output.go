@@ -180,16 +180,19 @@ func ComputeStats(name string, bucket int, trades []Trade, horizons []int, p Par
 		st.HoldWinRate[h], st.HoldAvgReturn[h] = hw, ha
 		st.StopDelta[h] = a - ha // positive = stop helped
 	}
-	var dds []float64
+	var dds, rdds []float64
 	stops := 0
 	for _, t := range trades {
 		dds = append(dds, t.MaxDrawdownAfterEntry)
+		rdds = append(rdds, t.RealizedDrawdown)
 		if t.HitStop {
 			stops++
 		}
 	}
 	st.MaxDrawdownAvg = mean(dds)
 	st.MaxDrawdownP90 = percentile(dds, 10) // 10th pct of signed dd = worst decile
+	st.RealizedDDAvg = mean(rdds)
+	st.RealizedDDP90 = percentile(rdds, 10)
 	if len(trades) > 0 {
 		st.StopHitRate = float64(stops) / float64(len(trades)) * 100
 	}
@@ -289,4 +292,101 @@ func pct(x float64) string {
 		return "—"
 	}
 	return strconv.FormatFloat(x, 'f', 1, 64) + "%"
+}
+
+// ── R6-3 stop-policy benchmark output ───────────────────────────────────────
+
+// benchmarkCSVHeader is the FIXED schema for the stop-policy comparison CSV
+// (one row per setup × stop_policy).
+var benchmarkCSVHeader = []string{
+	"setup_name", "pullback_bucket", "stop_policy", "sample_count",
+	"win_rate_5d", "win_rate_10d", "win_rate_20d", "win_rate_60d",
+	"avg_return_5d", "avg_return_10d", "avg_return_20d", "avg_return_60d",
+	"median_return_20d", "max_drawdown_avg", "max_drawdown_p90", "stop_hit_rate",
+	"avg_hold_return_20d", "stop_saved_or_hurt_delta_20d", "worst_cases",
+}
+
+// BenchmarkCSVHeader exposes the fixed benchmark schema (for tests).
+func BenchmarkCSVHeader() []string { return append([]string(nil), benchmarkCSVHeader...) }
+
+func g(x float64) string { // generic float (no % suffix) for CSV
+	if math.IsNaN(x) {
+		return ""
+	}
+	return strconv.FormatFloat(x, 'f', 2, 64)
+}
+
+func benchmarkRow(s SetupStat) []string {
+	return []string{
+		s.SetupName, strconv.Itoa(s.Bucket), s.StopPolicy, strconv.Itoa(s.SampleCount),
+		g(s.WinRate[5]), g(s.WinRate[10]), g(s.WinRate[20]), g(s.WinRate[60]),
+		g(s.AvgReturn[5]), g(s.AvgReturn[10]), g(s.AvgReturn[20]), g(s.AvgReturn[60]),
+		g(s.MedianReturn[20]), g(s.RealizedDDAvg), g(s.RealizedDDP90), g(s.StopHitRate),
+		g(s.HoldAvgReturn[20]), g(s.StopDelta[20]), strings.Join(s.WorstCases, ";"),
+	}
+}
+
+// WriteBenchmarkCSV writes the stop-policy comparison (header always present).
+func WriteBenchmarkCSV(path string, stats []SetupStat) error {
+	var b strings.Builder
+	b.WriteString(strings.Join(benchmarkCSVHeader, ",") + "\n")
+	for _, s := range stats {
+		row := benchmarkRow(s)
+		for i, c := range row {
+			if strings.ContainsAny(c, ",\"\n") {
+				c = "\"" + strings.ReplaceAll(c, "\"", "\"\"") + "\""
+			}
+			row[i] = c
+		}
+		b.WriteString(strings.Join(row, ",") + "\n")
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
+// WriteBenchmarkMarkdown groups the stats by setup and renders one comparison
+// table per setup, then flags the best policy per setup (by 20d & 60d avg
+// stop-adjusted return). It does NOT change any default — comparison only.
+func WriteBenchmarkMarkdown(path, title string, meta []string, stats []SetupStat) error {
+	var b strings.Builder
+	b.WriteString("# " + title + "\n\n")
+	b.WriteString("> Stop policy comparison（回測結果，僅供候選 / 勝率 / 風險 / 參考進場區）。\n")
+	b.WriteString("> **不變更任何預設 stop policy**；baseline 維持 BREAK_MA60+PCT_-10，其餘僅為對照。\n")
+	b.WriteString("> stop_saved_or_hurt_delta = avg_stop_adjusted_return − avg_hold_return（正=保護，負=過早洗出）。\n")
+	b.WriteString("> dd_avg / dd_p90 為 **stop-aware realized drawdown**（只算到出場/停損為止），故各 policy 不同。\n\n")
+	for _, m := range meta {
+		b.WriteString("- " + m + "\n")
+	}
+	b.WriteString("\n")
+
+	// group preserving first-seen setup order.
+	var order []string
+	groups := map[string][]SetupStat{}
+	for _, s := range stats {
+		if _, ok := groups[s.SetupName]; !ok {
+			order = append(order, s.SetupName)
+		}
+		groups[s.SetupName] = append(groups[s.SetupName], s)
+	}
+	for _, name := range order {
+		g := groups[name]
+		b.WriteString("## " + name + "\n\n")
+		b.WriteString("| stop_policy | n | win_20d | avg_20d | avg_60d | hold_20d | delta_20d | stop_hit | dd_avg | dd_p90 |\n")
+		b.WriteString("|---|---|---|---|---|---|---|---|---|---|\n")
+		best20, best60 := "", ""
+		var b20, b60 float64 = math.Inf(-1), math.Inf(-1)
+		for _, s := range g {
+			b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				s.StopPolicy, s.SampleCount, pct(s.WinRate[20]), pct(s.AvgReturn[20]), pct(s.AvgReturn[60]),
+				pct(s.HoldAvgReturn[20]), pct(s.StopDelta[20]), pct(s.StopHitRate),
+				pct(s.RealizedDDAvg), pct(s.RealizedDDP90)))
+			if !math.IsNaN(s.AvgReturn[20]) && s.AvgReturn[20] > b20 {
+				b20, best20 = s.AvgReturn[20], s.StopPolicy
+			}
+			if !math.IsNaN(s.AvgReturn[60]) && s.AvgReturn[60] > b60 {
+				b60, best60 = s.AvgReturn[60], s.StopPolicy
+			}
+		}
+		b.WriteString(fmt.Sprintf("\n- best avg_return: 20d → **%s**　60d → **%s**（僅對照，不自動採用）\n\n", best20, best60))
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
 }
