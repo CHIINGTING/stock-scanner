@@ -75,6 +75,11 @@ type Params struct {
 
 	Cooldown int // bars to suppress re-entry on same stock+setup+bucket (default 10)
 
+	// BaseLowLookback (Setup C base-low retest): trailing window whose min Low is
+	// used as a PROXY for the VCP base / recent contraction low (default 40).
+	// NOTE: this is a proxy — ComputeVCP does not expose contraction trough prices.
+	BaseLowLookback int
+
 	// ForceLowConfidence pins SetupStat.Confidence to LOW regardless of sample
 	// count (Setup D: only one real crash event in the data).
 	ForceLowConfidence bool
@@ -89,21 +94,24 @@ func DefaultParams() Params {
 		Horizons:       []int{5, 10, 20, 60},
 		MinForward:     5,
 		EntryMode:      "next_open",
-		StopRules:      []string{"BREAK_MA60", "PCT_-10"},
-		SwingLowback:   20,
-		Cooldown:       10,
+		StopRules:       []string{"BREAK_MA60", "PCT_-10"},
+		SwingLowback:    20,
+		Cooldown:        10,
+		BaseLowLookback: 40,
 	}
 }
 
 // Trigger is what a Setup returns when bar i is an entry signal (as-of i).
 // Setup-specific context the engine cannot derive on its own goes here.
 type Trigger struct {
-	Bucket       int     // Setup B pullback bucket (e.g., 10 for 10%); 0 = n/a
-	PullbackPct  float64 // pullback % from recent high (setup-defined)
-	VCPValid     bool
-	MomentumFlow string
-	MTFSignal    string
-	Note         string
+	Bucket          int     // Setup B pullback bucket (e.g., 10 for 10%); 0 = n/a
+	PullbackPct     float64 // pullback % from recent high (setup-defined)
+	VCPValid        bool
+	VCPGrade        string  // Setup C: ComputeVCP grade (EARLY/STANDARD/HIGH_QUALITY)
+	VCPQualityScore float64 // Setup C: ComputeVCP quality score
+	MomentumFlow    string
+	MTFSignal       string
+	Note            string
 }
 
 // Setup is one entry strategy. Detect MUST only read bars with index <= i
@@ -152,6 +160,8 @@ type Trade struct {
 	MA20DistancePct       float64
 	MA60DistancePct       float64
 	VCPValid              bool
+	VCPGrade              string  // Setup C: VCP grade (empty for A/B)
+	VCPQualityScore       float64 // Setup C: VCP quality score (0 for A/B)
 	MomentumFlow          string
 	MTFSignal             string
 	Sector                string
@@ -163,6 +173,7 @@ type SetupStat struct {
 	SetupName      string
 	Bucket         int
 	StopPolicy     string // empty for R6-2b runs; set in the R6-3 benchmark
+	Subgroup       string // Setup C grade/quality subgroup label (else empty)
 	SampleCount    int
 	// Main statistics use stop-adjusted return.
 	WinRate      map[int]float64 // horizon → win rate % (stop-adjusted)

@@ -19,7 +19,7 @@ func TestCSVSchemaFixed(t *testing.T) {
 		"max_drawdown_after_entry", "hit_stop", "stop_reason", "stop_date", "stop_price",
 		"rs_rank_at_entry", "distance_from_52w_high", "pullback_pct_from_recent_high",
 		"ma20_distance_pct", "ma60_distance_pct",
-		"vcp_valid", "momentum_flow", "mtf_signal", "sector", "pullback_bucket",
+		"vcp_valid", "vcp_grade", "vcp_quality_score", "momentum_flow", "mtf_signal", "sector", "pullback_bucket",
 	}
 	got := CSVHeader()
 	if len(got) != len(want) {

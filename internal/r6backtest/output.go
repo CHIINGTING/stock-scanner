@@ -19,7 +19,7 @@ var csvHeader = []string{
 	"max_drawdown_after_entry", "hit_stop", "stop_reason", "stop_date", "stop_price",
 	"rs_rank_at_entry", "distance_from_52w_high", "pullback_pct_from_recent_high",
 	"ma20_distance_pct", "ma60_distance_pct",
-	"vcp_valid", "momentum_flow", "mtf_signal", "sector", "pullback_bucket",
+	"vcp_valid", "vcp_grade", "vcp_quality_score", "momentum_flow", "mtf_signal", "sector", "pullback_bucket",
 }
 
 // forbiddenTokens must never appear in any R6 output (decision-support only,
@@ -51,7 +51,7 @@ func csvRow(t Trade) []string {
 		dateOrEmpty(t.StopDate), f(t.StopPrice),
 		f(t.RSRankAtEntry), f(t.DistanceFrom52wHigh), f(t.PullbackPctFromHigh),
 		f(t.MA20DistancePct), f(t.MA60DistancePct),
-		strconv.FormatBool(t.VCPValid), t.MomentumFlow, t.MTFSignal, t.Sector,
+		strconv.FormatBool(t.VCPValid), t.VCPGrade, g(t.VCPQualityScore), t.MomentumFlow, t.MTFSignal, t.Sector,
 		strconv.Itoa(t.Bucket),
 	}
 }
@@ -292,6 +292,78 @@ func pct(x float64) string {
 		return "—"
 	}
 	return strconv.FormatFloat(x, 'f', 1, 64) + "%"
+}
+
+// ── R6-2c VCP grade / quality grouping ──────────────────────────────────────
+
+// VCPGroup holds one Setup C variant's grouped stats: an overall row plus
+// per-grade and per-quality-bucket subgroups.
+type VCPGroup struct {
+	Variant string
+	Stats   []SetupStat // first = overall (Subgroup ""), then subgroups
+}
+
+// VCPGroupStats computes overall + per-grade + per-quality-bucket stats for one
+// Setup C variant's trades.
+func VCPGroupStats(name string, trades []Trade, horizons []int, p Params) VCPGroup {
+	g := VCPGroup{Variant: name}
+	g.Stats = append(g.Stats, ComputeStats(name, 0, trades, horizons, p)) // overall
+	for _, gr := range []string{"EARLY_VCP", "STANDARD_VCP", "HIGH_QUALITY_VCP"} {
+		var sub []Trade
+		for _, t := range trades {
+			if t.VCPGrade == gr {
+				sub = append(sub, t)
+			}
+		}
+		st := ComputeStats(name, 0, sub, horizons, p)
+		st.Subgroup = "grade=" + gr
+		g.Stats = append(g.Stats, st)
+	}
+	for _, b := range []struct {
+		name   string
+		lo, hi float64
+	}{{"70-79", 70, 80}, {"80-89", 80, 90}, {"90+", 90, 1e9}} {
+		var sub []Trade
+		for _, t := range trades {
+			if t.VCPQualityScore >= b.lo && t.VCPQualityScore < b.hi {
+				sub = append(sub, t)
+			}
+		}
+		st := ComputeStats(name, 0, sub, horizons, p)
+		st.Subgroup = "quality=" + b.name
+		g.Stats = append(g.Stats, st)
+	}
+	return g
+}
+
+// WriteVCPGroupMarkdown renders Setup C grade/quality subgroup comparison tables.
+func WriteVCPGroupMarkdown(path, title string, meta []string, groups []VCPGroup, horizons []int) error {
+	var b strings.Builder
+	b.WriteString("# " + title + "\n\n")
+	b.WriteString("> Setup C 分群（VCP grade / quality bucket）。回測結果，僅供候選 / 勝率 / 風險 / 參考進場區。\n")
+	b.WriteString("> base_low 為 **proxy（近 40 日低）**，非 ComputeVCP 內部 contraction trough。\n")
+	b.WriteString("> 主統計 stop-adjusted；hold 為對照；dd 為 stop-aware realized drawdown。\n\n")
+	for _, m := range meta {
+		b.WriteString("- " + m + "\n")
+	}
+	b.WriteString("\n")
+	for _, g := range groups {
+		b.WriteString("## " + g.Variant + "\n\n")
+		b.WriteString("| group | n | conf | win_20d | avg_20d | avg_60d | hold_20d | delta_20d | stop_hit | rdd_avg | rdd_p90 |\n")
+		b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|\n")
+		for _, s := range g.Stats {
+			label := s.Subgroup
+			if label == "" {
+				label = "ALL"
+			}
+			b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+				label, s.SampleCount, s.Confidence, pct(s.WinRate[20]), pct(s.AvgReturn[20]), pct(s.AvgReturn[60]),
+				pct(s.HoldAvgReturn[20]), pct(s.StopDelta[20]), pct(s.StopHitRate),
+				pct(s.RealizedDDAvg), pct(s.RealizedDDP90)))
+		}
+		b.WriteString("\n")
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
 }
 
 // ── R6-3 stop-policy benchmark output ───────────────────────────────────────

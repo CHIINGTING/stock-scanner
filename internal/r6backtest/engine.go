@@ -317,6 +317,8 @@ func buildTrade(name string, rs *RSPanel, ep entryPoint, sr StopResult, maxH int
 		MA20DistancePct:       ma20d,
 		MA60DistancePct:       ma60d,
 		VCPValid:              trig.VCPValid,
+		VCPGrade:              trig.VCPGrade,
+		VCPQualityScore:       trig.VCPQualityScore,
 		MomentumFlow:          trig.MomentumFlow,
 		MTFSignal:             trig.MTFSignal,
 		Sector:                s.Sector,

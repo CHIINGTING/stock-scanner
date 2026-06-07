@@ -173,6 +173,100 @@ func pullbackFromHigh(s *Stock, i, look int) float64 {
 	return (h - s.Close[i]) / h * 100
 }
 
+// ── Setup C: real-VCP retest of support ─────────────────────────────────────
+
+// vcpConfig mirrors configs/config.yaml (calibration baseline; the live config
+// file is untouched). Used to call the scanner's real ComputeVCP as-of a bar.
+func vcpConfig() scanner.VCPConfig {
+	return scanner.VCPConfig{
+		Enable: true, LookbackDays: 60, MinHistoryDays: 40, MinContractions: 2,
+		MinQualityScore: 70, UseAdjustedClose: false, ZigzagReversal: 2.5,
+		MinContractionDepthPct: 2, MaxContractions: 5,
+		WTightness: 30, WVolumeDryUp: 25, WMonotonic: 20, WSupportHold: 15, WNearBreakout: 10,
+	}
+}
+
+// vcpProvider is the as-of VCP source (package var so tests can stub it).
+var vcpProvider = asofVCP
+
+// asofVCP runs the REAL scanner.ComputeVCP on candles[:i+1] (no look-ahead) and
+// returns (valid, grade, qualityScore).
+func asofVCP(s *Stock, i int) (bool, string, float64) {
+	r := scanner.ComputeVCP(s.Candles[:i+1], vcpConfig())
+	return r.Valid, string(r.Grade), r.QualityScore
+}
+
+// baseLow is a PROXY for the VCP base / recent contraction low: the min Low over
+// the trailing BaseLowLookback bars. It is NOT the ComputeVCP internal contraction
+// trough (that price is not exposed by the exported API).
+func baseLow(s *Stock, i, lookback int) float64 {
+	if lookback <= 0 {
+		lookback = 40
+	}
+	return minLow(s, i-lookback+1, i)
+}
+
+// SetupC enters a real-VCP base on a retest of support. Variant ∈
+// {"MA20","MA60","BASE_LOW"}.
+type SetupC struct{ Variant string }
+
+func (c SetupC) Name() string {
+	switch c.Variant {
+	case "BASE_LOW":
+		return "C_VCP_BASE_LOW_RETEST"
+	default:
+		return "C_VCP_" + c.Variant + "_RETEST"
+	}
+}
+
+func (c SetupC) Detect(_ *Universe, rs *RSPanel, s *Stock, i int, p Params) *Trigger {
+	// cheap gates first
+	if _, _, ok := strongPrequalified(rs, s, i); !ok {
+		return nil
+	}
+	// retest condition (price-only, cheap) before the heavier VCP call.
+	switch c.Variant {
+	case "MA20":
+		if !(s.MA20[i] > 0 && s.Low[i] <= s.MA20[i]*1.02 && s.Close[i] >= s.MA20[i]*0.98) {
+			return nil
+		}
+	case "MA60":
+		if !(s.MA60[i] > 0 && s.Low[i] <= s.MA60[i]*1.02 && s.Close[i] >= s.MA60[i]*0.98) {
+			return nil
+		}
+	case "BASE_LOW":
+		bl := baseLow(s, i, p.BaseLowLookback)
+		if !(bl > 0 && s.Low[i] <= bl*1.03 && s.Close[i] >= bl*0.99 && i >= 1 && s.Close[i] > s.Close[i-1]) {
+			return nil
+		}
+	default:
+		return nil
+	}
+	// real VCP gate (heavier; only after the cheap gates pass)
+	valid, grade, q := vcpProvider(s, i)
+	if !valid || q < 70 {
+		return nil
+	}
+	flow := flowProvider(s, i)
+	if flow == "STRUCTURAL_SHIFT_DOWN" {
+		return nil
+	}
+	return &Trigger{
+		Bucket:          0,
+		PullbackPct:     pullbackFromHigh(s, i, 20),
+		VCPValid:        true,
+		VCPGrade:        grade,
+		VCPQualityScore: q,
+		MomentumFlow:    flow,
+		MTFSignal:       mtfProvider(s, i),
+	}
+}
+
+// SetupCVariants returns the three Setup C variants.
+func SetupCVariants() []Setup {
+	return []Setup{SetupC{Variant: "MA20"}, SetupC{Variant: "MA60"}, SetupC{Variant: "BASE_LOW"}}
+}
+
 // SetupAVariants returns the two Setup A variants.
 func SetupAVariants() []Setup { return []Setup{SetupA{Variant: "MA20"}, SetupA{Variant: "MA60"}} }
 

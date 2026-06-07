@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/deep-huang/stock-scanner/internal/r6backtest"
@@ -41,10 +42,11 @@ func main() {
 	rs := r6backtest.BuildRSPanel(u, p)
 	fmt.Printf("RS panel: %d dates in %v\n", rs.Dates(), time.Since(tRS))
 
-	// R6-2b: Setup A (MA20/MA60) + Setup B (pullback-depth sweep). C/D arrive later.
+	// R6-2b: Setup A/B ; R6-2c: Setup C (real VCP retest). D arrives later.
 	var setups []r6backtest.Setup
 	setups = append(setups, r6backtest.SetupAVariants()...)
 	setups = append(setups, r6backtest.SetupBBuckets()...)
+	setups = append(setups, r6backtest.SetupCVariants()...)
 
 	stamp := time.Now().Format("20060102")
 
@@ -74,6 +76,7 @@ func main() {
 
 	var allTrades []r6backtest.Trade
 	var stats []r6backtest.SetupStat
+	var vcpGroups []r6backtest.VCPGroup
 	for _, s := range setups {
 		tRun := time.Now()
 		trades := r6backtest.RunSetup(u, rs, s, p)
@@ -83,7 +86,10 @@ func main() {
 		}
 		allTrades = append(allTrades, trades...)
 		stats = append(stats, r6backtest.ComputeStats(s.Name(), bucket, trades, p.Horizons, p))
-		fmt.Printf("  %-18s %5d trades  (%v)\n", s.Name(), len(trades), time.Since(tRun))
+		if strings.HasPrefix(s.Name(), "C_VCP") { // R6-2c grade/quality grouping
+			vcpGroups = append(vcpGroups, r6backtest.VCPGroupStats(s.Name(), trades, p.Horizons, p))
+		}
+		fmt.Printf("  %-22s %5d trades  (%v)\n", s.Name(), len(trades), time.Since(tRun))
 	}
 
 	csvPath := filepath.Join(*outDir, "backtest_pullback_"+stamp+".csv")
@@ -104,4 +110,17 @@ func main() {
 		log.Fatalf("write md: %v", err)
 	}
 	fmt.Printf("wrote %s (%d trades) and %s\n", csvPath, len(allTrades), mdPath)
+
+	if len(vcpGroups) > 0 { // R6-2c: Setup C grade / quality grouping summary
+		vcpMd := filepath.Join(*outDir, "backtest_vcp_groups_summary_"+stamp+".md")
+		gmeta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s", u.Axis[0], u.Axis[len(u.Axis)-1]),
+			fmt.Sprintf("base_low proxy: min Low over %d bars (NOT a ComputeVCP contraction trough)", p.BaseLowLookback),
+		}
+		if err := r6backtest.WriteVCPGroupMarkdown(vcpMd, "R6-2c Setup C — VCP Grade / Quality Groups", gmeta, vcpGroups, p.Horizons); err != nil {
+			log.Fatalf("write vcp groups md: %v", err)
+		}
+		fmt.Printf("wrote %s\n", vcpMd)
+	}
 }
