@@ -149,6 +149,26 @@ sectors:
       - { code: "6188", name: "廣明" }
       - { code: "2359", name: "所羅門" }
 
+  - name: "電動車"
+    stocks:
+      # ── 整車 / 電動車製造 ──
+      - { code: "2258", name: "鴻華先進" }
+      - { code: "2201", name: "裕隆" }
+      - { code: "2204", name: "中華" }
+      - { code: "2206", name: "三陽" }
+      # ── 動力傳動 / 三電（電池・電控・電機） ──
+      - { code: "1536", name: "和大" }
+      - { code: "2308", name: "台達電" }
+      # ── 車用電子 / ADAS / 感測 ──
+      - { code: "2231", name: "為升" }
+      - { code: "3552", name: "同致" }
+      # ── 車燈 ──
+      - { code: "1521", name: "大億" }
+      - { code: "6605", name: "帝寶" }
+      - { code: "1522", name: "堤維西" }
+      # ── 線束 / 連接器 / 充電 ──
+      - { code: "3665", name: "貿聯-KY" }
+
   - name: "ASIC"
     stocks:
       - { code: "3443", name: "創意" }
@@ -203,6 +223,34 @@ sectors:
       - { code: "3015", name: "全漢" }
       - { code: "2457", name: "飛宏" }
       - { code: "5371", name: "僑威" }
+
+  - name: "散熱"
+    stocks:
+      # ── 散熱模組 / 均熱板 / 熱導管 ──
+      - { code: "3017", name: "奇鋐" }
+      - { code: "3324", name: "雙鴻" }
+      - { code: "6230", name: "尼得科超眾" }
+      - { code: "3653", name: "健策" }
+      # ── 風扇 ──
+      - { code: "2421", name: "建準" }
+
+  - name: "蘋果"
+    stocks:
+      # ── 組裝 ──
+      - { code: "2317", name: "鴻海" }
+      - { code: "4938", name: "和碩" }
+      # ── 鏡頭 / 光學 ──
+      - { code: "3008", name: "大立光" }
+      - { code: "3406", name: "玉晶光" }
+      # ── FPC 軟板 ──
+      - { code: "4958", name: "臻鼎-KY" }
+      - { code: "6269", name: "台郡" }
+      # ── 機殼 / 金屬件 ──
+      - { code: "2474", name: "可成" }
+      - { code: "2354", name: "鴻準" }
+      # ── 連接器 / 聲學 ──
+      - { code: "2392", name: "正崴" }
+      - { code: "4943", name: "康控-KY" }
 
   - name: "IC設計"
     stocks:
