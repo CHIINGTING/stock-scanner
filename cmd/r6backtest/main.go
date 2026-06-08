@@ -123,4 +123,46 @@ func main() {
 		}
 		fmt.Printf("wrote %s\n", vcpMd)
 	}
+
+	// ── R6-2d Setup D: crash-regime survivor CASE STUDY (warmup 120, LOW conf) ──
+	// Run separately from the generic loop: needs the regime panel, forces LOW
+	// confidence, and writes its own outputs. Not part of A/B/C or the benchmark.
+	regime := r6backtest.BuildRegimePanel(u, -8.0)
+	if !regime.ProxyOK {
+		fmt.Printf("Setup D skipped: market proxy %s not in cache\n", r6backtest.ProxySymbol)
+		return
+	}
+	dp := p
+	dp.Warmup = 120
+	dp.ForceLowConfidence = true
+	dMain := r6backtest.RunSetup(u, rs, r6backtest.SetupD{Regime: regime, RelThreshold: 5}, dp)
+	dStat := r6backtest.ComputeStats("D_CRASH_SURVIVOR", 0, dMain, dp.Horizons, dp)
+	// faithful event_count = distinct regime events that actually produced trades
+	// (pre-warmup events that yielded no entries are excluded).
+	evCount, evRange := r6backtest.DistinctCrashEvents(dMain)
+	dStat.EventCount = evCount
+	dStat.RegimeDateRange = evRange
+	dStat.ProxySymbol = r6backtest.ProxySymbol
+	high, low := r6backtest.RunCrashCohorts(u, rs, regime, dp)
+
+	crashCSV := filepath.Join(*outDir, "backtest_crash_survivors_"+stamp+".csv")
+	crashMd := filepath.Join(*outDir, "backtest_crash_survivors_summary_"+stamp+".md")
+	if err := r6backtest.WriteCrashSurvivorsCSV(crashCSV, dMain); err != nil {
+		log.Fatalf("write crash csv: %v", err)
+	}
+	dmeta := []string{
+		fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+		fmt.Sprintf("coverage: %s → %s", u.Axis[0], u.Axis[len(u.Axis)-1]),
+		fmt.Sprintf("regime: %s 20d return ≤ -8%% ; warmup %d ; horizons %v (60d auxiliary)", r6backtest.ProxySymbol, dp.Warmup, dp.Horizons),
+		"relative_return_vs_market_20d ≥ +5pp ; breadth_below_ma20 = context only (not a hard gate)",
+		fmt.Sprintf("regime events detected in full series: %d (pre-warmup events yield no entries)", regime.EventCount),
+	}
+	if err := r6backtest.WriteCrashSummary(crashMd, "R6-2d Setup D — Crash-Regime Survivor Case Study",
+		dmeta, dStat, r6backtest.AvgRelativeReturn(dMain), r6backtest.AvgProxyReturn(dMain),
+		high, low, evCount, evRange, dp.Horizons); err != nil {
+		log.Fatalf("write crash summary: %v", err)
+	}
+	fmt.Printf("Setup D: event_count=%d range=%s ; D_CRASH_SURVIVOR=%d trades ; cohort HIGH=%d LOW=%d\n",
+		evCount, evRange, len(dMain), high.Stat.SampleCount, low.Stat.SampleCount)
+	fmt.Printf("wrote %s and %s\n", crashCSV, crashMd)
 }

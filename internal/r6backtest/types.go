@@ -27,6 +27,19 @@ type Stock struct {
 	idxOf map[string]int // date(YYYY-MM-DD) → bar index
 }
 
+// CrashContext is Setup D (crash-regime) per-trade context. Attached only to
+// Setup D trades (nil otherwise), so it does not bloat the shared per-trade CSV.
+type CrashContext struct {
+	ProxySymbol          string
+	MarketProxyReturn20d float64 // 0050 20-day return % at the signal bar
+	StockReturn20d       float64
+	RelativeReturn20d    float64 // stock20d − market20d (percentage points)
+	BreadthBelowMA20Pct  float64 // % of universe below MA20 on the regime day
+	RegimeEventID        int
+	RegimeStart          time.Time
+	RegimeEnd            time.Time
+}
+
 // StopResult is the outcome of applying one stop policy to one entry. StopBar is
 // the absolute bar index where the stop fired (-1 when no stop).
 type StopResult struct {
@@ -111,6 +124,7 @@ type Trigger struct {
 	VCPQualityScore float64 // Setup C: ComputeVCP quality score
 	MomentumFlow    string
 	MTFSignal       string
+	Crash           *CrashContext // Setup D only
 	Note            string
 }
 
@@ -165,7 +179,8 @@ type Trade struct {
 	MomentumFlow          string
 	MTFSignal             string
 	Sector                string
-	Bucket                int // for Setup B grouping
+	Bucket                int           // for Setup B grouping
+	Crash                 *CrashContext // Setup D only (nil otherwise)
 }
 
 // SetupStat aggregates trades for one setup (or setup+bucket).

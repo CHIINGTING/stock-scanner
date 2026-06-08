@@ -294,6 +294,106 @@ func pct(x float64) string {
 	return strconv.FormatFloat(x, 'f', 1, 64) + "%"
 }
 
+// ── R6-2d crash-regime (Setup D) output ─────────────────────────────────────
+
+var crashCSVHeader = []string{
+	"setup_name", "stock_code", "stock_name", "entry_date", "entry_price",
+	"signal_date", "signal_close",
+	"return_5d", "return_10d", "return_20d", "return_60d",
+	"hold_return_5d", "hold_return_10d", "hold_return_20d", "hold_return_60d",
+	"realized_drawdown", "hit_stop", "stop_reason", "stop_date", "stop_price",
+	"rs_rank_at_entry", "proxy_symbol", "market_proxy_return_20d", "stock_return_20d",
+	"relative_return_vs_market_20d", "breadth_below_ma20_pct",
+	"regime_event_id", "regime_start_date", "regime_end_date",
+	"momentum_flow", "mtf_signal", "sector",
+}
+
+// CrashCSVHeader exposes the fixed Setup D schema (for tests).
+func CrashCSVHeader() []string { return append([]string(nil), crashCSVHeader...) }
+
+func crashRow(t Trade) []string {
+	c := t.Crash
+	if c == nil {
+		c = &CrashContext{}
+	}
+	return []string{
+		t.SetupName, t.StockCode, t.StockName, t.EntryDate.Format("2006-01-02"), f(t.EntryPrice),
+		dateOrEmpty(t.SignalDate), f(t.SignalClose),
+		f(t.Return5d), f(t.Return10d), f(t.Return20d), f(t.Return60d),
+		f(t.HoldReturn5d), f(t.HoldReturn10d), f(t.HoldReturn20d), f(t.HoldReturn60d),
+		f(t.RealizedDrawdown), strconv.FormatBool(t.HitStop), t.StopReason,
+		dateOrEmpty(t.StopDate), f(t.StopPrice),
+		f(t.RSRankAtEntry), c.ProxySymbol, f(c.MarketProxyReturn20d), f(c.StockReturn20d),
+		f(c.RelativeReturn20d), f(c.BreadthBelowMA20Pct),
+		strconv.Itoa(c.RegimeEventID), dateOrEmpty(c.RegimeStart), dateOrEmpty(c.RegimeEnd),
+		t.MomentumFlow, t.MTFSignal, t.Sector,
+	}
+}
+
+// WriteCrashSurvivorsCSV writes the Setup D per-trade CSV (header always present).
+func WriteCrashSurvivorsCSV(path string, trades []Trade) error {
+	var b strings.Builder
+	b.WriteString(strings.Join(crashCSVHeader, ",") + "\n")
+	for _, t := range trades {
+		row := crashRow(t)
+		for i, cc := range row {
+			if strings.ContainsAny(cc, ",\"\n") {
+				cc = "\"" + strings.ReplaceAll(cc, "\"", "\"\"") + "\""
+			}
+			row[i] = cc
+		}
+		b.WriteString(strings.Join(row, ",") + "\n")
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
+// CrashCohort bundles a cohort stat with its average relative return.
+type CrashCohort struct {
+	Stat   SetupStat
+	AvgRel float64
+}
+
+// WriteCrashSummary renders the Setup D case-study summary: the mandatory
+// non-extrapolation caveat, regime/event metadata, the main-stat table, and the
+// HIGH_RS vs LOW_RS cohort comparison. confidence is always LOW.
+func WriteCrashSummary(path, title string, meta []string, main SetupStat, mainRel, mainProxyRet float64,
+	high, low CrashCohort, eventCount int, regimeRange string, horizons []int) error {
+	var b strings.Builder
+	b.WriteString("# " + title + "\n\n")
+	b.WriteString("> **Setup D 是殺盤事件研究，不是高信心策略回測。**\n")
+	b.WriteString(fmt.Sprintf("> 本次 event_count=%d，事件數仍極少，且主要集中在 2025 春季與 2026-03 邊際事件。\n",
+		eventCount))
+	b.WriteString("> 結果僅供 regime case study，不可外推；confidence 永遠 LOW。\n\n")
+	for _, m := range meta {
+		b.WriteString("- " + m + "\n")
+	}
+	b.WriteString(fmt.Sprintf("- event_count: **%d**　regime_date_range: %s　proxy_symbol: %s\n",
+		eventCount, regimeRange, ProxySymbol))
+	b.WriteString(fmt.Sprintf("- confidence: **%s**　avg market_proxy_return_20d: %s　avg relative_return_vs_market_20d: %s\n\n",
+		main.Confidence, pct(mainProxyRet), pct(mainRel)))
+
+	b.WriteString("## D_CRASH_SURVIVOR（RS≥70 + 相對抗跌 ≥5pp）\n\n")
+	b.WriteString(fmt.Sprintf("- sample_count: %d　confidence: %s　stop_hit_rate: %s\n\n", main.SampleCount, main.Confidence, pct(main.StopHitRate)))
+	b.WriteString("| horizon | win | avg | median | hold_avg | stop_delta | rdd_avg | rdd_p90 |\n|---|---|---|---|---|---|---|---|\n")
+	for _, h := range horizons {
+		b.WriteString(fmt.Sprintf("| %dd | %s | %s | %s | %s | %s | %s | %s |\n", h,
+			pct(main.WinRate[h]), pct(main.AvgReturn[h]), pct(main.MedianReturn[h]),
+			pct(main.HoldAvgReturn[h]), pct(main.StopDelta[h]), pct(main.RealizedDDAvg), pct(main.RealizedDDP90)))
+	}
+	b.WriteString("\n## Cohort：HIGH_RS vs LOW_RS（同 regime、僅 near-MA20 候選，依 RS 切分）\n\n")
+	b.WriteString("回答「殺盤時 RS 高是否較抗跌」。\n\n")
+	b.WriteString("| cohort | n | win_20d | avg_20d | hold_20d | stop_hit | rdd_avg | rdd_p90 | avg_rel_ret_20d |\n")
+	b.WriteString("|---|---|---|---|---|---|---|---|---|\n")
+	for _, c := range []CrashCohort{high, low} {
+		s := c.Stat
+		b.WriteString(fmt.Sprintf("| %s | %d | %s | %s | %s | %s | %s | %s | %s |\n",
+			s.Subgroup, s.SampleCount, pct(s.WinRate[20]), pct(s.AvgReturn[20]), pct(s.HoldAvgReturn[20]),
+			pct(s.StopHitRate), pct(s.RealizedDDAvg), pct(s.RealizedDDP90), pct(c.AvgRel)))
+	}
+	b.WriteString("\n")
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
 // ── R6-2c VCP grade / quality grouping ──────────────────────────────────────
 
 // VCPGroup holds one Setup C variant's grouped stats: an overall row plus

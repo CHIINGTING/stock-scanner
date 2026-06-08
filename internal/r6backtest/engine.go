@@ -323,5 +323,6 @@ func buildTrade(name string, rs *RSPanel, ep entryPoint, sr StopResult, maxH int
 		MTFSignal:             trig.MTFSignal,
 		Sector:                s.Sector,
 		Bucket:                trig.Bucket,
+		Crash:                 trig.Crash,
 	}
 }
