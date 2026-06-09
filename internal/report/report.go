@@ -48,11 +48,17 @@ func calcSummary(items []scanner.StockAnalysis) PortfolioSummary {
 }
 
 // GuardrailViewOptions carries the minimal data report.go needs to DISPLAY the
-// C6a/C6b shadow signals & guardrails. It is display-only: report never scores.
+// C6a/C6b shadow signals & guardrails (plus a couple of unrelated display
+// toggles, e.g. ShowBacktestInsights). It is display-only: report never scores.
 type GuardrailViewOptions struct {
 	Show                    bool
 	GuardrailScoringEnabled bool
 	RSWatchThreshold        float64
+
+	// ShowBacktestInsights gates the static "🔬 回測洞察" tab. Default false →
+	// no such tab. Display-only; never reads reports/r6_*, never touches score /
+	// action / probability / sorting / stop / WatchAction.
+	ShowBacktestInsights bool
 
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
@@ -1021,6 +1027,25 @@ th.rotscore{min-width:120px}
 .wl-risk{border-color:#3b1414;background:#1a0f12}
 .wl-risk h4{color:#fca5a5}
 @media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
+
+/* ── 回測洞察 R6（純顯示，不影響策略） ────────────────────────────────────── */
+.bt-warn{background:#3b0a0a;border:2px solid #dc2626;border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#fecaca;font-size:.82rem;line-height:1.85}
+.bt-warn b{color:#fca5a5}
+.bt-warn-h{display:block;color:#fca5a5;font-weight:700;font-size:.95rem;margin-bottom:6px}
+.bt-intro{background:#0d1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:#94a3b8;line-height:1.7}
+.bt-intro b{color:#e2e8f0}
+.bt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
+.bt-card{background:#111827;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;font-size:.76rem;color:#cbd5e1;line-height:1.75}
+.bt-card h4{font-size:.8rem;color:#7dd3fc;margin-bottom:6px;font-weight:700}
+.bt-card b{color:#f1f5f9}
+.bt-card.bt-crash{border-color:#854d0e;background:#1c1402}
+.bt-card.bt-crash h4{color:#fbbf24}
+.bt-tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:.64rem;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.bt-tag-bull{background:#1c2433;color:#94a3b8;border:1px solid #475569}
+.bt-tag-low{background:#3b0a0a;color:#fca5a5;border:1px solid #dc262666}
+.bt-warn-inline{color:#fca5a5;font-weight:600}
+.bt-meta{font-size:.7rem;color:#64748b;margin-top:4px;font-style:italic}
+@media(max-width:900px){.bt-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1032,6 +1057,7 @@ th.rotscore{min-width:120px}
   <button class="tab-btn" onclick="tab(event,'watchlist')">🚀 飆股候選 ({{ len .Watchlist }})</button>
   <button class="tab-btn" onclick="tab(event,'market')">📊 市場掃描({{ .MarketLabel }})</button>
   <button class="tab-btn" onclick="tab(event,'rotation')">🔄 輪動 ({{ len .Rotation }})</button>
+  {{ if .GV.ShowBacktestInsights }}<button class="tab-btn" onclick="tab(event,'backtest')">🔬 回測洞察</button>{{ end }}
 </div>
 
 <!-- ══ POSITIONS ════════════════════════════════════════════════════════════ -->
@@ -1340,6 +1366,50 @@ th.rotscore{min-width:120px}
 </table>
 {{ end }}
 </div>
+
+<!-- ══ BACKTEST INSIGHT：R6 回測洞察（純顯示，完全不影響停損/排名/下單） ═════ -->
+{{ if .GV.ShowBacktestInsights }}
+<div id="tab-backtest" class="tab-pane">
+  <div class="bt-warn">
+    <span class="bt-warn-h">⚠️ 崩盤情境警告 — 請先讀這段</span>
+    以下回測結論<b>全部來自 2024-06 → 2026-06 的多頭／復甦行情</b>。其中「停損過嚴、抱著比停損好、NO_STOP 帳面報酬最高」等結論，是被這段多頭結構撐出來的，<b>不可外推到空頭／崩盤</b>。
+    崩盤時請<b>勿</b>把這些當成「不要停損／放寬停損」的依據 —— 那是最危險的誤用。真正面對崩盤所需的跨環境（bear / crash）驗證<b>尚未完成</b>。
+    本面板僅供研究參考，<b>不改變任何停損、排名或下單</b>。
+  </div>
+  <div class="bt-intro">
+    🔬 <b>回測洞察 (R6)</b>：離線、唯讀的策略研究產出，與上方即時掃描 / 停損 / 排名<b>完全分離</b>。資料區間 2024-06→2026-06（約 485 根日線、~1970 檔）。所有數字僅為歷史觀察，<b>不是操作訊號</b>，候選 ≠ 採用，預設一律未改。
+  </div>
+  <div class="bt-grid">
+    <div class="bt-card">
+      <h4>進場型態 A — 淺回測位置較佳<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
+      靠近 20 日線的拉回（<b>A_MA20</b>）整體優於靠 60 日線的拉回（A_MA60）。
+    </div>
+    <div class="bt-card">
+      <h4>深回測 B（15–20%）<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
+      深拉回 15–20% 的「抱到底」報酬較強，<b>但前提是沒被洗掉</b>；近期超強多頭裡深回測訊號太少太慢（B_20 訊號數遠少於 B_5）。
+    </div>
+    <div class="bt-card">
+      <h4>VCP 回測 C<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
+      全期 <b>C_VCP_MA20</b> 樣本充足；但近期多頭重跑顯示它<b>並未贏過單純 A_MA20</b> —— 結論會隨環境改變，不是定論。
+    </div>
+    <div class="bt-card">
+      <h4>停損政策 benchmark<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
+      在這段多頭裡現行 <b>BASELINE 停損偏嚴</b>（stop_hit 77–93%）；<b>ATR_3</b> 為目前最穩健候選、<b>PCT_15</b> 為簡化備案、NO_STOP 帳面最高但尾部回撤最深。
+      <div class="bt-meta"><span class="bt-warn-inline">⚠️ 純多頭結構造的，崩盤不適用；候選 ≠ 採用，預設未改。</span></div>
+    </div>
+    <div class="bt-card bt-crash">
+      <h4>崩盤相關（唯一一條）— Setup D 倖存者<span class="bt-tag bt-tag-low">LOW confidence／個案</span></h4>
+      唯一沾到崩盤的研究：崩盤 regime 中 <b>HIGH_RS（強相對強度）相對抗跌</b>，相對大盤 <b>+6.9pp</b>，LOW_RS 為 −0.4pp。
+      <div class="bt-meta"><span class="bt-warn-inline">但 event_count = 3，永遠標 LOW confidence，是個案研究，不可外推、不可當崩盤操作訊號。</span></div>
+    </div>
+    <div class="bt-card">
+      <h4>現況 — 為何不進策略</h4>
+      cross-regime（更多空頭／崩盤期）驗證<b>尚未完成</b>，是採用任何停損 profile 的前置。停損、排名、下單預設<b>一律未改</b>。
+      <div class="bt-meta">來源：reports/r6_* 回測存檔（R6-5 fresh-cache 可重現性穩定／R6-6 近期多頭 regime）。</div>
+    </div>
+  </div>
+</div>
+{{ end }}
 
 <footer>Stock Radar｜資料來源：TWSE / Yahoo Finance｜僅供研究參考，非投資建議</footer>
 </div>

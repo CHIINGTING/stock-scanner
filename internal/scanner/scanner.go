@@ -35,6 +35,12 @@ type Config struct {
 	// / sorting — it is independent of EnableSignalGuardrailScoring.
 	ShowGuardrailSignals bool `yaml:"show_guardrail_signals"`
 
+	// ShowBacktestInsights is a DISPLAY-ONLY flag: when true the report renders a
+	// "🔬 回測洞察" tab summarising R6 backtest findings (static text only). Default
+	// false → report has no such tab. NEVER reads reports/r6_*, never affects score
+	// / action / probability / sorting / stop / WatchAction — pure presentation.
+	ShowBacktestInsights bool `yaml:"show_backtest_insights"`
+
 	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
 	// EnableRSRank gates the whole RS feature. Default false → RS is never
 	// computed in the pipeline and cannot affect existing scoring / report /

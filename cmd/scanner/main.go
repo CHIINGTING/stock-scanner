@@ -182,6 +182,7 @@ func main() {
 	gv := report.GuardrailViewOptions{
 		Show:                        cfg.Scanner.ShowGuardrailSignals,
 		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
+		ShowBacktestInsights:        cfg.Scanner.ShowBacktestInsights,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,

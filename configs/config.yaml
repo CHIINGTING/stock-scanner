@@ -36,6 +36,11 @@ scanner:
   # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
   show_guardrail_signals: true
 
+  # 純顯示開關：true 時 report 多一個「🔬 回測洞察」分頁，靜態摘要 R6 回測結論
+  # （含「多頭結論、崩盤不適用、不可當停損依據」紅字警告）。預設 false → report 無此分頁。
+  # 純展示：不讀 reports/r6_*、不改分數/排序/WatchAction/ExplosionProb/停損預設。
+  show_backtest_insights: false
+
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
   # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
   # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
