@@ -24,6 +24,7 @@ func main() {
 	outDir := flag.String("out", "reports", "output directory (gitignored)")
 	minBars := flag.Int("min-bars", 130, "drop symbols with fewer bars")
 	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
+	recentBull := flag.Bool("recentbull", false, "R6-6: recent bull regime validation (20d primary, signal-date 2m/4m/6m windows)")
 	flag.Parse()
 
 	t0 := time.Now()
@@ -49,6 +50,40 @@ func main() {
 	setups = append(setups, r6backtest.SetupCVariants()...)
 
 	stamp := time.Now().Format("20060102")
+
+	// ── R6-6 recent bull regime validation (separate output; 20d primary) ──
+	// NOT cross-regime. Slices the same A/B/C entries into recent signal-date
+	// windows and judges them on the 20d horizon with 20d-maturity accounting.
+	// Setup D is excluded (no crash regime in a bull window).
+	if *recentBull {
+		windows := r6backtest.DefaultRecentBullWindows(u.Axis)
+		policies := r6backtest.BenchmarkStopPolicies()
+		tB := time.Now()
+		cells := r6backtest.RunRecentBull(u, rs, setups, policies, p, windows)
+		csv := filepath.Join(*outDir, "backtest_recent_bull_"+stamp+".csv")
+		md := filepath.Join(*outDir, "backtest_recent_bull_summary_"+stamp+".md")
+		if err := r6backtest.WriteRecentBullCSV(csv, cells); err != nil {
+			log.Fatalf("write recent-bull csv: %v", err)
+		}
+		cutoff := ""
+		if len(u.Axis) > r6backtest.PrimaryHorizon {
+			cutoff = u.Axis[len(u.Axis)-1-r6backtest.PrimaryHorizon]
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+			fmt.Sprintf("last_available_date: %s ; 20d_maturity_cutoff: %s (signals after this = UNMATURED_20D)", u.Axis[len(u.Axis)-1], cutoff),
+			fmt.Sprintf("warmup: %d ; entry: %s ; setups: %d (A/B/C; Setup D excluded — no crash regime) ; policies: %d", p.Warmup, p.EntryMode, len(setups), len(policies)),
+			"primary_horizon: 20d ; 5d/10d = early reaction ; 60d = optional reference",
+		}
+		anchors := []string{"A_MA20_PULLBACK", "B_PULLBACK_10", "C_VCP_MA20_RETEST"}
+		if err := r6backtest.WriteRecentBullMarkdown(md, "R6-6 Recent Bull Regime Validation", meta, cells, windows, "BASELINE", anchors); err != nil {
+			log.Fatalf("write recent-bull md: %v", err)
+		}
+		fmt.Printf("recent bull: %d cells (%d setups × %d policies × %d windows) in %v\nwrote %s and %s\n",
+			len(cells), len(setups), len(policies), len(windows), time.Since(tB), csv, md)
+		return
+	}
 
 	// ── R6-3 stop-policy benchmark (separate output; baseline unchanged) ──
 	if *stopBench {
