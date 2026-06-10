@@ -1,6 +1,8 @@
 bin/
 reports/
 .cache/
+.cache_fresh_r6_5/
+docs/
 *.log
 .DS_Store
-/docs
+.claude/settings.local.json

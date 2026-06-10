@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>股票雷達 2026-06-08</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:#0c1220;color:#e2e8f0;min-height:100vh;font-size:13px}
+.container{max-width:1800px;margin:0 auto;padding:18px 14px}
+h1{font-size:1.4rem;font-weight:700;color:#f8fafc;border-bottom:2px solid #1e3a5f;padding-bottom:10px;margin-bottom:14px}
+h1 small{font-size:.78rem;color:#64748b;font-weight:400;margin-left:8px}
+
+ 
+.tabs{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid #1e3a5f}
+.tab-btn{padding:9px 20px;background:none;border:none;color:#64748b;font-size:.85rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;transition:all .15s}
+.tab-btn:hover{color:#94a3b8}
+.tab-btn.active{color:#38bdf8;border-bottom-color:#38bdf8;font-weight:600}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+ 
+table{width:100%;border-collapse:collapse;background:#111827;border-radius:10px;overflow:hidden;margin-bottom:6px}
+thead{background:#0c1220}
+th{padding:8px 10px;text-align:left;font-weight:600;color:#475569;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #1e3a5f;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:#93c5fd}
+th.sort-active{color:#60a5fa}
+.sort-ico{display:inline-block;width:.8em;color:#60a5fa;font-size:.85em}
+th.r,td.r{text-align:right}
+td{padding:7px 10px;border-bottom:1px solid #131e2e;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#0f1d30}
+
+ 
+.action-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-weight:700;font-size:.71rem;white-space:nowrap;letter-spacing:.02em}
+.action-strong-buy{background:#052e16;color:#4ade80;border:1px solid #16a34a}
+.action-buy{background:#0f2d1a;color:#86efac;border:1px solid #22c55e66}
+.action-watch{background:#0c2340;color:#7dd3fc;border:1px solid #0284c766}
+.action-hold{background:#1c1500;color:#fcd34d;border:1px solid #ca8a0466}
+.action-reduce{background:#2d1200;color:#fdba74;border:1px solid #ea580c66}
+.action-take-profit{background:#052e16;color:#a3e635;border:2px solid #65a30d;letter-spacing:.05em}
+.action-stop-loss{background:#3b0a0a;color:#fca5a5;border:2px solid #dc2626;font-size:.75rem}
+.action-sell{background:#1c0202;color:#f87171;border:1px solid #dc262666}
+
+ 
+.score-bar{display:flex;align-items:center;gap:5px}
+.score-bar>div{height:5px;border-radius:3px;min-width:2px}
+.bar-high{background:#4ade80}.bar-mid{background:#fbbf24}.bar-low{background:#f87171}
+.score-bar span{font-weight:700;font-size:.8rem;color:#f1f5f9;min-width:24px}
+
+ 
+.bfp-wrap{white-space:nowrap;font-size:.85rem}
+.bfp-dot{margin:0 1px}
+.bfp-dot.pass{color:#4ade80}.bfp-dot.fail{color:#374151}
+.bfp-count{font-size:.72rem;color:#94a3b8;margin-left:3px}
+
+ 
+.t-entry{color:#38bdf8!important}.t-stop{color:#f87171!important}
+.t-t1{color:#4ade80!important}.t-t2{color:#a3e635!important}
+
+ 
+.pos{color:#4ade80}.neg{color:#f87171}.neu{color:#94a3b8}
+.sym{font-weight:700;color:#f8fafc}.name-col{color:#94a3b8}
+
+ 
+.reasons{font-size:.71rem;color:#94a3b8;line-height:1.6;max-width:360px}
+
+ 
+.pv-up-vol-up{color:#4ade80;font-weight:600}
+.pv-up-vol-down{color:#fbbf24}
+.pv-down-vol-up{color:#f87171;font-weight:600}
+.pv-down-vol-down{color:#64748b}
+.pv-locked{color:#a3e635;font-weight:700}
+.pv-failed{color:#f87171;font-weight:700}
+
+ 
+.pf-summary{background:#111827;border:1px solid #1e3a5f;border-radius:10px;padding:14px 20px;margin-bottom:14px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+.pf-item label{display:block;font-size:.68rem;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.pf-item .val{font-size:1.15rem;font-weight:700}
+
+ 
+.alert-sl{background:#3b0a0a55;border:1px solid #dc262677;border-radius:6px;padding:4px 10px;font-size:.72rem;color:#fca5a5;margin-bottom:2px}
+.alert-tp{background:#05280f55;border:1px solid #16a34a77;border-radius:6px;padding:4px 10px;font-size:.72rem;color:#86efac;margin-bottom:2px}
+
+.empty{text-align:center;padding:30px;color:#475569;font-size:.9rem}
+footer{margin-top:20px;font-size:.68rem;color:#374151;text-align:center;padding:10px 0}
+
+ 
+.vol-score{display:inline-block;background:#0c1f3a;border:1px solid #1e3a5f;border-radius:4px;padding:1px 6px;font-size:.7rem;color:#38bdf8;font-weight:600}
+
+ 
+.rot-intro{background:#0d1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:#94a3b8;line-height:1.7}
+.rot-intro b{color:#e2e8f0}
+th.c,td.c{text-align:center}
+th.rotscore{min-width:120px}
+.stage-badge{display:inline-block;padding:3px 9px;border-radius:4px;font-weight:700;font-size:.7rem;white-space:nowrap;letter-spacing:.02em}
+.stage-early{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}           
+.stage-confirmed{background:#052e16;color:#4ade80;border:1px solid #16a34a}       
+.stage-hot{background:#2d1200;color:#fdba74;border:1px solid #ea580c}             
+.stage-late{background:#1a1a1a;color:#9ca3af;border:1px solid #4b5563}            
+.sector-row{cursor:pointer}
+.sector-row:hover td{background:#10243d}
+.exp-caret{color:#64748b;text-align:center;font-size:.8rem}
+.sector-detail{display:none}
+.sector-detail.open{display:table-row}
+.sector-detail>td{padding:0 0 10px 0;background:#0b1422}
+.sub-table{margin:0;border-radius:0;background:#0b1422;box-shadow:inset 3px 0 0 #1e3a5f}
+.sub-table th{background:#0b1422;color:#475569}
+.sub-table td{border-bottom:1px solid #111c2c}
+.yes{color:#4ade80;font-weight:700}
+.no{color:#475569}
+.flow-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.7rem;white-space:nowrap}
+.flow-in{color:#4ade80}
+.flow-out{color:#f87171}
+.flow-neutral{color:#94a3b8}
+.flow-badge.flow-in{background:#052e16;border:1px solid #16a34a66}
+.flow-badge.flow-out{background:#3b0a0a;border:1px solid #dc262666}
+.flow-badge.flow-neutral{background:#1a2436;border:1px solid #33415566}
+.lvl-strong{color:#4ade80;font-weight:700}
+.lvl-mid{color:#fbbf24;font-weight:600}
+.lvl-weak{color:#94a3b8}
+.sector-meta{padding:8px 14px;font-size:.72rem;color:#94a3b8;line-height:1.8;background:#0b1422}
+.meta-concl{display:block;color:#e2e8f0;font-weight:600;font-size:.78rem;margin-bottom:3px}
+.meta-nums b{font-weight:700}
+
+ 
+.rk-go{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}       
+.rk-run{background:#052e16;color:#4ade80;border:1px solid #16a34a}       
+.rk-base{background:#1c2433;color:#cbd5e1;border:1px solid #475569}      
+.rk-hot{background:#2d1200;color:#fdba74;border:1px solid #ea580c}       
+.rk-fail{background:#3b0a0a;color:#fca5a5;border:1px solid #dc2626}      
+.rk-wait{background:#161e2e;color:#94a3b8;border:1px solid #334155}      
+.act-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.68rem;white-space:nowrap}
+.act-buy{background:#052e16;color:#4ade80;border:1px solid #16a34a}
+.act-prepare{background:#06263b;color:#38bdf8;border:1px solid #0ea5e9}
+.act-watch{background:#1c2433;color:#cbd5e1;border:1px solid #475569}
+.act-tp{background:#052e16;color:#a3e635;border:1px solid #65a30d}
+.act-remove{background:#3b0a0a;color:#fca5a5;border:1px solid #dc2626}
+.act-wait{background:#161e2e;color:#94a3b8;border:1px solid #334155}
+.risk-tag{display:inline-block;color:#fca5a5;font-weight:600;font-size:.72rem}
+.wl-card{padding:12px 16px;background:#0b1422}
+.wl-head{font-size:.85rem;color:#e2e8f0;font-weight:600;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid #1e3a5f}
+.wl-head b{color:#38bdf8;font-size:1rem}
+.wl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.wl-sec{background:#0f1d30;border:1px solid #16263d;border-radius:8px;padding:10px 12px;font-size:.74rem;color:#cbd5e1;line-height:1.85}
+.wl-sec h4{font-size:.72rem;color:#7dd3fc;margin-bottom:5px;font-weight:700}
+.wl-sec b{color:#f1f5f9}
+.wl-sec ul{margin:0;padding-left:16px}
+.wl-sec li{margin:2px 0}
+.wl-note{color:#94a3b8;font-size:.7rem;margin-top:3px;font-style:italic}
+.wl-gs-summary{background:#0b1626;border-left:3px solid #38bdf8;border-radius:6px;padding:7px 10px;margin:4px 0 6px}
+.wl-gs-headline{color:#e2e8f0;font-size:.78rem;margin-bottom:3px}
+.wl-gs-h{color:#7dd3fc;font-weight:700;margin-top:4px}
+.wl-gs-list{margin:0;padding-left:16px}
+.wl-gs-list li{margin:1px 0}
+.wl-risk{border-color:#3b1414;background:#1a0f12}
+.wl-risk h4{color:#fca5a5}
+@media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📡 股票雷達<small>2026-06-08 盤後分析</small></h1>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="tab(event,'positions')">💼 持倉 (0)</button>
+  <button class="tab-btn" onclick="tab(event,'watchlist')">🚀 飆股候選 (1)</button>
+  <button class="tab-btn" onclick="tab(event,'market')">📊 市場掃描(50)</button>
+  <button class="tab-btn" onclick="tab(event,'rotation')">🔄 輪動 (0)</button>
+</div>
+
+
+<div id="tab-positions" class="tab-pane active">
+
+<div class="empty">持倉無資料。請在 stocks.yaml 的 positions: 區段加入持股。</div>
+
+</div>
+
+
+<div id="tab-watchlist" class="tab-pane">
+
+<div class="rot-intro">🚀 <b>飆股候選追蹤</b>：Scanner 找標的，Watchlist 判斷它是不是<b>快變飆股</b>。點任一檔展開決策卡片，回答：要等突破還是拉回？失敗跌破哪裡移除？型態過去成功率高不高？</div>
+<table>
+  <thead><tr>
+    <th>#</th><th>股票</th>
+    <th class="sortable" onclick="sortWatch('sector',this)">族群 <span class="sort-ico"></span></th>
+    <th class="rotscore sortable" onclick="sortWatch('score',this)">飆股分數 <span class="sort-ico"></span></th>
+    <th class="sortable" onclick="sortWatch('stage',this)">階段 <span class="sort-ico"></span></th>
+    <th class="sortable" onclick="sortWatch('action',this)">操作建議 <span class="sort-ico"></span></th>
+    <th class="r">噴出</th>
+    <th class="sortable" onclick="sortWatch('risk',this)">風險 <span class="sort-ico"></span></th>
+    <th></th>
+  </tr></thead>
+  <tbody>
+  
+  <tr class="sector-row" onclick="toggleWatch( 0 )" data-score="44" data-sector="" data-stage="2" data-action="2" data-risk="1">
+    <td class="neu wl-num">1</td>
+    <td><span class="sym">0050</span> <span class="name-col">元大台灣50</span></td>
+    <td class="name-col">—</td>
+    <td class="rotscore"><div class="score-bar"><div class="bar-low" style="width:44px"></div><span>44</span></div></td>
+    <td><span class="stage-badge rk-wait">未就緒 NOT_READY</span></td>
+    <td><span class="act-badge act-wait">WAIT</span></td>
+    <td class="r lvl-weak">LOW</td>
+    <td><span class="lvl-weak">—</span></td>
+    <td class="exp-caret"><span id="wcaret-0">▸</span></td>
+  </tr>
+  <tr class="sector-detail" id="wdetail-0">
+    <td colspan="9">
+      <div class="wl-card">
+        <div class="wl-head">0050 元大台灣50｜無族群｜<span class="stage-badge rk-wait">未就緒 NOT_READY</span>　飆股分數 <b>44</b>　操作 <span class="act-badge act-wait">WAIT</span>　建議觀察 再觀察</div>
+        <div class="wl-grid">
+          <div class="wl-sec">
+            <h4>① 族群輪動</h4>
+            <div class="wl-note">此股不在任何族群清單中，無族群輪動連動。</div>
+          </div>
+          <div class="wl-sec">
+            <h4>② 型態狀態</h4>
+            <div>整理型態：極短整理 MICRO (3~5日)</div>
+            <div>整理天數：3 天　區間：9.1%</div>
+            <div>價格壓縮：1%　量縮比：2.16</div>
+            <div>支撐守住：53%　base 品質：<b>14%</b></div>
+          </div>
+          <div class="wl-sec">
+            <h4>③ 回測結果</h4>
+            <div>型態：GENERIC_STRENGTH</div>
+            <div>個股：7 筆／勝率 57%</div>
+            <div>族群：0 筆／勝率 0%</div>
+            <div>平均5日 <b class="pos">&#43;0.3%</b>　回撤 <b class="neg">-3.1%</b>　風報 0.09</div>
+            <div>信心：<span class="lvl-mid">MEDIUM</span></div>
+          </div>
+          <div class="wl-sec">
+            <h4>④ 價位計畫</h4>
+            <div>現價：<b>100.95</b></div>
+            <div>進場區：等待型態成形</div>
+            <div>突破價：<span class="t-t1">107.8</span>　支撐價：98.1</div>
+            <div>停損價：<span class="t-stop">97.1</span>　停利區：<span class="t-t2">111.9 ~ 120.1</span></div>
+          </div>
+          <div class="wl-sec">
+            <h4>⑤ 理由</h4>
+            <ul><li>相似型態個股回測勝率 57%（7 筆）</li></ul>
+          </div>
+          <div class="wl-sec wl-risk">
+            <h4>⑥ 風險</h4>
+            <div class="risk-tag">—</div>
+            <div class="wl-note">依計畫設好停損即可</div>
+          </div>
+          <div class="wl-sec wl-guardrail">
+            <h4>⑦ Guardrail Signals（實驗性）</h4>
+            <div class="wl-note">此區為實驗性輔助訊號，參數尚待實機校準。</div>
+            <div class="wl-note">scoring 未啟用，以下僅為 shadow 訊號，不參與分數。</div>
+              <div class="wl-gs-summary">
+                <div class="wl-gs-headline"><b>Guardrail Summary：</b>強勢候選，但短線動能轉弱，暫不追高。</div>
+                <div class="wl-gs-h">優勢：</div>
+                <ul class="wl-gs-list"><li>接近 / 創 52 週高</li><li>日週趨勢共振（多頭）</li><li>站上 200 日線（長期偏多）</li></ul>
+                <div class="wl-gs-h">風險：</div>
+                <ul class="wl-gs-list"><li>短線動能轉弱（FADING）</li><li>出現量價 / 動能背離</li><li>高位追價風險</li></ul>
+                <div class="wl-gs-h">操作解讀：</div>
+                <ul class="wl-gs-list"><li>空手：等回測或重新放量轉強再評估</li><li>持有：可續抱，但提高停利 / 收緊移動停損</li><li>加碼：等 MomentumFlow 由 FADING 轉回 BUILDING / CONTINUATION</li></ul>
+              </div>
+              <div class="wl-note">── 以下為原始數據（raw）──</div>
+              <div>距 52 週高：-6.2%　NewHighScore：30.0</div>
+              <div>Near52wHigh：true　BreakoutWatch：false　H20/H60/H120/H250：false/false/false/false</div>
+              <div>VCP Valid：false　Grade：NONE　QualityScore：51.2　Depths：3→5→3→5→6</div>
+              <div>Flow：MOMENTUM_FADING　Score：24.0　Structure：HH_HL　Divergence：true</div>
+              <div>modifier：-6（僅供參考，未套用）</div>
+              <div>Multi-Timeframe：SignalStrength MODERATE　Daily UPTREND　Weekly UPTREND（本週未完成）</div>
+              <div>Alignment：FULL_BULL　LongTermFilter：200日線上</div>
+          </div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  
+  </tbody>
+</table>
+
+</div>
+
+
+<div id="tab-market" class="tab-pane">
+
+<div class="empty">市場掃描無資料（請執行 make run 或 make run-top100）</div>
+
+</div>
+
+
+<div id="tab-rotation" class="tab-pane">
+
+<div class="empty">族群輪動無資料。請在 configs/sectors.yaml 設定族群與成員，並確認未加 --no-rotation。</div>
+
+</div>
+
+<footer>Stock Radar｜資料來源：TWSE / Yahoo Finance｜僅供研究參考，非投資建議</footer>
+</div>
+<script>
+function tab(e,n){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+}
+function toggleSector(i){
+  var row=document.getElementById('detail-'+i);
+  var caret=document.getElementById('caret-'+i);
+  if(!row)return;
+  var open=row.classList.toggle('open');
+  if(caret)caret.textContent=open?'▾':'▸';
+}
+function toggleWatch(i){
+  var row=document.getElementById('wdetail-'+i);
+  var caret=document.getElementById('wcaret-'+i);
+  if(!row)return;
+  var open=row.classList.toggle('open');
+  if(caret)caret.textContent=open?'▾':'▸';
+}
+
+
+var wlSort={key:null,dir:null};
+function sortWatch(key,th){
+  var tbody=th.closest('table').querySelector('tbody');
+  
+  var dir=(wlSort.key===key&&wlSort.dir==='desc')?'asc':'desc';
+  wlSort={key:key,dir:dir};
+  
+  var pairs=[];
+  tbody.querySelectorAll('tr.sector-row').forEach(function(main){
+    pairs.push([main,main.nextElementSibling]);
+  });
+  var sign=(dir==='desc')?-1:1;
+  pairs.sort(function(a,b){
+    var ra=a[0],rb=b[0],c;
+    if(key==='sector'){
+      var sa=ra.getAttribute('data-sector')||'',sb=rb.getAttribute('data-sector')||'';
+      c=sa.localeCompare(sb,'zh-Hant');
+      if(c!==0)return sign*c;
+      
+      return (+rb.getAttribute('data-score'))-(+ra.getAttribute('data-score'));
+    }
+    c=(+ra.getAttribute('data-'+key))-(+rb.getAttribute('data-'+key));
+    return sign*c;
+  });
+  pairs.forEach(function(p,idx){
+    tbody.appendChild(p[0]);
+    if(p[1])tbody.appendChild(p[1]);
+    var num=p[0].querySelector('.wl-num');
+    if(num)num.textContent=idx+1;
+  });
+  
+  th.closest('tr').querySelectorAll('th').forEach(function(h){
+    h.classList.remove('sort-active');
+    var ico=h.querySelector('.sort-ico');
+    if(ico)ico.textContent='';
+  });
+  th.classList.add('sort-active');
+  var ico=th.querySelector('.sort-ico');
+  if(ico)ico.textContent=(dir==='desc')?'▼':'▲';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>台股掃描 2026-06-01</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;font-size:13px}
+.container{max-width:1700px;margin:0 auto;padding:20px 14px}
+h1{font-size:1.5rem;font-weight:700;color:#f8fafc;border-bottom:2px solid #334155;padding-bottom:10px;margin-bottom:16px}
+h1 small{font-size:.8rem;color:#64748b;font-weight:400;margin-left:8px}
+
+.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #334155}
+.tab-btn{padding:10px 22px;background:none;border:none;color:#64748b;font-size:.88rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit;transition:all .15s}
+.tab-btn:hover{color:#94a3b8}
+.tab-btn.active{color:#38bdf8;border-bottom-color:#38bdf8;font-weight:600}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:9px;padding:12px 16px;min-width:120px}
+.card-label{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.card-value{font-size:1.5rem;font-weight:700;color:#38bdf8}
+.card-value.pos{color:#4ade80}.card-value.neg{color:#f87171}
+.card-sub{font-size:.72rem;color:#94a3b8;margin-top:1px}
+
+table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:10px;overflow:hidden}
+thead{background:#0f172a}
+th{padding:9px 11px;text-align:left;font-weight:600;color:#64748b;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #334155;white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:8px 11px;border-bottom:1px solid #1a2535;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#1a2744;cursor:default}
+
+.action-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-weight:700;font-size:.72rem;white-space:nowrap;letter-spacing:.03em}
+.action-strong-buy{background:#14532d55;color:#4ade80;border:1px solid #16a34a77}
+.action-buy{background:#15803d33;color:#86efac;border:1px solid #22c55e55}
+.action-watch{background:#0c4a6e33;color:#7dd3fc;border:1px solid #0284c755}
+.action-hold{background:#78350f33;color:#fcd34d;border:1px solid #d9770655}
+.action-reduce{background:#9a3412aa;color:#fdba74;border:1px solid #ea580c55}
+.action-sell{background:#7f1d1d55;color:#fca5a5;border:1px solid #dc262655}
+
+.score-bar{display:flex;align-items:center;gap:5px}
+.score-bar>div{height:5px;border-radius:3px;min-width:2px}
+.bar-high{background:#4ade80}
+.bar-mid{background:#fbbf24}
+.bar-low{background:#f87171}
+.score-bar span{font-weight:700;font-size:.8rem;color:#f1f5f9;min-width:26px}
+
+.t-entry{color:#38bdf8!important}
+.t-stop{color:#f87171!important}
+.t-t1{color:#4ade80!important}
+.t-t2{color:#a3e635!important}
+
+.pos{color:#4ade80}.neg{color:#f87171}.neu{color:#94a3b8}
+.sym{font-weight:700;color:#f8fafc}
+.name-col{color:#cbd5e1}
+.reasons{font-size:.72rem;color:#94a3b8;line-height:1.55;max-width:320px}
+
+.pf-summary{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 20px;margin-bottom:16px;display:flex;gap:28px;flex-wrap:wrap;align-items:center}
+.pf-item label{display:block;font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.pf-item .val{font-size:1.2rem;font-weight:700}
+
+.empty{text-align:center;padding:32px;color:#475569;font-size:.9rem}
+footer{margin-top:24px;font-size:.7rem;color:#475569;text-align:center;padding:12px 0}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>📈 台股掃描報告<small>2026-06-01</small></h1>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="tab(event,'market')">📊 市場掃描(50)</button>
+  <button class="tab-btn" onclick="tab(event,'portfolio')">💼 Portfolio (9)</button>
+  <button class="tab-btn" onclick="tab(event,'watchlist')">👁 Watchlist (6)</button>
+</div>
+
+
+<div id="tab-market" class="tab-pane active">
+
+<div class="cards">
+  <div class="card"><div class="card-label">Top 股數</div><div class="card-value">50</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>#</th><th>代號</th><th>名稱</th>
+    <th class="r">收盤</th><th class="r">量比</th>
+    <th>分數</th><th>建議</th>
+    <th class="r">進場價</th><th class="r">停損</th><th class="r">目標1</th><th class="r">目標2</th>
+    <th class="r">RSI</th><th class="r">MA20</th><th class="r">K</th><th class="r">D</th>
+    <th>MA20趨勢</th><th>原因</th>
+  </tr></thead>
+  <tbody>
+  
+  <tr>
+    <td class="neu">1</td>
+    <td class="sym">3060</td>
+    <td class="name-col">銘異</td>
+    <td class="r">32.60</td>
+    <td class="r pos">5.1x</td>
+    <td><div class="score-bar"><div class="bar-high" style="width:62px"></div><span>62</span></div></td>
+    <td><span class="action-badge action-buy">BUY</span></td>
+    <td class="r t-entry">32.60</td>
+    <td class="r t-stop">29.60</td>
+    <td class="r t-t1">38.60</td>
+    <td class="r t-t2">43.10</td>
+    <td class="r neu">67.4</td>
+    <td class="r">28.45</td>
+    <td class="r">79.7</td>
+    <td class="r">70.0</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=67.4 強勢，注意追高風險<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=79.7&gt;D=70.0，J=99.2）<br>超級爆量 5.1x，異常大量資金進場<br>布林帶向上擴張（帶寬18.6%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">2</td>
+    <td class="sym">2105</td>
+    <td class="name-col">正新</td>
+    <td class="r">34.00</td>
+    <td class="r pos">3.1x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:59px"></div><span>59</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">34.00</td>
+    <td class="r t-stop">32.40</td>
+    <td class="r t-t1">37.10</td>
+    <td class="r t-t2">39.50</td>
+    <td class="r neu">68.1</td>
+    <td class="r">32.11</td>
+    <td class="r">68.4</td>
+    <td class="r">54.4</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.1 強勢，注意追高風險<br>MA20 連 5 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=68.4&gt;D=54.4，J=96.6）<br>爆量 3.1x MA20，主力積極買入<br>布林帶向上擴張（帶寬7.7%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">3</td>
+    <td class="sym">9910</td>
+    <td class="name-col">豐泰</td>
+    <td class="r">79.00</td>
+    <td class="r pos">4.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:57px"></div><span>57</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">79.00</td>
+    <td class="r t-stop">74.10</td>
+    <td class="r t-t1">88.70</td>
+    <td class="r t-t2">96.00</td>
+    <td class="r neu">67.8</td>
+    <td class="r">70.62</td>
+    <td class="r">72.9</td>
+    <td class="r">48.1</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=67.8 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=72.9&gt;D=48.1，J=122.4）<br>超級爆量 4.0x，異常大量資金進場<br>布林帶向上擴張（帶寬15.7%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">4</td>
+    <td class="sym">2379</td>
+    <td class="name-col">瑞昱</td>
+    <td class="r">653.00</td>
+    <td class="r pos">2.2x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">653.00</td>
+    <td class="r t-stop">602.50</td>
+    <td class="r t-t1">754.00</td>
+    <td class="r t-t2">829.70</td>
+    <td class="r neu">69.8</td>
+    <td class="r">576.25</td>
+    <td class="r">77.8</td>
+    <td class="r">69.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=69.8 強勢，注意追高風險<br>MA20 連 12 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=77.8&gt;D=69.6，J=94.3）<br>放量 2.2x MA20，量能溫和擴張<br>布林帶向上擴張（帶寬18.7%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">5</td>
+    <td class="sym">3015</td>
+    <td class="name-col">全漢</td>
+    <td class="r">54.50</td>
+    <td class="r pos">4.5x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">54.50</td>
+    <td class="r t-stop">51.20</td>
+    <td class="r t-t1">61.00</td>
+    <td class="r t-t2">65.90</td>
+    <td class="r neu">63.2</td>
+    <td class="r">51.21</td>
+    <td class="r">72.4</td>
+    <td class="r">66.8</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=63.2 強勢，注意追高風險<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=72.4&gt;D=66.8，J=83.7）<br>超級爆量 4.5x，異常大量資金進場</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">6</td>
+    <td class="sym">2497</td>
+    <td class="name-col">怡利電</td>
+    <td class="r">61.80</td>
+    <td class="r pos">2.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">61.80</td>
+    <td class="r t-stop">56.00</td>
+    <td class="r t-t1">73.50</td>
+    <td class="r t-t2">82.20</td>
+    <td class="r neu">58.9</td>
+    <td class="r">58.60</td>
+    <td class="r">68.2</td>
+    <td class="r">62.9</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=58.9 中性偏強<br>MA20 連 7 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=68.2&gt;D=62.9，J=78.7）<br>爆量 2.6x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">7</td>
+    <td class="sym">8112</td>
+    <td class="name-col">至上</td>
+    <td class="r">94.50</td>
+    <td class="r pos">2.7x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">94.50</td>
+    <td class="r t-stop">86.80</td>
+    <td class="r t-t1">109.80</td>
+    <td class="r t-t2">121.40</td>
+    <td class="r neu">66.8</td>
+    <td class="r">85.83</td>
+    <td class="r">79.9</td>
+    <td class="r">71.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=66.8 強勢，注意追高風險<br>MA20 連 4 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=79.9&gt;D=71.2，J=97.2）<br>爆量 2.7x MA20，主力積極買入<br>布林帶向上擴張（帶寬14.8%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">8</td>
+    <td class="sym">6757</td>
+    <td class="name-col">台灣虎航</td>
+    <td class="r">56.40</td>
+    <td class="r pos">2.9x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">56.40</td>
+    <td class="r t-stop">52.70</td>
+    <td class="r t-t1">63.80</td>
+    <td class="r t-t2">69.40</td>
+    <td class="r neu">59.1</td>
+    <td class="r">54.23</td>
+    <td class="r">77.6</td>
+    <td class="r">76.3</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=59.1 中性偏強<br>MA20 連 23 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=77.6&gt;D=76.3，J=80.3）<br>爆量 2.9x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">9</td>
+    <td class="sym">2889</td>
+    <td class="name-col">國票金</td>
+    <td class="r">14.75</td>
+    <td class="r pos">1.8x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">14.80</td>
+    <td class="r t-stop">14.40</td>
+    <td class="r t-t1">15.50</td>
+    <td class="r t-t2">16.10</td>
+    <td class="r neu">49.4</td>
+    <td class="r">14.65</td>
+    <td class="r">59.1</td>
+    <td class="r">50.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=49.4 中性偏弱<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=59.1&gt;D=50.2，J=76.8）<br>放量 1.8x MA20，量能溫和擴張<br>布林帶極度收斂（帶寬2.2%），蓄勢待發</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">10</td>
+    <td class="sym">3047</td>
+    <td class="name-col">訊舟</td>
+    <td class="r">16.95</td>
+    <td class="r pos">3.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">17.00</td>
+    <td class="r t-stop">15.70</td>
+    <td class="r t-t1">19.50</td>
+    <td class="r t-t2">21.50</td>
+    <td class="r neu">68.1</td>
+    <td class="r">14.82</td>
+    <td class="r">77.0</td>
+    <td class="r">66.0</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.1 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=77.0&gt;D=66.0，J=98.8）<br>爆量 3.6x MA20，主力積極買入<br>布林帶向上擴張（帶寬17.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">11</td>
+    <td class="sym">2323</td>
+    <td class="name-col">中環</td>
+    <td class="r">11.60</td>
+    <td class="r pos">3.3x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">11.60</td>
+    <td class="r t-stop">10.70</td>
+    <td class="r t-t1">13.30</td>
+    <td class="r t-t2">14.60</td>
+    <td class="r neu">66.1</td>
+    <td class="r">10.28</td>
+    <td class="r">74.9</td>
+    <td class="r">61.3</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=66.1 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=74.9&gt;D=61.3，J=102.1）<br>爆量 3.3x MA20，主力積極買入<br>布林帶向上擴張（帶寬20.1%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">12</td>
+    <td class="sym">2603</td>
+    <td class="name-col">長榮</td>
+    <td class="r">231.00</td>
+    <td class="r pos">1.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">231.00</td>
+    <td class="r t-stop">217.80</td>
+    <td class="r t-t1">257.40</td>
+    <td class="r t-t2">277.30</td>
+    <td class="r neu">69.9</td>
+    <td class="r">212.05</td>
+    <td class="r">82.7</td>
+    <td class="r">72.1</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=69.9 強勢，注意追高風險<br>MA20 連 10 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=82.7&gt;D=72.1，J=103.7）<br>放量 1.6x MA20，量能溫和擴張<br>布林帶向上擴張（帶寬14.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">13</td>
+    <td class="sym">1710</td>
+    <td class="name-col">東聯</td>
+    <td class="r">14.55</td>
+    <td class="r pos">2.5x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">14.60</td>
+    <td class="r t-stop">13.40</td>
+    <td class="r t-t1">16.90</td>
+    <td class="r t-t2">18.70</td>
+    <td class="r neu">66.8</td>
+    <td class="r">12.68</td>
+    <td class="r">82.4</td>
+    <td class="r">78.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=66.8 強勢，注意追高風險<br>MA20 連 4 日翻揚，趨勢確認轉多<br>KDJ 黃金交叉（K=82.4 上穿 D=78.5），多頭轉強<br>爆量 2.5x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">14</td>
+    <td class="sym">2597</td>
+    <td class="name-col">潤弘</td>
+    <td class="r">173.50</td>
+    <td class="r pos">4.3x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">173.50</td>
+    <td class="r t-stop">163.20</td>
+    <td class="r t-t1">194.00</td>
+    <td class="r t-t2">209.40</td>
+    <td class="r neu">68.9</td>
+    <td class="r">161.10</td>
+    <td class="r">66.5</td>
+    <td class="r">57.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.9 強勢，注意追高風險<br>MA20 連 11 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=66.5&gt;D=57.2，J=84.9）<br>超級爆量 4.3x，異常大量資金進場</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">15</td>
+    <td class="sym">9904</td>
+    <td class="name-col">寶成</td>
+    <td class="r">26.10</td>
+    <td class="r pos">1.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:52px"></div><span>52</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">26.10</td>
+    <td class="r t-stop">25.20</td>
+    <td class="r t-t1">27.80</td>
+    <td class="r t-t2">29.10</td>
+    <td class="r neu">49.9</td>
+    <td class="r">25.79</td>
+    <td class="r">46.8</td>
+    <td class="r">29.2</td>
+    <td>↑↑</td>
+    <td><div class="reasons">RSI(14)=49.9 中性偏弱<br>MA20 連2日上升，短期趨勢改善<br>KDJ 多頭排列（K=46.8&gt;D=29.2），低檔J=81.9 動能強<br>放量 1.6x MA20，量能溫和擴張<br>布林帶極度收斂（帶寬4.2%），蓄勢待發</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">16</td>
+    <td class="sym">2883</td>
+    <td class="name-col">凱基金</td>
+    <td class="r">23.40</td>
+    <td class="r pos">2.9x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">23.40</td>
+    <td class="r t-stop">22.10</td>
+    <td class="r t-t1">26.00</td>
+    <td class="r t-t2">28.00</td>
+    <td class="r neu">68.4</td>
+    <td class="r">22.09</td>
+    <td class="r">75.7</td>
+    <td class="r">57.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.4 強勢，注意追高風險<br>MA20 連 26 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=75.7&gt;D=57.5，J=112.3）<br>爆量 2.9x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">17</td>
+    <td class="sym">2646</td>
+    <td class="name-col">星宇航空</td>
+    <td class="r">20.90</td>
+    <td class="r pos">1.7x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">20.90</td>
+    <td class="r t-stop">20.20</td>
+    <td class="r t-t1">22.30</td>
+    <td class="r t-t2">23.30</td>
+    <td class="r neu">60.2</td>
+    <td class="r">20.34</td>
+    <td class="r">71.8</td>
+    <td class="r">58.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=60.2 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=71.8&gt;D=58.6，J=98.4）<br>放量 1.7x MA20，量能溫和擴張<br>布林帶收斂後突破上軌（20.80），波段啟動訊號</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">18</td>
+    <td class="sym">3706</td>
+    <td class="name-col">神達</td>
+    <td class="r">95.20</td>
+    <td class="r pos">2.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">95.20</td>
+    <td class="r t-stop">88.20</td>
+    <td class="r t-t1">109.20</td>
+    <td class="r t-t2">119.60</td>
+    <td class="r neu">68.9</td>
+    <td class="r">85.52</td>
+    <td class="r">79.5</td>
+    <td class="r">70.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.9 強勢，注意追高風險<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=79.5&gt;D=70.6，J=97.4）<br>爆量 2.6x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">19</td>
+    <td class="sym">2442</td>
+    <td class="name-col">新美齊</td>
+    <td class="r">18.90</td>
+    <td class="r neu">1.2x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">18.90</td>
+    <td class="r t-stop">18.10</td>
+    <td class="r t-t1">20.50</td>
+    <td class="r t-t2">21.60</td>
+    <td class="r neu">53.1</td>
+    <td class="r">18.55</td>
+    <td class="r">77.8</td>
+    <td class="r">66.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=53.1 中性偏強<br>MA20 連 6 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=77.8&gt;D=66.2，J=100.9）<br>布林帶極度收斂（帶寬4.5%），蓄勢待發</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">20</td>
+    <td class="sym">6768</td>
+    <td class="name-col">志強-KY</td>
+    <td class="r">94.00</td>
+    <td class="r pos">3.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">94.00</td>
+    <td class="r t-stop">87.40</td>
+    <td class="r t-t1">107.20</td>
+    <td class="r t-t2">117.20</td>
+    <td class="r neu">67.6</td>
+    <td class="r">85.60</td>
+    <td class="r">59.4</td>
+    <td class="r">36.9</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=67.6 強勢，注意追高風險<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=59.4&gt;D=36.9，J=104.6）<br>爆量 3.0x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">21</td>
+    <td class="sym">1319</td>
+    <td class="name-col">東陽</td>
+    <td class="r">92.10</td>
+    <td class="r pos">3.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">92.10</td>
+    <td class="r t-stop">85.00</td>
+    <td class="r t-t1">106.20</td>
+    <td class="r t-t2">116.80</td>
+    <td class="r neu">64.6</td>
+    <td class="r">81.86</td>
+    <td class="r">73.9</td>
+    <td class="r">70.9</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=64.6 強勢，注意追高風險<br>MA20 連 12 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=73.9&gt;D=70.9，J=80.0）<br>爆量 3.0x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">22</td>
+    <td class="sym">1608</td>
+    <td class="name-col">華榮</td>
+    <td class="r">35.85</td>
+    <td class="r pos">3.5x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">35.80</td>
+    <td class="r t-stop">33.50</td>
+    <td class="r t-t1">40.60</td>
+    <td class="r t-t2">44.10</td>
+    <td class="r neu">66.5</td>
+    <td class="r">33.40</td>
+    <td class="r">78.0</td>
+    <td class="r">70.8</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=66.5 強勢，注意追高風險<br>MA20 連 7 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=78.0&gt;D=70.8，J=92.3）<br>爆量 3.5x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">23</td>
+    <td class="sym">1464</td>
+    <td class="name-col">得力</td>
+    <td class="r">10.30</td>
+    <td class="r neu">1.2x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">10.30</td>
+    <td class="r t-stop">10.00</td>
+    <td class="r t-t1">11.00</td>
+    <td class="r t-t2">11.50</td>
+    <td class="r neu">56.6</td>
+    <td class="r">10.12</td>
+    <td class="r">66.4</td>
+    <td class="r">54.3</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=56.6 中性偏強<br>MA20 連 6 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=66.4&gt;D=54.3，J=90.8）<br>布林帶極度收斂（帶寬4.3%），蓄勢待發</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">24</td>
+    <td class="sym">1210</td>
+    <td class="name-col">大成</td>
+    <td class="r">52.80</td>
+    <td class="r pos">4.1x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:51px"></div><span>51</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">52.80</td>
+    <td class="r t-stop">51.20</td>
+    <td class="r t-t1">56.00</td>
+    <td class="r t-t2">58.30</td>
+    <td class="r neu">50.7</td>
+    <td class="r">52.48</td>
+    <td class="r">40.7</td>
+    <td class="r">30.1</td>
+    <td>↑</td>
+    <td><div class="reasons">RSI(14)=50.7 中性偏強<br>MA20 昨日止跌翻揚，尚待確認<br>KDJ 多頭排列（K=40.7&gt;D=30.1），低檔J=62.1 動能強<br>超級爆量 4.1x，異常大量資金進場<br>布林帶極度收斂（帶寬3.4%），蓄勢待發</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">25</td>
+    <td class="sym">2362</td>
+    <td class="name-col">藍天</td>
+    <td class="r">51.90</td>
+    <td class="r pos">5.4x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">51.90</td>
+    <td class="r t-stop">48.30</td>
+    <td class="r t-t1">59.10</td>
+    <td class="r t-t2">64.50</td>
+    <td class="r neg">84.9</td>
+    <td class="r">41.11</td>
+    <td class="r">86.9</td>
+    <td class="r">76.7</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=84.9 超買（&gt;70），回調壓力大<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=86.9&gt;D=76.7，J=107.4）<br>超級爆量 5.4x，異常大量資金進場<br>布林帶向上擴張（帶寬31.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">26</td>
+    <td class="sym">6698</td>
+    <td class="name-col">旭暉應材</td>
+    <td class="r">43.45</td>
+    <td class="r pos">5.1x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">43.50</td>
+    <td class="r t-stop">39.20</td>
+    <td class="r t-t1">51.90</td>
+    <td class="r t-t2">58.20</td>
+    <td class="r neg">82.5</td>
+    <td class="r">33.57</td>
+    <td class="r">89.1</td>
+    <td class="r">81.3</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=82.5 超買（&gt;70），回調壓力大<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=89.1&gt;D=81.3，J=104.6）<br>超級爆量 5.1x，異常大量資金進場<br>布林帶向上擴張（帶寬41.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">27</td>
+    <td class="sym">2405</td>
+    <td class="name-col">輔信</td>
+    <td class="r">20.20</td>
+    <td class="r pos">5.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">20.20</td>
+    <td class="r t-stop">18.60</td>
+    <td class="r t-t1">23.40</td>
+    <td class="r t-t2">25.70</td>
+    <td class="r neg">80.3</td>
+    <td class="r">16.12</td>
+    <td class="r">85.5</td>
+    <td class="r">75.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=80.3 超買（&gt;70），回調壓力大<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=85.5&gt;D=75.5，J=105.5）<br>超級爆量 5.6x，異常大量資金進場<br>布林帶向上擴張（帶寬33.1%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">28</td>
+    <td class="sym">3231</td>
+    <td class="name-col">緯創</td>
+    <td class="r">191.00</td>
+    <td class="r pos">4.2x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">191.00</td>
+    <td class="r t-stop">176.40</td>
+    <td class="r t-t1">220.30</td>
+    <td class="r t-t2">242.30</td>
+    <td class="r neg">82.7</td>
+    <td class="r">146.32</td>
+    <td class="r">90.4</td>
+    <td class="r">78.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=82.7 超買（&gt;70），回調壓力大<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=90.4&gt;D=78.6，J=114.1）<br>超級爆量 4.2x，異常大量資金進場<br>布林帶向上擴張（帶寬37.5%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">29</td>
+    <td class="sym">2353</td>
+    <td class="name-col">宏碁</td>
+    <td class="r">42.55</td>
+    <td class="r pos">4.1x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">42.50</td>
+    <td class="r t-stop">39.30</td>
+    <td class="r t-t1">49.10</td>
+    <td class="r t-t2">54.00</td>
+    <td class="r neg">87.7</td>
+    <td class="r">30.49</td>
+    <td class="r">89.8</td>
+    <td class="r">78.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=87.7 超買（&gt;70），回調壓力大<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=89.8&gt;D=78.2，J=113.2）<br>超級爆量 4.1x，異常大量資金進場<br>布林帶向上擴張（帶寬52.5%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">30</td>
+    <td class="sym">2328</td>
+    <td class="name-col">廣宇</td>
+    <td class="r">61.70</td>
+    <td class="r pos">4.7x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">61.70</td>
+    <td class="r t-stop">55.90</td>
+    <td class="r t-t1">73.40</td>
+    <td class="r t-t2">82.10</td>
+    <td class="r neg">70.8</td>
+    <td class="r">53.92</td>
+    <td class="r">76.6</td>
+    <td class="r">68.4</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=70.8 超買（&gt;70），回調壓力大<br>MA20 連 25 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=76.6&gt;D=68.4，J=93.0）<br>超級爆量 4.7x，異常大量資金進場<br>布林帶向上擴張（帶寬22.0%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">31</td>
+    <td class="sym">8070</td>
+    <td class="name-col">長華*</td>
+    <td class="r">58.00</td>
+    <td class="r pos">4.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">58.00</td>
+    <td class="r t-stop">53.40</td>
+    <td class="r t-t1">67.10</td>
+    <td class="r t-t2">74.00</td>
+    <td class="r neg">80.2</td>
+    <td class="r">47.84</td>
+    <td class="r">86.1</td>
+    <td class="r">74.0</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=80.2 超買（&gt;70），回調壓力大<br>MA20 連 6 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=86.1&gt;D=74.0，J=110.2）<br>超級爆量 4.6x，異常大量資金進場<br>布林帶向上擴張（帶寬31.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">32</td>
+    <td class="sym">3661</td>
+    <td class="name-col">世芯-KY</td>
+    <td class="r">4575.00</td>
+    <td class="r neu">1.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:50px"></div><span>50</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">4575.00</td>
+    <td class="r t-stop">4048.80</td>
+    <td class="r t-t1">5627.40</td>
+    <td class="r t-t2">6416.70</td>
+    <td class="r neu">52.5</td>
+    <td class="r">4737.75</td>
+    <td class="r">42.7</td>
+    <td class="r">38.7</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=52.5 中性偏強<br>MA20 連 35 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=42.7&gt;D=38.7），低檔J=50.6 動能強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">33</td>
+    <td class="sym">2886</td>
+    <td class="name-col">兆豐金</td>
+    <td class="r">41.70</td>
+    <td class="r pos">2.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">41.70</td>
+    <td class="r t-stop">40.10</td>
+    <td class="r t-t1">44.90</td>
+    <td class="r t-t2">47.20</td>
+    <td class="r neu">68.2</td>
+    <td class="r">39.94</td>
+    <td class="r">57.9</td>
+    <td class="r">41.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=68.2 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=57.9&gt;D=41.5，J=90.7）<br>放量 2.0x MA20，量能溫和擴張<br>布林帶向上擴張（帶寬6.6%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">34</td>
+    <td class="sym">2009</td>
+    <td class="name-col">第一銅</td>
+    <td class="r">41.10</td>
+    <td class="r pos">1.7x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">41.10</td>
+    <td class="r t-stop">38.50</td>
+    <td class="r t-t1">46.40</td>
+    <td class="r t-t2">50.30</td>
+    <td class="r neu">57.7</td>
+    <td class="r">39.39</td>
+    <td class="r">63.1</td>
+    <td class="r">52.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=57.7 中性偏強<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=63.1&gt;D=52.5，J=84.2）<br>放量 1.7x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">35</td>
+    <td class="sym">5434</td>
+    <td class="name-col">崇越</td>
+    <td class="r">466.00</td>
+    <td class="r neu">1.2x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">466.00</td>
+    <td class="r t-stop">433.30</td>
+    <td class="r t-t1">531.50</td>
+    <td class="r t-t2">580.60</td>
+    <td class="r neu">63.6</td>
+    <td class="r">433.57</td>
+    <td class="r">65.5</td>
+    <td class="r">64.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=63.6 強勢，注意追高風險<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 黃金交叉（K=65.5 上穿 D=64.6），多頭轉強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">36</td>
+    <td class="sym">3050</td>
+    <td class="name-col">鈺德</td>
+    <td class="r">13.20</td>
+    <td class="r pos">1.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">13.20</td>
+    <td class="r t-stop">12.30</td>
+    <td class="r t-t1">14.90</td>
+    <td class="r t-t2">16.20</td>
+    <td class="r neu">63.5</td>
+    <td class="r">12.32</td>
+    <td class="r">79.3</td>
+    <td class="r">69.5</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=63.5 強勢，注意追高風險<br>MA20 連 4 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=79.3&gt;D=69.5，J=98.8）<br>放量 1.6x MA20，量能溫和擴張<br>布林帶向上擴張（帶寬10.9%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">37</td>
+    <td class="sym">3002</td>
+    <td class="name-col">歐格</td>
+    <td class="r">20.45</td>
+    <td class="r pos">7.4x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">20.50</td>
+    <td class="r t-stop">18.80</td>
+    <td class="r t-t1">23.80</td>
+    <td class="r t-t2">26.20</td>
+    <td class="r neu">69.8</td>
+    <td class="r">17.55</td>
+    <td class="r">81.5</td>
+    <td class="r">69.3</td>
+    <td>↑↑</td>
+    <td><div class="reasons">RSI(14)=69.8 強勢，注意追高風險<br>MA20 連2日上升，短期趨勢改善<br>KDJ 多頭排列（K=81.5&gt;D=69.3，J=105.9）<br>超級爆量 7.4x，異常大量資金進場<br>布林帶向上擴張（帶寬21.6%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">38</td>
+    <td class="sym">2027</td>
+    <td class="name-col">大成鋼</td>
+    <td class="r">43.65</td>
+    <td class="r neu">1.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">43.70</td>
+    <td class="r t-stop">40.60</td>
+    <td class="r t-t1">49.70</td>
+    <td class="r t-t2">54.30</td>
+    <td class="r neu">64.7</td>
+    <td class="r">40.86</td>
+    <td class="r">62.6</td>
+    <td class="r">62.1</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=64.7 強勢，注意追高風險<br>MA20 連 14 日上揚，趨勢強勁向上<br>KDJ 黃金交叉（K=62.6 上穿 D=62.1），多頭轉強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">39</td>
+    <td class="sym">2615</td>
+    <td class="name-col">萬海</td>
+    <td class="r">84.20</td>
+    <td class="r neu">0.9x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">84.20</td>
+    <td class="r t-stop">79.00</td>
+    <td class="r t-t1">94.50</td>
+    <td class="r t-t2">102.30</td>
+    <td class="r neu">63.5</td>
+    <td class="r">79.65</td>
+    <td class="r">70.3</td>
+    <td class="r">70.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=63.5 強勢，注意追高風險<br>MA20 連 12 日上揚，趨勢強勁向上<br>KDJ 黃金交叉（K=70.3 上穿 D=70.2），多頭轉強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">40</td>
+    <td class="sym">2637</td>
+    <td class="name-col">慧洋-KY</td>
+    <td class="r">77.00</td>
+    <td class="r pos">1.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:49px"></div><span>49</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">77.00</td>
+    <td class="r t-stop">71.90</td>
+    <td class="r t-t1">87.20</td>
+    <td class="r t-t2">94.90</td>
+    <td class="r neu">58.1</td>
+    <td class="r">74.43</td>
+    <td class="r">72.7</td>
+    <td class="r">67.2</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=58.1 中性偏強<br>MA20 連 7 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=72.7&gt;D=67.2，J=83.6）<br>放量 1.6x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">41</td>
+    <td class="sym">1907</td>
+    <td class="name-col">永豐餘</td>
+    <td class="r">24.35</td>
+    <td class="r neu">1.3x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:48px"></div><span>48</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">24.40</td>
+    <td class="r t-stop">23.40</td>
+    <td class="r t-t1">26.20</td>
+    <td class="r t-t2">27.60</td>
+    <td class="r neu">48.6</td>
+    <td class="r">24.32</td>
+    <td class="r">37.6</td>
+    <td class="r">34.3</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=48.6 中性偏弱<br>MA20 連 4 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=37.6&gt;D=34.3），低檔J=44.4 動能強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">42</td>
+    <td class="sym">9958</td>
+    <td class="name-col">世紀鋼</td>
+    <td class="r">102.50</td>
+    <td class="r neu">1.0x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:48px"></div><span>48</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">102.50</td>
+    <td class="r t-stop">98.00</td>
+    <td class="r t-t1">111.60</td>
+    <td class="r t-t2">118.40</td>
+    <td class="r neu">45.5</td>
+    <td class="r">103.88</td>
+    <td class="r">32.1</td>
+    <td class="r">28.4</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=45.5 中性偏弱<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=32.1&gt;D=28.4），低檔J=39.6 動能強</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">43</td>
+    <td class="sym">6573</td>
+    <td class="name-col">虹揚-KY</td>
+    <td class="r">17.30</td>
+    <td class="r pos">2.9x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:47px"></div><span>47</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">17.30</td>
+    <td class="r t-stop">15.40</td>
+    <td class="r t-t1">21.10</td>
+    <td class="r t-t2">23.90</td>
+    <td class="r neg">72.8</td>
+    <td class="r">13.80</td>
+    <td class="r">86.7</td>
+    <td class="r">77.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=72.8 超買（&gt;70），回調壓力大<br>MA20 連 7 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=86.7&gt;D=77.6，J=105.0）<br>爆量 2.9x MA20，主力積極買入<br>布林帶向上擴張（帶寬36.7%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">44</td>
+    <td class="sym">8454</td>
+    <td class="name-col">富邦媒</td>
+    <td class="r">265.50</td>
+    <td class="r pos">3.7x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:47px"></div><span>47</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">265.50</td>
+    <td class="r t-stop">243.90</td>
+    <td class="r t-t1">308.60</td>
+    <td class="r t-t2">340.90</td>
+    <td class="r neg">84.7</td>
+    <td class="r">200.30</td>
+    <td class="r">81.1</td>
+    <td class="r">64.7</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=84.7 超買（&gt;70），回調壓力大<br>MA20 連 20 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=81.1&gt;D=64.7，J=113.9）<br>爆量 3.7x MA20，主力積極買入<br>布林帶向上擴張（帶寬41.5%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">45</td>
+    <td class="sym">2347</td>
+    <td class="name-col">聯強</td>
+    <td class="r">91.50</td>
+    <td class="r pos">3.8x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:47px"></div><span>47</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">91.50</td>
+    <td class="r t-stop">86.30</td>
+    <td class="r t-t1">102.00</td>
+    <td class="r t-t2">109.90</td>
+    <td class="r neg">74.0</td>
+    <td class="r">84.57</td>
+    <td class="r">67.6</td>
+    <td class="r">61.4</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=74.0 超買（&gt;70），回調壓力大<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=67.6&gt;D=61.4，J=80.1）<br>爆量 3.8x MA20，主力積極買入<br>布林帶向上擴張（帶寬9.9%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">46</td>
+    <td class="sym">6890</td>
+    <td class="name-col">來億-KY</td>
+    <td class="r">191.50</td>
+    <td class="r pos">3.6x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:47px"></div><span>47</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">191.50</td>
+    <td class="r t-stop">176.20</td>
+    <td class="r t-t1">222.00</td>
+    <td class="r t-t2">244.90</td>
+    <td class="r neg">73.5</td>
+    <td class="r">166.35</td>
+    <td class="r">69.4</td>
+    <td class="r">57.1</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=73.5 超買（&gt;70），回調壓力大<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=69.4&gt;D=57.1，J=94.1）<br>爆量 3.6x MA20，主力積極買入<br>布林帶向上擴張（帶寬19.0%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">47</td>
+    <td class="sym">3607</td>
+    <td class="name-col">谷崧</td>
+    <td class="r">17.80</td>
+    <td class="r pos">3.1x</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:47px"></div><span>47</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">17.80</td>
+    <td class="r t-stop">16.70</td>
+    <td class="r t-t1">20.10</td>
+    <td class="r t-t2">21.80</td>
+    <td class="r neg">83.4</td>
+    <td class="r">14.90</td>
+    <td class="r">89.9</td>
+    <td class="r">81.4</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=83.4 超買（&gt;70），回調壓力大<br>MA20 連 7 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=89.9&gt;D=81.4，J=107.0）<br>爆量 3.1x MA20，主力積極買入<br>布林帶向上擴張（帶寬22.7%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">48</td>
+    <td class="sym">4540</td>
+    <td class="name-col">全球傳動</td>
+    <td class="r">77.30</td>
+    <td class="r pos">2.0x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:46px"></div><span>46</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">77.30</td>
+    <td class="r t-stop">67.10</td>
+    <td class="r t-t1">97.70</td>
+    <td class="r t-t2">112.90</td>
+    <td class="r neu">64.7</td>
+    <td class="r">70.22</td>
+    <td class="r">52.5</td>
+    <td class="r">43.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=64.7 強勢，注意追高風險<br>MA20 連 35 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=52.5&gt;D=43.6，J=70.2）<br>放量 2.0x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">49</td>
+    <td class="sym">3311</td>
+    <td class="name-col">閎暉</td>
+    <td class="r">36.75</td>
+    <td class="r pos">1.6x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:46px"></div><span>46</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">36.80</td>
+    <td class="r t-stop">33.60</td>
+    <td class="r t-t1">43.00</td>
+    <td class="r t-t2">47.60</td>
+    <td class="r neu">69.3</td>
+    <td class="r">33.23</td>
+    <td class="r">71.3</td>
+    <td class="r">68.9</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=69.3 強勢，注意追高風險<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=71.3&gt;D=68.9，J=76.3）<br>放量 1.6x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  <tr>
+    <td class="neu">50</td>
+    <td class="sym">6451</td>
+    <td class="name-col">訊芯-KY</td>
+    <td class="r">659.00</td>
+    <td class="r pos">1.7x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:46px"></div><span>46</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">659.00</td>
+    <td class="r t-stop">563.80</td>
+    <td class="r t-t1">849.30</td>
+    <td class="r t-t2">992.10</td>
+    <td class="r neu">67.0</td>
+    <td class="r">532.40</td>
+    <td class="r">75.5</td>
+    <td class="r">70.6</td>
+    <td>↑↑↑</td>
+    <td><div class="reasons">RSI(14)=67.0 強勢，注意追高風險<br>MA20 連 10 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=75.5&gt;D=70.6，J=85.2）<br>放量 1.7x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  </tbody>
+</table>
+
+</div>
+
+
+<div id="tab-portfolio" class="tab-pane">
+
+<div class="pf-summary">
+  <div class="pf-item">
+    <label>總市值</label>
+    <div class="val">861700</div>
+  </div>
+  <div class="pf-item">
+    <label>總成本</label>
+    <div class="val">821800</div>
+  </div>
+  <div class="pf-item">
+    <label>損益%</label>
+    <div class="val pos">&#43;4.9%</div>
+  </div>
+  <div class="pf-item">
+    <label>損益額(元)</label>
+    <div class="val pos">39900</div>
+  </div>
+</div>
+<table>
+  <thead><tr>
+    <th>代號</th><th>名稱</th>
+    <th class="r">股數</th><th class="r">成本</th><th class="r">現價</th>
+    <th class="r">市值</th><th class="r">損益%</th><th class="r">損益額</th>
+    <th>分數</th><th>建議</th>
+    <th class="r">進場價</th><th class="r">停損</th><th class="r">目標1</th><th class="r">目標2</th>
+    <th class="r">RSI</th><th>MA20趨勢</th><th class="r">K</th><th class="r">D</th>
+    <th>原因與建議</th>
+  </tr></thead>
+  <tbody>
+  
+  <tr>
+    <td class="sym">3015</td>
+    <td class="name-col">全漢</td>
+    <td class="r">1000</td>
+    <td class="r">54.60</td>
+    <td class="r">54.50</td>
+    <td class="r">54500</td>
+    <td class="r neg">-0.2%</td>
+    <td class="r neg">-100</td>
+    <td><div class="score-bar"><div class="bar-mid" style="width:54px"></div><span>54</span></div></td>
+    <td><span class="action-badge action-watch">WATCH</span></td>
+    <td class="r t-entry">54.50</td>
+    <td class="r t-stop">51.20</td>
+    <td class="r t-t1">61.00</td>
+    <td class="r t-t2">65.90</td>
+    <td class="r neu">63.2</td>
+    <td>↑↑↑</td>
+    <td class="r">72.4</td>
+    <td class="r">66.8</td>
+    <td><div class="reasons">RSI(14)=63.2 強勢，注意追高風險<br>MA20 連 8 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=72.4&gt;D=66.8，J=83.7）<br>超級爆量 4.5x，異常大量資金進場<br>持倉成本 54.6，現價 54.5，虧損 -0.2%（1000 股，損益 -100 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2374</td>
+    <td class="name-col">佳能</td>
+    <td class="r">1000</td>
+    <td class="r">84.00</td>
+    <td class="r">82.50</td>
+    <td class="r">82500</td>
+    <td class="r neg">-1.8%</td>
+    <td class="r neg">-1500</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:44px"></div><span>44</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">82.50</td>
+    <td class="r t-stop">75.70</td>
+    <td class="r t-t1">96.10</td>
+    <td class="r t-t2">106.20</td>
+    <td class="r neu">55.7</td>
+    <td>↑↑↑</td>
+    <td class="r">57.5</td>
+    <td class="r">55.0</td>
+    <td><div class="reasons">RSI(14)=55.7 中性偏強<br>MA20 連 25 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=57.5&gt;D=55.0，J=62.6）<br>持倉成本 84.0，現價 82.5，虧損 -1.8%（1000 股，損益 -1500 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">1504</td>
+    <td class="name-col">東元</td>
+    <td class="r">1000</td>
+    <td class="r">79.20</td>
+    <td class="r">75.50</td>
+    <td class="r">75500</td>
+    <td class="r neg">-4.7%</td>
+    <td class="r neg">-3700</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:41px"></div><span>41</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">75.50</td>
+    <td class="r t-stop">68.80</td>
+    <td class="r t-t1">88.90</td>
+    <td class="r t-t2">99.00</td>
+    <td class="r neu">61.3</td>
+    <td>↑↑↑</td>
+    <td class="r">65.6</td>
+    <td class="r">61.2</td>
+    <td><div class="reasons">RSI(14)=61.3 強勢，注意追高風險<br>MA20 連 23 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=65.6&gt;D=61.2，J=74.3）<br>持倉成本 79.2，現價 75.5，虧損 -4.7%（1000 股，損益 -3700 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2337</td>
+    <td class="name-col">旺宏</td>
+    <td class="r">1000</td>
+    <td class="r">177.00</td>
+    <td class="r">175.50</td>
+    <td class="r">175500</td>
+    <td class="r neg">-0.8%</td>
+    <td class="r neg">-1500</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:36px"></div><span>36</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">175.50</td>
+    <td class="r t-stop">150.30</td>
+    <td class="r t-t1">225.90</td>
+    <td class="r t-t2">263.80</td>
+    <td class="r neu">62.3</td>
+    <td>↑↑↑</td>
+    <td class="r">73.3</td>
+    <td class="r">59.5</td>
+    <td><div class="reasons">RSI(14)=62.3 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=73.3&gt;D=59.5，J=100.9）<br>持倉成本 177.0，現價 175.5，虧損 -0.8%（1000 股，損益 -1500 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2337</td>
+    <td class="name-col">旺宏</td>
+    <td class="r">1000</td>
+    <td class="r">177.00</td>
+    <td class="r">175.50</td>
+    <td class="r">175500</td>
+    <td class="r neg">-0.8%</td>
+    <td class="r neg">-1500</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:36px"></div><span>36</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">175.50</td>
+    <td class="r t-stop">150.30</td>
+    <td class="r t-t1">225.90</td>
+    <td class="r t-t2">263.80</td>
+    <td class="r neu">62.3</td>
+    <td>↑↑↑</td>
+    <td class="r">73.3</td>
+    <td class="r">59.5</td>
+    <td><div class="reasons">RSI(14)=62.3 強勢，注意追高風險<br>MA20 連 3 日翻揚，趨勢確認轉多<br>KDJ 多頭排列（K=73.3&gt;D=59.5，J=100.9）<br>持倉成本 177.0，現價 175.5，虧損 -0.8%（1000 股，損益 -1500 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">1809</td>
+    <td class="name-col">中釉</td>
+    <td class="r">1000</td>
+    <td class="r">43.00</td>
+    <td class="r">52.60</td>
+    <td class="r">52600</td>
+    <td class="r pos">&#43;22.3%</td>
+    <td class="r pos">9600</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:22px"></div><span>22</span></div></td>
+    <td><span class="action-badge action-reduce">REDUCE</span></td>
+    <td class="r t-entry">52.60</td>
+    <td class="r t-stop">46.20</td>
+    <td class="r t-t1">65.40</td>
+    <td class="r t-t2">75.00</td>
+    <td class="r neg">73.3</td>
+    <td>↑↑↑</td>
+    <td class="r">76.4</td>
+    <td class="r">68.1</td>
+    <td><div class="reasons">RSI(14)=73.3 超買（&gt;70），回調壓力大<br>MA20 連 23 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=76.4&gt;D=68.1，J=92.9）<br>縮量 0.7x MA20，市場觀望，交投清淡<br>持倉成本 43.0，現價 52.6，浮盈 22.3%（1000 股，損益 9600 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2401</td>
+    <td class="name-col">凌陽</td>
+    <td class="r">1000</td>
+    <td class="r">31.00</td>
+    <td class="r">28.90</td>
+    <td class="r">28900</td>
+    <td class="r neg">-6.8%</td>
+    <td class="r neg">-2100</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:20px"></div><span>20</span></div></td>
+    <td><span class="action-badge action-reduce">REDUCE</span></td>
+    <td class="r t-entry">28.90</td>
+    <td class="r t-stop">25.70</td>
+    <td class="r t-t1">35.20</td>
+    <td class="r t-t2">40.00</td>
+    <td class="r neu">60.0</td>
+    <td>↑↑↑</td>
+    <td class="r">56.4</td>
+    <td class="r">66.6</td>
+    <td><div class="reasons">RSI(14)=60.0 中性偏強<br>MA20 連 35 日上揚，趨勢強勁向上<br>KDJ K=56.4 在 D=66.6 下方，偏空格局<br>縮量 0.7x MA20，市場觀望，交投清淡<br>持倉成本 31.0，現價 28.9，虧損 -6.8%（1000 股，損益 -2100 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">3048</td>
+    <td class="name-col">益登</td>
+    <td class="r">1000</td>
+    <td class="r">31.00</td>
+    <td class="r">75.20</td>
+    <td class="r">75200</td>
+    <td class="r pos">&#43;142.6%</td>
+    <td class="r pos">44200</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:12px"></div><span>12</span></div></td>
+    <td><span class="action-badge action-sell">SELL</span></td>
+    <td class="r t-entry">75.20</td>
+    <td class="r t-stop">66.00</td>
+    <td class="r t-t1">93.60</td>
+    <td class="r t-t2">107.40</td>
+    <td class="r neg">75.5</td>
+    <td>↑↑↑</td>
+    <td class="r">58.6</td>
+    <td class="r">67.6</td>
+    <td><div class="reasons">RSI(14)=75.5 超買（&gt;70），回調壓力大<br>MA20 連 26 日上揚，趨勢強勁向上<br>KDJ K=58.6 在 D=67.6 下方，偏空格局<br>持倉成本 31.0，現價 75.2，浮盈 142.6%（1000 股，損益 44200 元）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2303</td>
+    <td class="name-col">聯電</td>
+    <td class="r">1000</td>
+    <td class="r">145.00</td>
+    <td class="r">141.50</td>
+    <td class="r">141500</td>
+    <td class="r neg">-2.4%</td>
+    <td class="r neg">-3500</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:5px"></div><span>5</span></div></td>
+    <td><span class="action-badge action-sell">SELL</span></td>
+    <td class="r t-entry">141.50</td>
+    <td class="r t-stop">122.30</td>
+    <td class="r t-t1">180.00</td>
+    <td class="r t-t2">208.80</td>
+    <td class="r neg">75.8</td>
+    <td>↑↑↑</td>
+    <td class="r">79.2</td>
+    <td class="r">83.6</td>
+    <td><div class="reasons">RSI(14)=75.8 超買（&gt;70），回調壓力大<br>MA20 連 35 日上揚，趨勢強勁向上<br>KDJ 高檔空頭排列（K=79.2&lt;D=83.6），賣壓沉重<br>持倉成本 145.0，現價 141.5，虧損 -2.4%（1000 股，損益 -3500 元）</div></td>
+  </tr>
+  
+  </tbody>
+</table>
+
+</div>
+
+
+<div id="tab-watchlist" class="tab-pane">
+
+<table>
+  <thead><tr>
+    <th>代號</th><th>名稱</th>
+    <th class="r">收盤</th><th class="r">量比</th>
+    <th>分數</th><th>建議</th>
+    <th class="r">進場價</th><th class="r">停損</th><th class="r">目標1</th><th class="r">目標2</th>
+    <th class="r">RSI</th><th>MA20趨勢</th><th class="r">K</th><th class="r">D</th><th class="r">J</th>
+    <th>原因與建議</th>
+  </tr></thead>
+  <tbody>
+  
+  <tr>
+    <td class="sym">2356</td>
+    <td class="name-col">英業達</td>
+    <td class="r">80.60</td>
+    <td class="r pos">2.9x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:39px"></div><span>39</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">80.60</td>
+    <td class="r t-stop">72.40</td>
+    <td class="r t-t1">96.90</td>
+    <td class="r t-t2">109.20</td>
+    <td class="r neg">86.2</td>
+    <td>↑↑↑</td>
+    <td class="r">88.7</td>
+    <td class="r">83.1</td>
+    <td class="r">99.9</td>
+    <td><div class="reasons">RSI(14)=86.2 超買（&gt;70），回調壓力大<br>MA20 連 39 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=88.7&gt;D=83.1，J=99.9）<br>爆量 2.9x MA20，主力積極買入</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2408</td>
+    <td class="name-col">南亞科</td>
+    <td class="r">419.50</td>
+    <td class="r neu">1.1x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:37px"></div><span>37</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">419.50</td>
+    <td class="r t-stop">368.60</td>
+    <td class="r t-t1">521.30</td>
+    <td class="r t-t2">597.60</td>
+    <td class="r neg">76.3</td>
+    <td>↑↑↑</td>
+    <td class="r">87.3</td>
+    <td class="r">72.7</td>
+    <td class="r">116.5</td>
+    <td><div class="reasons">RSI(14)=76.3 超買（&gt;70），回調壓力大<br>MA20 連 26 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=87.3&gt;D=72.7，J=116.5）<br>布林帶向上擴張（帶寬45.3%），多頭動能釋放</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2409</td>
+    <td class="name-col">友達</td>
+    <td class="r">26.15</td>
+    <td class="r pos">1.8x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:34px"></div><span>34</span></div></td>
+    <td><span class="action-badge action-hold">HOLD</span></td>
+    <td class="r t-entry">26.10</td>
+    <td class="r t-stop">22.80</td>
+    <td class="r t-t1">32.80</td>
+    <td class="r t-t2">37.80</td>
+    <td class="r neg">71.2</td>
+    <td>↑↑↑</td>
+    <td class="r">74.9</td>
+    <td class="r">66.3</td>
+    <td class="r">92.0</td>
+    <td><div class="reasons">RSI(14)=71.2 超買（&gt;70），回調壓力大<br>MA20 連 9 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=74.9&gt;D=66.3，J=92.0）<br>放量 1.8x MA20，量能溫和擴張</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">3149</td>
+    <td class="name-col">正達</td>
+    <td class="r">86.10</td>
+    <td class="r neu">1.4x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:29px"></div><span>29</span></div></td>
+    <td><span class="action-badge action-reduce">REDUCE</span></td>
+    <td class="r t-entry">86.10</td>
+    <td class="r t-stop">77.00</td>
+    <td class="r t-t1">104.40</td>
+    <td class="r t-t2">118.10</td>
+    <td class="r neg">83.1</td>
+    <td>↑↑↑</td>
+    <td class="r">93.2</td>
+    <td class="r">87.8</td>
+    <td class="r">104.1</td>
+    <td><div class="reasons">RSI(14)=83.1 超買（&gt;70），回調壓力大<br>MA20 連 24 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=93.2&gt;D=87.8，J=104.1）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2344</td>
+    <td class="name-col">華邦電</td>
+    <td class="r">184.50</td>
+    <td class="r neu">1.0x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:29px"></div><span>29</span></div></td>
+    <td><span class="action-badge action-reduce">REDUCE</span></td>
+    <td class="r t-entry">184.50</td>
+    <td class="r t-stop">162.30</td>
+    <td class="r t-t1">228.80</td>
+    <td class="r t-t2">262.10</td>
+    <td class="r neg">77.0</td>
+    <td>↑↑↑</td>
+    <td class="r">91.1</td>
+    <td class="r">83.0</td>
+    <td class="r">107.4</td>
+    <td><div class="reasons">RSI(14)=77.0 超買（&gt;70），回調壓力大<br>MA20 連 22 日上揚，趨勢強勁向上<br>KDJ 多頭排列（K=91.1&gt;D=83.0，J=107.4）</div></td>
+  </tr>
+  
+  <tr>
+    <td class="sym">2303</td>
+    <td class="name-col">台積電</td>
+    <td class="r">141.50</td>
+    <td class="r neu">1.3x</td>
+    <td><div class="score-bar"><div class="bar-low" style="width:5px"></div><span>5</span></div></td>
+    <td><span class="action-badge action-sell">SELL</span></td>
+    <td class="r t-entry">141.50</td>
+    <td class="r t-stop">122.30</td>
+    <td class="r t-t1">180.00</td>
+    <td class="r t-t2">208.80</td>
+    <td class="r neg">75.8</td>
+    <td>↑↑↑</td>
+    <td class="r">79.2</td>
+    <td class="r">83.6</td>
+    <td class="r">70.4</td>
+    <td><div class="reasons">RSI(14)=75.8 超買（&gt;70），回調壓力大<br>MA20 連 35 日上揚，趨勢強勁向上<br>KDJ 高檔空頭排列（K=79.2&lt;D=83.6），賣壓沉重</div></td>
+  </tr>
+  
+  </tbody>
+</table>
+
+</div>
+
+<footer>資料來源：TWSE / Yahoo Finance｜僅供研究參考，非投資建議｜stock-scanner</footer>
+</div>
+<script>
+function tab(e,n){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  e.currentTarget.classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+}
+</script>
+</body>
+</html>

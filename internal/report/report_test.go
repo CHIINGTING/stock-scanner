@@ -310,3 +310,31 @@ func containsStr(ss []string, want string) bool {
 	}
 	return false
 }
+
+// 回測洞察分頁：ShowBacktestInsights=false（預設）→ report 完全沒有此分頁。
+func TestBacktestInsightsHiddenByDefault(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: false})
+	for _, marker := range []string{"回測洞察", "tab-backtest", "崩盤情境警告", "Setup D 倖存者"} {
+		if strings.Contains(html, marker) {
+			t.Errorf("ShowBacktestInsights=false must not render %q", marker)
+		}
+	}
+}
+
+// 回測洞察分頁：ShowBacktestInsights=true → 顯示分頁 + 紅字崩盤警告 + 純顯示框定。
+func TestBacktestInsightsShownWhenEnabled(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: true})
+	for _, marker := range []string{
+		"回測洞察",            // 分頁標題
+		"tab-backtest",     // 分頁容器
+		"崩盤情境警告",         // 紅字警告標題
+		"不可外推到空頭／崩盤",    // 多頭結論不適用崩盤
+		"勿", "不要停損", // 不可當停損依據
+		"Setup D 倖存者", "LOW confidence", // 唯一崩盤相關項標低信心
+		"不改變任何停損、排名或下單", // 純顯示框定
+	} {
+		if !strings.Contains(html, marker) {
+			t.Errorf("ShowBacktestInsights=true must render %q", marker)
+		}
+	}
+}

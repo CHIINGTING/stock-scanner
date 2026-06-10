@@ -36,6 +36,11 @@ scanner:
   # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
   show_guardrail_signals: true
 
+  # 純顯示開關：true 時 report 多一個「🔬 回測洞察」分頁，靜態摘要 R6 回測結論
+  # （含「多頭結論、崩盤不適用、不可當停損依據」紅字警告）。預設 false → report 無此分頁。
+  # 純展示：不讀 reports/r6_*、不改分數/排序/WatchAction/ExplosionProb/停損預設。
+  show_backtest_insights: true
+
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
   # 全市場普通股相對強弱百分位。enable_rs_rank=false（預設）時完全不計算、不影響任何
   # 既有 scoring / report / watchlist / rotation。RS 如何納入飆股分數屬後續 C6。
@@ -128,6 +133,14 @@ scanner:
   mf_score_modifier_fading: -6
   mf_score_modifier_shift_down: -12
   mf_score_modifier_cap: 12
+
+  # HoldingHorizon（R7-1）— shadow-only 參考持有區間，純人類閱讀。
+  # enable_holding_horizon=false（預設）時完全不計算、WatchlistEntry.HoldingHorizon 為 nil，
+  # 不影響 RocketScore / WatchAction / ExplosionProb / 排序 / 停損 / backtest stop / report。
+  # 第一版最小 3 旋鈕；stage 幾何門檻（slope/dev/near-high）先固定在 holdinghorizon.go 內部常數。
+  enable_holding_horizon: false                  # 總開關，預設 false
+  hh_min_history_days: 70                         # 不足則 HoldingHorizon.Computed=false（60 MA60 + 10 slope）
+  hh_atr_compress_pct: 4.0                        # 高波動壓縮閾值（待校準；最重要的可調參數）
 
   kdj:
     k_period: 9
