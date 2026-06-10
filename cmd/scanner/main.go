@@ -209,6 +209,16 @@ func main() {
 		log.Fatalf("report: %v", err)
 	}
 
+	// Publish the latest report as index.html at the repo root so GitHub Pages
+	// serves the newest report at "/".
+	if html, err := os.ReadFile(r.OutputPath(analysisDate)); err != nil {
+		log.Printf("index.html: read report failed: %v", err)
+	} else if err := os.WriteFile("index.html", html, 0o644); err != nil {
+		log.Printf("index.html: write failed: %v", err)
+	} else {
+		fmt.Println("       已更新 index.html（GitHub Pages 最新報告）")
+	}
+
 	// ── 5. 自動更新觀察清單（--update-watchlist）────────────────────────────────
 	if *updateWatchlist {
 		cands := collectWatchCandidates(marketResults)

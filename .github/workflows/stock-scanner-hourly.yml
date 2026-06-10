@@ -32,14 +32,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Find the most recently generated daily report and copy it to the
-          # repo-root index.html so GitHub Pages shows the latest report at "/".
-          latest="$(ls -t reports/report_*.html 2>/dev/null | head -1)"
-          if [ -n "$latest" ]; then
-            cp "$latest" index.html
-            echo "Published $latest -> index.html"
-          fi
-
+          # The scanner writes index.html (a copy of the latest report) to the
+          # repo root, which GitHub Pages serves at "/".
           git add stocks.yaml index.html
           # reports/ is gitignored, so force-add today's HTML report (archive).
           git add -f reports/report_*.html

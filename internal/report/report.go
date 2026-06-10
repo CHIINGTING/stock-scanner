@@ -248,6 +248,11 @@ type reportData struct {
 	GV           GuardrailViewOptions
 }
 
+// OutputPath returns the HTML report path the scanner writes for the given date.
+func (r *Report) OutputPath(date time.Time) string {
+	return filepath.Join(r.cfg.OutputDir, fmt.Sprintf("report_%s.html", date.Format("20060102")))
+}
+
 func (r *Report) Generate(
 	market, portfolio []scanner.StockAnalysis,
 	watchlist []scanner.WatchlistEntry,
@@ -273,7 +278,7 @@ func (r *Report) Generate(
 		GV:           gv,
 	}
 
-	fname := filepath.Join(r.cfg.OutputDir, fmt.Sprintf("report_%s.html", date.Format("20060102")))
+	fname := r.OutputPath(date)
 	f, err := os.Create(fname)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", fname, err)
