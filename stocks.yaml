@@ -17,7 +17,7 @@ positions:
   - code: "00632R"
     name: "0050反一"
     entry: 10.63
-    shares: 4000
+    shares: 15000
 watchlist:
   - code: "3290"
     name: "東浦"
