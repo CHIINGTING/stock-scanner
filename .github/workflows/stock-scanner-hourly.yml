@@ -27,16 +27,19 @@ jobs:
             --update-watchlist \
             --stocks-file stocks.yaml
 
-      - name: Commit & push watchlist changes
+      - name: Commit & push watchlist + daily report
         run: |
-          if [ -z "$(git status --porcelain stocks.yaml)" ]; then
-            echo "stocks.yaml unchanged — nothing to commit."
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add stocks.yaml
-          git commit -m "Update stock watchlist from scanner"
+          # reports/ is gitignored, so force-add today's HTML report so it can
+          # be served via GitHub Pages.
+          git add -f reports/report_*.html
+          if git diff --cached --quiet; then
+            echo "No changes — nothing to commit."
+            exit 0
+          fi
+          git commit -m "Update watchlist & daily report from scanner"
           git push
 
       - name: Run tests

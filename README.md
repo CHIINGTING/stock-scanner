@@ -71,6 +71,27 @@ make run-all
 
 報告輸出至 `reports/report_YYYYMMDD.html`，用瀏覽器開啟即可。
 
+### 線上查看每日報告（GitHub Pages）
+
+每小時的自動掃描（`.github/workflows/stock-scanner-hourly.yml`）會把當天的 HTML 報告
+commit 進 repo，因此可以直接用瀏覽器在線上查看，不必本機重跑。
+
+報告網址格式（把 `YYYYMMDD` 換成日期）：
+
+```
+https://chiingting.github.io/stock-scanner/reports/report_YYYYMMDD.html
+```
+
+例如 2026/06/09 的報告：
+<https://chiingting.github.io/stock-scanner/reports/report_20260609.html>
+
+**首次啟用（只需做一次）**：到 GitHub repo 的
+**Settings → Pages**，將 **Source** 設為 **Deploy from a branch**，
+Branch 選 **`main`** / **`/ (root)`**，存檔後等幾分鐘部署完成即可。
+
+> 備註：GitHub 不會直接渲染 repo 內的 `.html`（點進去只會看到原始碼），
+> 一定要透過上面的 Pages 網址才能看到渲染後的頁面。
+
 ---
 
 ## stocks.yaml 格式
