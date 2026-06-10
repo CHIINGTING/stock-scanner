@@ -137,6 +137,17 @@ type Config struct {
 	MFScoreModifierShiftDown    float64 `yaml:"mf_score_modifier_shift_down"`   // default -12
 	MFScoreModifierCap          float64 `yaml:"mf_score_modifier_cap"`          // default 12
 
+	// ── HoldingHorizon (R7-1) — shadow-only 參考持有區間 ──────────────────────
+	// EnableHoldingHorizon gates the whole feature. Default false → never computed;
+	// WatchlistEntry.HoldingHorizon stays nil. NEVER affects RocketScore / WatchAction
+	// / ExplosionProb / sort / stop / backtest stop profile / report. Pure human-read
+	// shadow on a dedicated field (not in ShadowSignals, not fed to computeRocket).
+	// Minimal 3-knob config; stage geometry thresholds are module constants in
+	// holdinghorizon.go pending R7-2 calibration.
+	EnableHoldingHorizon bool    `yaml:"enable_holding_horizon"`  // 預設 false
+	HHMinHistoryDays     int     `yaml:"hh_min_history_days"`     // 預設 70（60 MA60 + 10 slope lookback）
+	HHATRCompressPct     float64 `yaml:"hh_atr_compress_pct"`     // 預設 4.0（待校準；最重要的可調參數）
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

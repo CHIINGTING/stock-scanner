@@ -65,6 +65,13 @@ type WatchlistEntry struct {
 	// guardrail is active (enable_multi_timeframe && enable_signal_guardrail_scoring
 	// && mtf_risk_warning_enabled). Display-only; never alters score/action/probability.
 	MTFRiskNote string `json:"mtf_risk_note,omitempty"`
+
+	// HoldingHorizon (R7-1): shadow-only 參考持有區間. nil unless enable_holding_horizon
+	// is on. Deliberately a dedicated field, NOT inside ShadowSignals, so it can never be
+	// read by the C6b guardrail scoring. Never affects score/action/probability/sort/
+	// stop/backtest/report (display wiring is a later phase). When data is insufficient it
+	// is non-nil with Computed=false.
+	HoldingHorizon *HoldingHorizonResult `json:"holding_horizon,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,
@@ -192,6 +199,13 @@ func (s *Scanner) EnrichWatchlist(
 
 		// Attach shadow for inspection (still never scored beyond the gated VCP path).
 		e.Shadow = shadow
+
+		// HoldingHorizon (R7-1): shadow-only, computed AFTER rocket and never fed into
+		// it. flag-off → not computed, field stays nil. Pure display/human reference.
+		if s.cfg.EnableHoldingHorizon {
+			hh := computeHoldingHorizon(item.Candles, holdingHorizonConfigFrom(s.cfg))
+			e.HoldingHorizon = &hh
+		}
 
 		out = append(out, e)
 	}
