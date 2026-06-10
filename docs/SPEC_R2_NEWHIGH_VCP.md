@@ -1,4 +1,4 @@
-# R2 Implementation Spec — New High Analysis + VCP
+d# R2 Implementation Spec — New High Analysis + VCP
 
 > **Design only — no code changes.** 把 `docs/SCANNER_ENHANCEMENT_PLAN.md`（Rev 2）的
 > **R2：New High Analysis + Volatility Contraction Pattern** 展開為可實作規格。
