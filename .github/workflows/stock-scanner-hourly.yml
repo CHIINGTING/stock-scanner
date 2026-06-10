@@ -27,19 +27,27 @@ jobs:
             --update-watchlist \
             --stocks-file stocks.yaml
 
-      - name: Commit & push watchlist + daily report
+      - name: Publish latest report & push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add stocks.yaml
-          # reports/ is gitignored, so force-add today's HTML report so it can
-          # be served via GitHub Pages.
+
+          # Find the most recently generated daily report and copy it to the
+          # repo-root index.html so GitHub Pages shows the latest report at "/".
+          latest="$(ls -t reports/report_*.html 2>/dev/null | head -1)"
+          if [ -n "$latest" ]; then
+            cp "$latest" index.html
+            echo "Published $latest -> index.html"
+          fi
+
+          git add stocks.yaml index.html
+          # reports/ is gitignored, so force-add today's HTML report (archive).
           git add -f reports/report_*.html
           if git diff --cached --quiet; then
             echo "No changes — nothing to commit."
             exit 0
           fi
-          git commit -m "Update watchlist & daily report from scanner"
+          git commit -m "Update watchlist & publish latest report"
           git push
 
       - name: Run tests

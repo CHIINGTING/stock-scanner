@@ -74,9 +74,13 @@ make run-all
 ### 線上查看每日報告（GitHub Pages）
 
 每小時的自動掃描（`.github/workflows/stock-scanner-hourly.yml`）會把當天的 HTML 報告
-commit 進 repo，因此可以直接用瀏覽器在線上查看，不必本機重跑。
+commit 進 repo，並把最新一份複製成根目錄的 `index.html`，因此可以直接用瀏覽器在線上
+查看，不必本機重跑。
 
-報告網址格式（把 `YYYYMMDD` 換成日期）：
+**最新報告**（根網址永遠指向最新一份，建議加書籤）：
+<https://chiingting.github.io/stock-scanner/>
+
+**指定日期**的歸檔報告（把 `YYYYMMDD` 換成日期）：
 
 ```
 https://chiingting.github.io/stock-scanner/reports/report_YYYYMMDD.html
