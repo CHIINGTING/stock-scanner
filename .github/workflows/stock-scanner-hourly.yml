@@ -1,0 +1,43 @@
+name: stock-scanner-hourly
+
+on:
+  schedule:
+    # GitHub cron is UTC. Taiwan (UTC+8) 08:30–13:30 on weekdays == UTC 00:30–05:30.
+    - cron: "30 0-5 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Run scanner (update watchlist)
+        run: |
+          go run ./cmd/scanner run-all \
+            --update-watchlist \
+            --stocks-file stocks.yaml
+
+      - name: Commit & push watchlist changes
+        run: |
+          if [ -z "$(git status --porcelain stocks.yaml)" ]; then
+            echo "stocks.yaml unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add stocks.yaml
+          git commit -m "Update stock watchlist from scanner"
+          git push
+
+      - name: Run tests
+        run: go test ./...

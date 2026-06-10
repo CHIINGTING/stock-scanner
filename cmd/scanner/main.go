@@ -26,19 +26,34 @@ func main() {
 
 	configPath := flag.String("config", "configs/config.yaml", "config file path")
 	stocksPath := flag.String("stocks", "", "portfolio/watchlist YAML (overrides stocks_file in config)")
+	stocksFilePath := flag.String("stocks-file", "", "alias of -stocks")
 	dateStr := flag.String("date", "", "analysis date YYYY-MM-DD (default: today)")
 	skipMarket := flag.Bool("no-market", false, "skip full market scan (faster)")
 	topN := flag.Int("top", 0, "market scan top N (50 | 100 | 500); 0 = use config default")
 	scanAll := flag.Bool("all", false, "show all scanned stocks, no top-N limit")
 	sectorsPath := flag.String("sectors", "", "sector rotation YAML (overrides sectors_file in config)")
 	skipRotation := flag.Bool("no-rotation", false, "skip sector rotation analysis")
-	flag.Parse()
+	updateWatchlist := flag.Bool("update-watchlist", false, "掃描後將 BUY/WATCH 結果寫回 stocks.yaml 的 watchlist（positions 不變）")
+
+	// Accept an optional leading "run-all" subcommand token so that
+	//   go run ./cmd/scanner run-all --update-watchlist ...
+	// parses the same as the flag-only invocation.
+	args := os.Args[1:]
+	if len(args) > 0 && args[0] == "run-all" {
+		args = args[1:]
+	}
+	if err := flag.CommandLine.Parse(args); err != nil {
+		os.Exit(2)
+	}
 
 	cfg, err := loadConfig(*configPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
 
+	if *stocksFilePath != "" {
+		cfg.StocksFile = *stocksFilePath
+	}
 	if *stocksPath != "" {
 		cfg.StocksFile = *stocksPath
 	}
@@ -192,6 +207,52 @@ func main() {
 	}
 	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv); err != nil {
 		log.Fatalf("report: %v", err)
+	}
+
+	// ── 5. 自動更新觀察清單（--update-watchlist）────────────────────────────────
+	if *updateWatchlist {
+		cands := collectWatchCandidates(marketResults)
+		added, err := fetcher.UpdateWatchlistFile(cfg.StocksFile, cands)
+		if err != nil {
+			log.Printf("update watchlist: %v", err)
+		} else if len(added) == 0 {
+			fmt.Printf("[5] 觀察清單無新增（%s）\n", cfg.StocksFile)
+		} else {
+			fmt.Printf("[5] 已更新觀察清單：新增 %d 支 → %s\n", len(added), cfg.StocksFile)
+			for _, c := range added {
+				fmt.Printf("      + %s %s\n", c.Code, c.Name)
+			}
+		}
+	}
+}
+
+// collectWatchCandidates extracts the BUY/WATCH stocks from scan results as
+// watchlist candidates (de-duplicated by code). SELL/HOLD/REDUCE/empty actions
+// are ignored. Positions/duplicate filtering happens in UpdateWatchlistFile.
+func collectWatchCandidates(results []scanner.StockAnalysis) []fetcher.WatchCandidate {
+	var out []fetcher.WatchCandidate
+	seen := map[string]bool{}
+	for _, r := range results {
+		if !qualifiesForWatchlist(r.Action) {
+			continue
+		}
+		if r.Symbol == "" || seen[r.Symbol] {
+			continue
+		}
+		seen[r.Symbol] = true
+		out = append(out, fetcher.WatchCandidate{Code: r.Symbol, Name: r.Name})
+	}
+	return out
+}
+
+// qualifiesForWatchlist reports whether an action should land a stock on the
+// watchlist. STRONG BUY is treated as a stronger BUY and included.
+func qualifiesForWatchlist(a scanner.Action) bool {
+	switch a {
+	case scanner.ActionStrongBuy, scanner.ActionBuy, scanner.ActionWatch:
+		return true
+	default:
+		return false
 	}
 }
 
