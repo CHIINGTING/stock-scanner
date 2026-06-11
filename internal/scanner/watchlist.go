@@ -72,6 +72,12 @@ type WatchlistEntry struct {
 	// stop/backtest/report (display wiring is a later phase). When data is insufficient it
 	// is non-nil with Computed=false.
 	HoldingHorizon *HoldingHorizonResult `json:"holding_horizon,omitempty"`
+
+	// HorizonHint (R6-7): display-only 回測觀察週期 hint. nil unless show_horizon_hint
+	// is on. Distinct from R7-1 HoldingHorizon (stage+ATR shadow): R6-7 is setup-matched
+	// from existing shadow + daily indicators and surfaced in the report (⑧). Never affects
+	// score/action/probability/sort/stop/backtest. Non-nil with Computed=false on thin data.
+	HorizonHint *HoldingHorizonHint `json:"horizon_hint,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,
@@ -205,6 +211,13 @@ func (s *Scanner) EnrichWatchlist(
 		if s.cfg.EnableHoldingHorizon {
 			hh := computeHoldingHorizon(item.Candles, holdingHorizonConfigFrom(s.cfg))
 			e.HoldingHorizon = &hh
+		}
+
+		// HorizonHint (R6-7): display-only 回測觀察週期, computed AFTER rocket and never
+		// fed into it. flag-off → field stays nil (report ⑧ then renders nothing).
+		if s.cfg.EnableHorizonHint {
+			hint := computeHorizonHint(a, shadow, item.Candles)
+			e.HorizonHint = &hint
 		}
 
 		out = append(out, e)

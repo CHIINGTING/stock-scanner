@@ -148,6 +148,12 @@ type Config struct {
 	HHMinHistoryDays     int     `yaml:"hh_min_history_days"`     // 預設 70（60 MA60 + 10 slope lookback）
 	HHATRCompressPct     float64 `yaml:"hh_atr_compress_pct"`     // 預設 4.0（待校準；最重要的可調參數）
 
+	// EnableHorizonHint (R6-7) gates the display-only 回測觀察週期 hint in the report
+	// (⑧). Default false → WatchlistEntry.HorizonHint stays nil, report unchanged. Pure
+	// display: NEVER affects RocketScore / WatchAction / ExplosionProb / sort / stop /
+	// backtest. Distinct from EnableHoldingHorizon (R7-1). See horizonhint.go.
+	EnableHorizonHint bool `yaml:"show_horizon_hint"` // 預設 false
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

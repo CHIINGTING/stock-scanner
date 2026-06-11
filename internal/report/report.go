@@ -298,6 +298,13 @@ func (r *Report) Generate(
 		},
 		"fmtVol": fmtVolume,
 		"inc":    func(i int) int { return i + 1 },
+		"intsSlash": func(xs []int) string {
+			parts := make([]string, len(xs))
+			for i, x := range xs {
+				parts[i] = fmt.Sprintf("%d", x)
+			}
+			return strings.Join(parts, " / ")
+		},
 		"actionCSS": func(a scanner.Action) string {
 			return scanner.ActionCSS[a]
 		},
@@ -1248,6 +1255,22 @@ th.rotscore{min-width:120px}
             {{- end }}
           </div>
           {{- end }}
+          {{- with $e.HorizonHint }}{{- if .Computed }}
+          <div class="wl-sec wl-horizon">
+            <h4>⑧ 回測觀察週期</h4>
+            <div>主要觀察週期：<b>{{ .PrimaryDays }} 個交易日</b></div>
+            <div>早期反應：{{ intsSlash .EarlyDays }} 日　中期參考：{{ intsSlash .ReferenceDays }} 日</div>
+            <div>匹配型態：{{ .MatchedSetup }}　信心：{{ .Confidence }}</div>
+            {{- if .Reason }}
+            <div class="wl-gs-h">理由：</div>
+            <ul class="wl-gs-list">{{- range .Reason }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- end }}
+            {{- if .Caveat }}
+            <div class="wl-gs-h">注意：</div>
+            <ul class="wl-gs-list">{{- range .Caveat }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- end }}
+          </div>
+          {{- end }}{{- end }}
         </div>
       </div>
     </td>

@@ -142,6 +142,12 @@ scanner:
   hh_min_history_days: 70                         # 不足則 HoldingHorizon.Computed=false（60 MA60 + 10 slope）
   hh_atr_compress_pct: 4.0                        # 高波動壓縮閾值（待校準；最重要的可調參數）
 
+  # HorizonHint（R6-7）— display-only 回測觀察週期，顯示於 report ⑧。setup matching
+  # (C/B/A/D/Default) 由既有 shadow + 日線指標推估，主要觀察週期 = 20d（由 R6-6 近期強多頭
+  # 驗證支撐）。show_horizon_hint=false（預設）時 WatchlistEntry.HorizonHint 為 nil、report
+  # 不變。純顯示：不影響 RocketScore / WatchAction / ExplosionProb / 排序 / 停損 / backtest。
+  show_horizon_hint: false                        # 總開關，預設 false
+
   kdj:
     k_period: 9
     d_smooth: 3
