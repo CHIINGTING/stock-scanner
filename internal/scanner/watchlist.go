@@ -3,6 +3,7 @@ package scanner
 import (
 	"sort"
 
+	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 )
 
@@ -34,10 +35,10 @@ type WatchlistEntry struct {
 	// ── 族群輪動連動 ─────────────────────────────────────────────────────────
 	Sector         string
 	HasSector      bool
-	SectorFlowDir  string      // INFLOW/OUTFLOW/NEUTRAL（短線流向）
-	SectorMidLabel string      // 強/中/弱（20 日強度）
+	SectorFlowDir  string        // INFLOW/OUTFLOW/NEUTRAL（短線流向）
+	SectorMidLabel string        // 強/中/弱（20 日強度）
 	SectorStage    RotationStage // 整體階段（EARLY/CONFIRMED/HOT/LATE）
-	SectorNote     string      // 一句說明
+	SectorNote     string        // 一句說明
 
 	// ── 型態 / 回測 / 飆股 ───────────────────────────────────────────────────
 	Consol   Consolidation
@@ -78,6 +79,14 @@ type WatchlistEntry struct {
 	// from existing shadow + daily indicators and surfaced in the report (⑧). Never affects
 	// score/action/probability/sort/stop/backtest. Non-nil with Computed=false on thin data.
 	HorizonHint *HoldingHorizonHint `json:"horizon_hint,omitempty"`
+
+	// ETFFlow (R8-4): display-only ETF / active-rotation CONTEXT (delayed disclosure).
+	// nil unless enable_etf_flow is on AND a flow exists for this stock. Attached by the
+	// AttachETFFlow post-pass (NOT EnrichWatchlist), so it is never read by computeRocket /
+	// the C6b guardrail. Never affects RocketScore / WatchAction / ExplosionProb / sort /
+	// stop. Rendered in report ⑨ only when show_etf_flow is on. Deliberately a dedicated
+	// field, NOT inside ShadowSignals.
+	ETFFlow *etfflow.StockFlowSignal `json:"etf_flow,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,

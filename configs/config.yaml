@@ -148,6 +148,18 @@ scanner:
   # 不變。純顯示：不影響 RocketScore / WatchAction / ExplosionProb / 排序 / 停損 / backtest。
   show_horizon_hint: false                        # 總開關，預設 false
 
+  # ETF Flow / Active Rotation Context（R8）— display/context only，延遲揭露資料。
+  # enable_etf_flow=false（預設）時完全不載 snapshot、不 attach，WatchlistEntry.ETFFlow 為 nil。
+  # show_etf_flow=false（預設）時 report ⑨ 不顯示。兩者皆不影響 RocketScore / WatchAction /
+  # ExplosionProb / 排序 / 停損 / rotation。資料來源 / 正式 watch_etfs / 校準屬 R8-5。
+  enable_etf_flow: false                          # 總開關，預設 false
+  show_etf_flow: false                            # report ⑨ 顯示開關，預設 false
+  etf_flow:
+    snapshot_dir: "data/etf_holdings"             # snapshot JSON 目錄（R8-1 schema）
+    history_days: 10                              # 連續天數回看窗
+    watch_etfs: []                                # 正式清單（00981A+00919）留 R8-5
+    # strength: {}                                # 省略 → etfflow.DefaultStrengthThresholds()
+
   kdj:
     k_period: 9
     d_smooth: 3

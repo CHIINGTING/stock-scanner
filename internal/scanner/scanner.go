@@ -47,21 +47,21 @@ type Config struct {
 	// watchlist / rotation. The RS helpers in relstrength.go are pure and only
 	// run when explicitly called. Wiring RS into rocket_candidate_score is C6.
 	EnableRSRank                    bool    `yaml:"enable_rs_rank"`
-	RSLookbackDays                  int     `yaml:"rs_lookback_days"`                    // default 120
-	RSMinHistoryDays                int     `yaml:"rs_min_history_days"`                 // default 100
-	RSUniverseExcludeNonCommonStock bool    `yaml:"rs_universe_exclude_non_common_stock"`// default true (set in yaml)
-	RSUseAdjustedClose              bool    `yaml:"rs_use_adjusted_close"`               // OR'd with UseAdjustedClose
-	RSLeadershipThreshold           float64 `yaml:"rs_leadership_threshold"`             // config-only in C2 (not wired)
-	RSWatchThreshold                float64 `yaml:"rs_watch_threshold"`                  // config-only in C2 (not wired)
+	RSLookbackDays                  int     `yaml:"rs_lookback_days"`                     // default 120
+	RSMinHistoryDays                int     `yaml:"rs_min_history_days"`                  // default 100
+	RSUniverseExcludeNonCommonStock bool    `yaml:"rs_universe_exclude_non_common_stock"` // default true (set in yaml)
+	RSUseAdjustedClose              bool    `yaml:"rs_use_adjusted_close"`                // OR'd with UseAdjustedClose
+	RSLeadershipThreshold           float64 `yaml:"rs_leadership_threshold"`              // config-only in C2 (not wired)
+	RSWatchThreshold                float64 `yaml:"rs_watch_threshold"`                   // config-only in C2 (not wired)
 
 	// ── New High / 52-week high (C3) ─────────────────────────────────────────
 	// EnableNewHigh gates the whole feature. Default false → never computed in the
 	// pipeline; cannot affect existing scoring / report / watchlist / rotation.
 	// newhigh.go helpers are pure and only run when explicitly called. Wiring into
 	// rocket_candidate_score is C6.
-	EnableNewHigh       bool    `yaml:"enable_new_high"`
-	NHLookbacks         []int   `yaml:"nh_lookbacks"`           // default [20,60,120,250]
-	NHMinHistoryDays    int     `yaml:"nh_min_history_days"`    // default 60
+	EnableNewHigh      bool    `yaml:"enable_new_high"`
+	NHLookbacks        []int   `yaml:"nh_lookbacks"`          // default [20,60,120,250]
+	NHMinHistoryDays   int     `yaml:"nh_min_history_days"`   // default 60
 	NHLeaderWithinPct  float64 `yaml:"nh_leader_within_pct"`  // default 25 → leadership-eligible band
 	NHNear52wHighPct   float64 `yaml:"nh_near_52w_high_pct"`  // default 15 → near_52w_high band
 	NHBreakoutWatchPct float64 `yaml:"nh_breakout_watch_pct"` // default 5  → breakout_watch band
@@ -101,14 +101,14 @@ type Config struct {
 	MFMinHistoryDays    int     `yaml:"mf_min_history_days"`    // default 30
 	MFAccelShortWindow  int     `yaml:"mf_accel_short_window"`  // default 3
 	MFAccelLongWindow   int     `yaml:"mf_accel_long_window"`   // default 20
-	MFAccelPosThresh    float64 `yaml:"mf_accel_pos_thresh"`   // default 0.0008 (待校準)
-	MFAccelNegThresh    float64 `yaml:"mf_accel_neg_thresh"`   // default -0.0008 (待校準)
-	MFAccelScale        float64 `yaml:"mf_accel_scale"`        // default 12000 (待校準)
-	MFKeyMA             int     `yaml:"mf_key_ma"`             // default 20
-	MFReclaimLookback   int     `yaml:"mf_reclaim_lookback"`   // default 5
-	MFZigzagReversalPct float64 `yaml:"mf_zigzag_reversal_pct"`// default 1.5
-	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`   // default 20
-	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"` // OR'd with UseAdjustedClose
+	MFAccelPosThresh    float64 `yaml:"mf_accel_pos_thresh"`    // default 0.0008 (待校準)
+	MFAccelNegThresh    float64 `yaml:"mf_accel_neg_thresh"`    // default -0.0008 (待校準)
+	MFAccelScale        float64 `yaml:"mf_accel_scale"`         // default 12000 (待校準)
+	MFKeyMA             int     `yaml:"mf_key_ma"`              // default 20
+	MFReclaimLookback   int     `yaml:"mf_reclaim_lookback"`    // default 5
+	MFZigzagReversalPct float64 `yaml:"mf_zigzag_reversal_pct"` // default 1.5
+	MFRSIDivLookback    int     `yaml:"mf_rsi_div_lookback"`    // default 20
+	MFUseAdjustedClose  bool    `yaml:"mf_use_adjusted_close"`  // OR'd with UseAdjustedClose
 
 	// R5-1: tighten STRUCTURAL_SHIFT_UP so it means a genuine structural turn.
 	MFShiftUpMinBelowDays int `yaml:"mf_shift_up_min_below_days"` // default 2 (sustained dip below key)
@@ -125,9 +125,9 @@ type Config struct {
 	MTFStrongWeeklyScoreThreshold float64 `yaml:"mtf_strong_weekly_score_threshold"`
 	// R4-3: MTF risk note + sort tie-breaker. Sub-toggles default true but the whole
 	// feature stays gated behind EnableMultiTimeframe && EnableSignalGuardrailScoring.
-	MTFRiskWarningEnabled       bool `yaml:"mtf_risk_warning_enabled"`
-	MTFSortTieBreakerEnabled    bool `yaml:"mtf_sort_tiebreaker_enabled"`
-	MTFSortTieBreakerScoreGap   int  `yaml:"mtf_sort_tiebreaker_score_gap"` // default 3
+	MTFRiskWarningEnabled     bool `yaml:"mtf_risk_warning_enabled"`
+	MTFSortTieBreakerEnabled  bool `yaml:"mtf_sort_tiebreaker_enabled"`
+	MTFSortTieBreakerScoreGap int  `yaml:"mtf_sort_tiebreaker_score_gap"` // default 3
 
 	// ── MomentumFlow score modifiers (C6b-4; final-layer correction) ─────────
 	MFScoreModifierBuilding     float64 `yaml:"mf_score_modifier_building"`     // default 5
@@ -144,15 +144,26 @@ type Config struct {
 	// shadow on a dedicated field (not in ShadowSignals, not fed to computeRocket).
 	// Minimal 3-knob config; stage geometry thresholds are module constants in
 	// holdinghorizon.go pending R7-2 calibration.
-	EnableHoldingHorizon bool    `yaml:"enable_holding_horizon"`  // 預設 false
-	HHMinHistoryDays     int     `yaml:"hh_min_history_days"`     // 預設 70（60 MA60 + 10 slope lookback）
-	HHATRCompressPct     float64 `yaml:"hh_atr_compress_pct"`     // 預設 4.0（待校準；最重要的可調參數）
+	EnableHoldingHorizon bool    `yaml:"enable_holding_horizon"` // 預設 false
+	HHMinHistoryDays     int     `yaml:"hh_min_history_days"`    // 預設 70（60 MA60 + 10 slope lookback）
+	HHATRCompressPct     float64 `yaml:"hh_atr_compress_pct"`    // 預設 4.0（待校準；最重要的可調參數）
 
 	// EnableHorizonHint (R6-7) gates the display-only 回測觀察週期 hint in the report
 	// (⑧). Default false → WatchlistEntry.HorizonHint stays nil, report unchanged. Pure
 	// display: NEVER affects RocketScore / WatchAction / ExplosionProb / sort / stop /
 	// backtest. Distinct from EnableHoldingHorizon (R7-1). See horizonhint.go.
 	EnableHorizonHint bool `yaml:"show_horizon_hint"` // 預設 false
+
+	// ── ETF Flow / Active Rotation Context (R8) — display/context only ────────
+	// EnableETFFlow gates loading ETF snapshots + attaching WatchlistEntry.ETFFlow
+	// (via the AttachETFFlow post-pass). Default false → never loaded/attached, the
+	// field stays nil. ShowETFFlow gates the report ⑨ section. Both are display-only:
+	// NEVER affect RocketScore / WatchAction / ExplosionProb / sort / stop / backtest /
+	// rotation. ETF flow is delayed-disclosure CONTEXT, not an intraday signal. The
+	// data/signal layer lives in internal/etfflow (R8-1/2/3).
+	EnableETFFlow bool          `yaml:"enable_etf_flow"` // 預設 false
+	ShowETFFlow   bool          `yaml:"show_etf_flow"`   // 預設 false
+	ETFFlow       ETFFlowConfig `yaml:"etf_flow"`
 
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
