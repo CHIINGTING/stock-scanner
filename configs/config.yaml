@@ -157,7 +157,11 @@ scanner:
   etf_flow:
     snapshot_dir: "data/etf_holdings"             # snapshot JSON 目錄（R8-1 schema）
     history_days: 10                              # 連續天數回看窗
-    watch_etfs: []                                # 正式清單（00981A+00919）留 R8-5
+    watch_etfs:                                   # 填清單≠啟用；enable_etf_flow=false 仍不載 snapshot
+      - code: "00981A"
+        type: "active"
+      - code: "00919"
+        type: "passive"
     # strength: {}                                # 省略 → etfflow.DefaultStrengthThresholds()
 
   kdj:
