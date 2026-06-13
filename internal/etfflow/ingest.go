@@ -91,32 +91,46 @@ func (m ManualCSVSource) Load(etfCode, asOfDate string) ([]RawHolding, error) {
 		return nil, fmt.Errorf("etfflow: open %s: %w", path, err)
 	}
 	defer f.Close()
-
-	r := csv.NewReader(f)
-	r.FieldsPerRecord = -1 // we validate columns by header, not by a fixed count
-	r.TrimLeadingSpace = true
-
-	header, err := r.Read()
+	out, err := parseHoldingsCSV(f)
 	if err != nil {
-		return nil, fmt.Errorf("etfflow: read header %s: %w", path, err)
+		return nil, fmt.Errorf("etfflow: %s: %w", path, err)
+	}
+	return out, nil
+}
+
+// parseHoldingsCSV is the shared holdings-CSV parser behind ManualCSVSource and
+// CSVFileSource (R8-5a DRY), so both parse identically and the R8-1 tests guard both.
+// It reads a header + data rows and returns RawHolding (NOT yet normalised): unit
+// normalisation stays centralised in Ingest via NormalizeToShares, per the
+// HoldingsSource contract. Header is order-independent / case-insensitive; blank rows
+// are skipped. Errors on missing required column, bad number, unknown unit, or when
+// there are zero holding rows.
+func parseHoldingsCSV(r io.Reader) ([]RawHolding, error) {
+	cr := csv.NewReader(r)
+	cr.FieldsPerRecord = -1 // columns validated by header, not by a fixed count
+	cr.TrimLeadingSpace = true
+
+	header, err := cr.Read()
+	if err != nil {
+		return nil, fmt.Errorf("read header: %w", err)
 	}
 	col, err := csvHeaderIndex(header)
 	if err != nil {
-		return nil, fmt.Errorf("etfflow: %s: %w", path, err)
+		return nil, err
 	}
 
 	var out []RawHolding
 	for line := 2; ; line++ { // line 1 is the header
-		rec, err := r.Read()
+		rec, err := cr.Read()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("etfflow: read %s line %d: %w", path, line, err)
+			return nil, fmt.Errorf("read line %d: %w", line, err)
 		}
 		h, err := parseHoldingRow(rec, col)
 		if err != nil {
-			return nil, fmt.Errorf("etfflow: %s line %d: %w", path, line, err)
+			return nil, fmt.Errorf("line %d: %w", line, err)
 		}
 		if h == nil { // blank row → skip
 			continue
@@ -124,7 +138,7 @@ func (m ManualCSVSource) Load(etfCode, asOfDate string) ([]RawHolding, error) {
 		out = append(out, *h)
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("etfflow: %s has no holding rows", path)
+		return nil, fmt.Errorf("no holding rows")
 	}
 	return out, nil
 }
