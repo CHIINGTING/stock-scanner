@@ -111,14 +111,19 @@ func (EzMoney) Parse(body string) (asOfDate string, holdings []RawHolding, err e
 `cmd/etfflow-fetch`：
 
 ```bash
-# 00981A 已內建 fundCode（49YTW）、name、type：
+# 內建主動式 ETF（fundCode / name / type 皆已內建，免帶額外旗標）：
+#   00981A → 49YTW（主動統一台股增長）
+#   00403A → 63YTW（主動統一升級50）
+#   00988A → 61YTW（主動統一全球創新）
 go run ./cmd/etfflow-fetch --etf-code 00981A --source ezmoney \
     --snapshot-dir data/etf_holdings
 
-# 其他主動式 ETF 需自帶 --fund-code / --etf-name / --etf-type
+# 未內建的主動式 ETF 需自帶 --fund-code / --etf-name / --etf-type
 go run ./cmd/etfflow-fetch --etf-code XXXXXA --source ezmoney \
     --fund-code <投信內部基金代號> --etf-name <名稱> --etf-type active
 ```
+
+> fundCode 對照可從 ezMoney 頁面的 `DataFundList`（`sStockNo` ↔ `sFundCode`）取得。
 
 - `--source ezmoney` 缺 `--fund-code`（且非已知 ETF）→ 報錯、不打網路。
 - `--source moneydj`（預設）維持 top10、context-only、PARTIAL 行為不變。
@@ -161,8 +166,8 @@ go run ./cmd/etfflow-fetch --etf-code XXXXXA --source ezmoney \
 
 ## 6. 後續建議
 
-1. 其他統一投信主動式 ETF（00403A、00988A…）可沿用 `EzMoney`，只需各自 `--fund-code`；
-   建議把 code→fundCode 對照集中（目前 00981A 內建於 `knownETFs`）。
+1. 統一投信主動式 ETF 已內建三檔（00981A→49YTW、00403A→63YTW、00988A→61YTW，
+   見 `knownETFs`）；新檔沿用 `EzMoney`，把 `sStockNo`↔`sFundCode` 對照加進 `knownETFs` 即可。
 2. 每日抓取排程仍維持「單次公開 GET」原則，勿高頻打站；可由人工或低頻 cron 觸發 CLI。
 3. 若 ezMoney 改版（`DataAsset` 結構變動），fixture 測試會先在解析層失敗、不會默默產生壞資料；
    屆時更新 `ezmoney.go` 解析與 fixture 即可。
