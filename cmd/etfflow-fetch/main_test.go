@@ -72,6 +72,24 @@ func TestRunSourceValidationOffline(t *testing.T) {
 	})
 }
 
+// Every built-in ETF must carry a non-empty fundCode (the ezMoney source needs it)
+// and a valid type, so the common `--source ezmoney --etf-code <known>` invocation
+// resolves without extra flags. Guards against adding an ETF but forgetting its
+// fundCode.
+func TestKnownETFsAreWired(t *testing.T) {
+	for code, k := range knownETFs {
+		if strings.TrimSpace(k.fundCode) == "" {
+			t.Errorf("%s: missing fundCode (required for --source ezmoney)", code)
+		}
+		if strings.TrimSpace(k.name) == "" {
+			t.Errorf("%s: missing name", code)
+		}
+		if k.etfType != etfflow.TypeActive && k.etfType != etfflow.TypePassive {
+			t.Errorf("%s: invalid etfType %q", code, k.etfType)
+		}
+	}
+}
+
 // errStub stands in for a FAILED result's parse/fetch error.
 var errStub = stubError("boom")
 

@@ -47,6 +47,8 @@ type fetchOpts struct {
 // issuer's internal id used by ezMoney (00981A → 49YTW).
 var knownETFs = map[string]struct{ name, etfType, fundCode string }{
 	"00981A": {"主動統一台股增長", etfflow.TypeActive, "49YTW"},
+	"00403A": {"主動統一升級50", etfflow.TypeActive, "63YTW"},
+	"00988A": {"主動統一全球創新", etfflow.TypeActive, "61YTW"},
 }
 
 func main() {
