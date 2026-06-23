@@ -235,3 +235,44 @@ session cookie 由 `cookiejar` 自動處理（非登入 / 無 captcha / 無私�
 
 **下一步**：其他統一投信主動式 ETF（00403A/00988A…）沿用 `EzMoney` + 各自 `--fund-code`；
 可把 code→fundCode 對照集中；每日抓取以低頻 cron / 人工觸發。
+
+---
+
+## Phase R8-6d — ezMoney full holdings pipeline 正式化（2026-06-24）
+
+**時間**：2026-06-24（autonomous execution）。
+
+**做了什麼**：把 R8-6c 來源收斂成可維護、可擴充、可日常執行的 pipeline。詳見
+[SPEC_R8_6D_EZMONEY_FULL_HOLDINGS_PIPELINE.md](SPEC_R8_6D_EZMONEY_FULL_HOLDINGS_PIPELINE.md)。
+
+- **fundCode registry**（`internal/etfflow/registry.go`）：ETF code →（provider/fundCode/
+  market/coverage/name/type）集中管理；`LookupETF` / `RegisteredETFs`；CLI 不再 hardcode；
+  內建 00981A→49YTW、00403A→63YTW、00988A→61YTW（皆取自 ezMoney `DataFundList` 官方對照）。
+- **parser 強化**（`ezmoney.go`）：`ParseValidated` 檢查 DataAsset/ST/code/name/Share/Amount/
+  TranDate，`Share`/`Amount` 用 `*float64` 區分缺失與 0；`sum(Amount)` 對齊 `ST.Value`
+  （容差 0.5%），不齊 → error；任何缺漏即 error，**不產生 partial snapshot**。
+- **snapshot schema**（`snapshot.go` / `ingest.go`）：新增 `holding_amount`、`source`、
+  `fund_code`、`validation`（stock_category/holding_count/sum_amount/category_value/
+  amount_matched），皆 omitempty、向後相容。
+- **CLI**（`cmd/etfflow-fetch/main.go`）：`--etf`（`--etf-code` 為別名）、`--fund-code`
+  override、`--dry-run`（fetch+validate 不寫檔）、registry 查詢、錯誤訊息 + non-zero exit；
+  預設 source 改 ezmoney。
+- **fetcher**（`holdings_fetcher.go`）：`SelfValidatingParser` 可選介面把 validation 蓋到
+  snapshot；`Fetcher.DryRun`；cookiejar 維持單次 GET。
+- **tests**：`registry_test.go`、`pipeline_test.go`（httptest 302+cookiejar、LoadHistory
+  過濾、MoneyDJ 仍 partial、dry-run 不寫檔）、`ezmoney_test.go` 補對帳/缺欄位/schema 回放；
+  全 offline、合成 fixture。
+
+**是否需要 browser automation / 登入 / captcha**：否（同 R8-6c）。
+
+**測試結果**：`go build ./...` / `go vet ./...` / `go test ./...` 全過（未打外網）。
+
+**是否觸 hard stop**：否。未改 scoring/sorting/RocketScore/WatchAction/ExplosionProb/broker；
+未 push；未 commit 真實 snapshot / config / index.html / data。
+
+**既有 dirty files**：`.gitignore`、`configs/config.yaml`、`index.html`、`stocks.yaml`、
+`data/00981A_TW_holding_20260430.csv`、`fetch_00981a_official.py`、`scripts/`、`.agents/`
+全程未動、未混入 commit。
+
+**下一步**：依 §1.1 流程（官方頁確認）逐筆新增更多主動式 ETF mapping；日常抓取低頻 cron /
+人工觸發，先 `--dry-run` 再寫入。

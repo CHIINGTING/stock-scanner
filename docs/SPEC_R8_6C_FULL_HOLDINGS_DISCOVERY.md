@@ -5,6 +5,11 @@
 `EzMoney` adapter（`internal/etfflow/ezmoney.go`），標 `coverage_type = full_holdings`，
 可進 R8 flow。
 
+> **後續（R8-6d）**：本來源已正式化為可維護 pipeline——集中式 fundCode registry、
+> parser 強化（缺欄位 / Amount 對帳失敗即 error）、snapshot schema 加 source/fund_code/
+> validation、CLI 收斂（`--etf` / `--fund-code` / `--dry-run`）、httptest 與 guardrail 補測。
+> 詳見 [SPEC_R8_6D_EZMONEY_FULL_HOLDINGS_PIPELINE.md](SPEC_R8_6D_EZMONEY_FULL_HOLDINGS_PIPELINE.md)。
+
 相關：
 [SPEC_R8_6B_SOURCE_DISCOVERY.md](SPEC_R8_6B_SOURCE_DISCOVERY.md)（coverage 分類 / guardrail；
 ezMoney 先前被標 BLOCKED，本文件解除）、
