@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
@@ -40,6 +42,34 @@ func TestStatusError(t *testing.T) {
 			}
 		})
 	}
+}
+
+// run's source/fund-code resolution must reject misconfiguration BEFORE any network
+// call (these checks precede NewFetcher). Tested offline: an unknown source and an
+// ezmoney source without a fund-code both error without fetching.
+func TestRunSourceValidationOffline(t *testing.T) {
+	devnull, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatalf("open devnull: %v", err)
+	}
+	defer devnull.Close()
+
+	base := fetchOpts{etfCode: "99999A", etfName: "x", etfType: etfflow.TypeActive}
+
+	t.Run("unknown source", func(t *testing.T) {
+		o := base
+		o.source = "bogus"
+		if err := run(o, devnull); err == nil || !strings.Contains(err.Error(), "unknown --source") {
+			t.Fatalf("want unknown-source error, got %v", err)
+		}
+	})
+	t.Run("ezmoney without fund-code", func(t *testing.T) {
+		o := base
+		o.source = "ezmoney"
+		if err := run(o, devnull); err == nil || !strings.Contains(err.Error(), "fund-code") {
+			t.Fatalf("want fund-code error, got %v", err)
+		}
+	})
 }
 
 // errStub stands in for a FAILED result's parse/fetch error.

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"time"
 )
@@ -75,7 +76,12 @@ type Pager func(url string) (string, error)
 // defaultPager is the only place that performs a real network request. It adds a
 // User-Agent and an overall timeout, and reads a single page (no crawling, no loops).
 func defaultPager(timeout time.Duration) Pager {
-	client := &http.Client{Timeout: timeout}
+	// A cookie jar lets us follow a site's first-request session bootstrap (e.g.
+	// ezMoney's 302-to-self that sets __nxquid) the way any browser would. It is NOT
+	// authentication — there is no login/captcha — and is harmless for cookieless
+	// sources like MoneyDJ.
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{Timeout: timeout, Jar: jar}
 	return func(url string) (string, error) {
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {

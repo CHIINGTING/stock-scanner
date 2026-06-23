@@ -29,10 +29,11 @@ import (
 )
 
 type fetchOpts struct {
-	etfCode     string
-	etfName     string
-	etfType     string
-	source      string
+	etfCode      string
+	etfName      string
+	etfType      string
+	source       string
+	fundCode     string
 	snapshotDir  string
 	requireDate  string
 	allowStale   bool
@@ -40,10 +41,12 @@ type fetchOpts struct {
 	timeout      time.Duration
 }
 
-// knownETFs supplies sensible name/type defaults so the common 00981A invocation needs
-// no extra flags. Anything not listed must pass --etf-name / --etf-type explicitly.
-var knownETFs = map[string]struct{ name, etfType string }{
-	"00981A": {"主動統一台股增長", etfflow.TypeActive},
+// knownETFs supplies sensible name/type/fundCode defaults so the common 00981A
+// invocation needs no extra flags. Anything not listed must pass --etf-name /
+// --etf-type explicitly (and --fund-code for the ezmoney source). fundCode is the
+// issuer's internal id used by ezMoney (00981A → 49YTW).
+var knownETFs = map[string]struct{ name, etfType, fundCode string }{
+	"00981A": {"主動統一台股增長", etfflow.TypeActive, "49YTW"},
 }
 
 func main() {
@@ -51,7 +54,8 @@ func main() {
 	flag.StringVar(&o.etfCode, "etf-code", "", "ETF 代號（如 00981A）")
 	flag.StringVar(&o.etfName, "etf-name", "", "ETF 名稱（預設依 etf-code 帶入已知值）")
 	flag.StringVar(&o.etfType, "etf-type", "", "active | passive（預設依 etf-code 帶入已知值）")
-	flag.StringVar(&o.source, "source", "moneydj", "資料源：moneydj")
+	flag.StringVar(&o.source, "source", "moneydj", "資料源：moneydj（top10，context-only）| ezmoney（官方完整每日持股，可進 flow）")
+	flag.StringVar(&o.fundCode, "fund-code", "", "ezmoney 來源所需的投信內部基金代號（如 49YTW；00981A 已內建）")
 	flag.StringVar(&o.snapshotDir, "snapshot-dir", "data/etf_holdings", "snapshot 輸出目錄")
 	flag.StringVar(&o.requireDate, "require-date", "", "要求的持股明細資料日 YYYY-MM-DD；抓到的較舊則標 STALE 且 exit≠0")
 	flag.BoolVar(&o.allowStale, "allow-stale", false, "允許接受比 require-date 舊的最新資料（仍會寫檔）")
@@ -78,6 +82,9 @@ func run(o fetchOpts, out *os.File) error {
 		if o.etfType == "" {
 			o.etfType = k.etfType
 		}
+		if o.fundCode == "" {
+			o.fundCode = k.fundCode
+		}
 	}
 	if o.etfType != etfflow.TypeActive && o.etfType != etfflow.TypePassive {
 		return fmt.Errorf("--etf-type must be %q or %q (got %q); pass it explicitly for unknown ETFs",
@@ -96,8 +103,13 @@ func run(o fetchOpts, out *os.File) error {
 	switch strings.ToLower(o.source) {
 	case "moneydj":
 		parser = etfflow.MoneyDJ{}
+	case "ezmoney":
+		if strings.TrimSpace(o.fundCode) == "" {
+			return fmt.Errorf("--source ezmoney requires --fund-code (issuer fund id, e.g. 49YTW for 00981A)")
+		}
+		parser = etfflow.EzMoney{FundCode: o.fundCode}
 	default:
-		return fmt.Errorf("unknown --source %q (supported: moneydj)", o.source)
+		return fmt.Errorf("unknown --source %q (supported: moneydj, ezmoney)", o.source)
 	}
 
 	f := etfflow.NewFetcher(parser, o.timeout)
