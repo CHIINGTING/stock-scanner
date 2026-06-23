@@ -1,10 +1,13 @@
 # SPEC R8-6b — ETF Holdings Source Discovery & Classification
 
-狀態：Discovery 完成（docs only）。本文件**只做來源分類與 guardrail**，不接任何來源進 R8 flow。
+狀態：Discovery 完成 + **coverage guardrail 已落地（code）**。本文件做來源分類與 guardrail；
+guardrail 已在 `internal/etfflow` 以 `coverage_type` 欄位 + `LoadHistory` 過濾 + fetcher
+PARTIAL 語意實作（見 §3.1 / §6）。**仍不把任何 partial / 季度來源接進 R8 flow。**
 
 相關：[SPEC_R8_1_ETF_FLOW.md](SPEC_R8_1_ETF_FLOW.md)（snapshot schema / flow 定義）、
 [SPEC_R8_5_MANUAL_INGEST.md](SPEC_R8_5_MANUAL_INGEST.md)（手動 ingest CLI）、
-R8-6a MoneyDJ auto fetcher（**尚未 commit**，待本 registry 落地後再決定改造方向，見 §6）。
+[R8_AUTONOMOUS_EXECUTION_LOG.md](R8_AUTONOMOUS_EXECUTION_LOG.md)（本輪自動執行紀錄）。
+R8-6a MoneyDJ auto fetcher 已改造為 **top-n-only probe**（不可進 flow，見 §6）。
 
 ---
 
@@ -82,9 +85,34 @@ R8 ETF flow（`CalculateFlows` / `delta_shares` / sell-pressure / 連續賣出�
 |------|---------------|
 | MoneyDJ basic0007 | `partial_top_n`（top_n = 10） |
 | WantGoo constituent | `quarterly_composition` |
-| 官方 / issuer / PCF | 待 R8-6c 探查（目標 `full_daily_holdings`） |
+| 統一投信 ezMoney PCF（49YTW） | `full_daily_holdings`（**內容符合**，但自動抓取 **BLOCKED**，見 §5） |
+| 手動匯出 full holdings CSV | `full_holdings`（經 `cmd/etfflow-ingest`，目前唯一可進 flow 路徑） |
 
-> 目前**沒有任何來源**達到 `full_daily_holdings`，因此 R8 flow 目前**不應**接任何自動來源。
+> 目前**沒有任何「公開純 HTTP、無 browser automation」的自動來源**達到 `full_daily_holdings`。
+> R8 flow 目前**只應**接手動匯出的 full holdings CSV（empty / `full_holdings` 標籤）。
+
+### 3.1 Snapshot `coverage_type` 欄位對照（registry → code）
+
+本文件 registry 用語對應到 `internal/etfflow` snapshot 的 `coverage_type` 欄位值：
+
+| registry 用語（本文件） | snapshot `coverage_type` 欄位值（code） | `IsFlowEligible()` | `LoadHistory` |
+|--------------------------|------------------------------------------|--------------------|---------------|
+| `full_daily_holdings` | `full_holdings`（或**空字串**＝legacy/手動 full） | ✅ true | 讀入 → 可進 flow |
+| `partial_top_n` | `top_n_only`（+ `top_n`、`coverage_note`） | ❌ false | **跳過** |
+| `quarterly_composition` | `quarterly_composition` | ❌ false | **跳過** |
+| `unusable` / 無法判定 | `unknown`（或任何未識別值，fail closed） | ❌ false | **跳過** |
+
+欄位（`internal/etfflow/snapshot.go`）：
+
+```go
+CoverageType string `json:"coverage_type,omitempty"` // full_holdings | top_n_only | quarterly_composition | unknown
+TopN         int    `json:"top_n,omitempty"`
+CoverageNote string `json:"coverage_note,omitempty"`
+```
+
+- `IsFlowEligible()` 只在 `coverage_type ∈ {"", full_holdings}` 回 true；其餘一律 false（fail closed）。
+- `LoadHistory`（R8 flow 的唯一輸入閘口）只回傳 flow-eligible snapshot，partial/季度/unknown **永不**進
+  `CalculateFlows`。
 
 ---
 
@@ -103,24 +131,68 @@ R8 ETF flow（`CalculateFlows` / `delta_shares` / sell-pressure / 連續賣出�
 
 ---
 
-## 5. 下一步 — R8-6c：官方 / issuer / PCF full holdings 探查
+## 5. Full daily holdings 來源探查結論
 
-目標：找到 `full_daily_holdings`（逐日、完整、含持有股數）來源。
+目標：找到 `full_daily_holdings`（逐日、完整、含持有股數）公開來源。
 
-- 優先找**統一投信官方**公開資料（00981A 為統一投信主動式 ETF）。
-- 候選：投信官網每日持股 / PCF（申購買回清單，通常含逐檔股數）、TWSE 公開揭露。
-- 仍受 §4.7 約束：**不繞過登入 / captcha / 私有 API**，只取公開資料。
-- 產出：比照本文件，對每個候選標 `coverage_type`，確認是否真為 `full_daily_holdings`
-  （逐日 + 完整 + 股數三者皆備）後，才允許進 flow。
+### 5.1 候選：統一投信 ezMoney 官方 PCF / 投資組合明細
+
+00981A 為統一投信主動式 ETF（fundCode `49YTW`）。主動式 ETF 依規定**每日揭露 PCF（申購買回
+清單）/ 投資組合明細**，由發行商官方公布：
+
+```
+holdings: https://www.ezmoney.com.tw/ETF/Fund/Info?fundCode=49YTW
+PCF:      https://www.ezmoney.com.tw/ETF/Transaction/PCF?fundCode=49YTW
+```
+
+**內容上**這份資料符合 `full_daily_holdings`：逐日、完整成分（非前 N 大）、含個股代號 + 持有
+股數 + 權重 + 資料日期。已有一份**人工匯出**樣本可佐證（`data/00981A_TW_holding_20260430.csv`，
+date/ticker/stock_name/weight_pct/shares，含 2330/2383/2454/2327…，明顯多於 top-10）。
+
+### 5.2 為何目前判定為 BLOCKED（不接自動 flow）
+
+| 約束（§4.7 / hard-stop） | ezMoney 現況 |
+|---------------------------|--------------|
+| 不可 browser automation（Playwright/Selenium） | ❌ 現有原型 `fetch_00981a_official.py`、`scripts/fetch_00981a_daily_official.mjs` **皆以 Playwright** 抓取，代表頁面為 JS 渲染 / 需瀏覽器下載觸發，純 HTTP GET 取不到完整表 |
+| 不可高頻 crawler / 不加壓 | 自動每日抓需排程打站 |
+| 不可登入 / captcha / 私有 API | 未驗證有無，但前項已足以 BLOCK |
+
+> 因此**未確立**「公開純 HTTP、無 browser automation」可取得 ezMoney 完整每日持股的途徑。
+> 依 hard-stop 規則（需 browser automation → 停止、記錄 BLOCKED、不繞過），**不**建置 ezMoney
+> 自動 fetcher，也**未**對該站發出探測請求（避免加壓 / 繞過）。
+
+### 5.3 結論（明文）
+
+```
+目前未找到 00981A full_daily_holdings 的「公開、純 HTTP、無 browser automation」自動來源。
+MoneyDJ 只能 top_n_only。
+WantGoo 只能 quarterly_composition。
+ezMoney 官方 PCF 內容雖為 full_daily_holdings，但唯一可行抓取為 browser automation（被禁），故 BLOCKED。
+R8 flow 暫時只能使用「人工匯出 full holdings CSV」（cmd/etfflow-ingest），由人工從官方頁匯出，
+非由 scanner 自動爬取。
+```
+
+### 5.4 後續（R8-6c，未動工）
+
+- 若要把 ezMoney full holdings 自動化，須先找到**不需 browser automation 的公開取得方式**
+  （例如官方提供的 CSV/XLS 直接下載連結、或公開 JSON endpoint），再比照本文件分類確認三要件
+  （逐日 + 完整 + 股數）後，才允許標 `full_holdings` 進 flow。
+- 在那之前，唯一進 flow 的路徑是**人工 full holdings CSV**。
 
 ---
 
-## 6. R8-6a MoneyDJ fetcher 後續（暫停，待決策）
+## 6. R8-6a MoneyDJ fetcher — 已改造為 top-n-only probe（已落地）
 
-R8-6a MoneyDJ auto fetcher 程式**先不 commit**。待本 registry 落地後，再決定是否改造為
-**top-n-only probe**：
+R8-6a MoneyDJ auto fetcher 已依本 registry 改造並落地（`internal/etfflow/moneydj.go`、
+`holdings_fetcher.go`、`cmd/etfflow-fetch`）：
 
-- 標記 `coverage_type = top_n_only`（對齊本文件的 `partial_top_n`）。
-- `LoadHistory` **不讀** partial snapshot（避免被 flow 誤用）。
-- **預設不寫入 production snapshot**。
-- 僅在 `--allow-partial` 時輸出，且輸出與紀錄中**明確警告：不可進 flow**。
+- `MoneyDJ.Coverage()` 回傳 `coverage_type = top_n_only`、`top_n = 10`、`coverage_note =
+  "MoneyDJ page exposes top holdings only; not a full holdings snapshot."`。
+- fetcher 對「coverage 非 full」回 `status = PARTIAL`：**預設不寫入** production snapshot、
+  CLI exit ≠ 0。
+- 僅在 `--allow-partial` 時寫出 probe，且 probe snapshot **仍標 `top_n_only`**；CLI 印出
+  `WARNING: PARTIAL … NOT eligible for R8 flow`。
+- `LoadHistory` 以 `IsFlowEligible()` 過濾，**即使 probe 被寫出也會被跳過**，永不進
+  `CalculateFlows`。
+- 抓取維持單次公開頁 GET（User-Agent + timeout，無 crawler、無 browser automation）；解析
+  由 fixture 測試保護。
