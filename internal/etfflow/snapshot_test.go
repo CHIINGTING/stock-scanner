@@ -53,6 +53,53 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 }
 
+// Coverage metadata round-trips through Save/Load and drives IsFlowEligible.
+func TestCoverageRoundTripAndFlowEligibility(t *testing.T) {
+	dir := t.TempDir()
+	s := sampleSnapshot()
+	s.AsOfDate = "2026-06-12"
+	s.CoverageType = CoverageTopNOnly
+	s.TopN = 10
+	s.CoverageNote = "MoneyDJ page exposes top holdings only; not a full holdings snapshot."
+	if err := Save(dir, s); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	got, err := Load(dir, "00981A", "2026-06-12")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got.CoverageType != CoverageTopNOnly || got.TopN != 10 || got.CoverageNote == "" {
+		t.Errorf("coverage round-trip mismatch: %+v", got)
+	}
+	if got.IsFlowEligible() {
+		t.Error("top_n_only must not be flow-eligible")
+	}
+}
+
+func TestIsFlowEligible(t *testing.T) {
+	cases := []struct {
+		coverage string
+		want     bool
+	}{
+		{"", true}, // legacy / manual full snapshot
+		{CoverageFullHoldings, true},
+		{CoverageTopNOnly, false},
+		{CoverageQuarterlyComposition, false},
+		{CoverageUnknown, false},
+		{"anything_unrecognised", false}, // fail closed
+	}
+	for _, c := range cases {
+		s := &Snapshot{CoverageType: c.coverage}
+		if got := s.IsFlowEligible(); got != c.want {
+			t.Errorf("IsFlowEligible(%q)=%v want %v", c.coverage, got, c.want)
+		}
+	}
+	var nilSnap *Snapshot
+	if nilSnap.IsFlowEligible() {
+		t.Error("nil snapshot must not be flow-eligible")
+	}
+}
+
 func TestLoadMissingFileIsNotExist(t *testing.T) {
 	_, err := Load(t.TempDir(), "00919", "2026-06-10")
 	if err == nil {

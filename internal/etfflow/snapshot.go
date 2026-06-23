@@ -21,6 +21,18 @@ const (
 	TypePassive = "passive" // 高股息 / 規則型 ETF（規則換股 / 再平衡）
 )
 
+// Coverage tags describe how COMPLETE a snapshot's source is. Only full daily
+// holdings (or an empty tag, for R8-1..R8-5 manual snapshots written before tagging
+// existed) may feed R8 flow (CalculateFlows / delta_shares). Everything else is
+// context-only and must be skipped by LoadHistory, so a partial source can never
+// fabricate a sell-pressure signal. See docs/SPEC_R8_6B_SOURCE_DISCOVERY.md.
+const (
+	CoverageFullHoldings         = "full_holdings"         // 逐日、完整成分、含持有股數 → 可進 flow
+	CoverageTopNOnly             = "top_n_only"            // 僅前 N 大（如 MoneyDJ top-10）→ context only
+	CoverageQuarterlyComposition = "quarterly_composition" // 季度成分比例（無股數）→ context only
+	CoverageUnknown              = "unknown"               // 無法判定 → 保守跳過
+)
+
 // Holding is one stock position inside an ETF on a given as-of date. HoldingShares
 // is always normalised to 股 (shares); the original unit is kept in HoldingRawUnit
 // so the normalisation is auditable.
@@ -46,6 +58,31 @@ type Snapshot struct {
 	Holdings         []Holding `json:"holdings"`
 	SourceURL        string    `json:"source_url"`
 	FetchedAt        time.Time `json:"fetched_at"`
+
+	// Coverage metadata (R8-6). Optional: an empty CoverageType means a legacy /
+	// manual full snapshot (treated as full_holdings). A non-full tag marks the
+	// snapshot as context-only — IsFlowEligible returns false and LoadHistory skips
+	// it, so partial / quarterly data never reaches CalculateFlows.
+	CoverageType string `json:"coverage_type,omitempty"` // full_holdings | top_n_only | quarterly_composition | unknown
+	TopN         int    `json:"top_n,omitempty"`         // set when CoverageType == top_n_only
+	CoverageNote string `json:"coverage_note,omitempty"` // human-readable provenance caveat
+}
+
+// IsFlowEligible reports whether this snapshot's coverage is complete enough to feed
+// R8 flow. Only full daily holdings qualify; an empty CoverageType is treated as
+// full_holdings for backward-compatibility with R8-1..R8-5 manual snapshots written
+// before coverage tagging existed. Everything else (top_n_only / quarterly /
+// unknown / any unrecognised value) fails closed — it is context-only.
+func (s *Snapshot) IsFlowEligible() bool {
+	if s == nil {
+		return false
+	}
+	switch strings.TrimSpace(s.CoverageType) {
+	case "", CoverageFullHoldings:
+		return true
+	default:
+		return false
+	}
 }
 
 // dateLayout is the canonical AsOfDate format used throughout R8.

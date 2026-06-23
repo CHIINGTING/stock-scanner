@@ -59,6 +59,54 @@ func TestLoadHistoryMissingDirIsQuiet(t *testing.T) {
 	}
 }
 
+// saveSnapCov writes a snapshot with an explicit coverage_type so the flow guardrail
+// in LoadHistory can be exercised.
+func saveSnapCov(t *testing.T, dir, etf, asOf, coverage string) {
+	t.Helper()
+	s := &Snapshot{
+		ETFCode:      etf,
+		ETFType:      TypeActive,
+		AsOfDate:     asOf,
+		Holdings:     []Holding{{StockCode: "2330", HoldingShares: 1000, HoldingRawUnit: unitShare}},
+		CoverageType: coverage,
+		FetchedAt:    time.Now(),
+	}
+	if err := Save(dir, s); err != nil {
+		t.Fatalf("Save %s/%s: %v", asOf, coverage, err)
+	}
+}
+
+// R8-6 guardrail: LoadHistory returns only flow-eligible snapshots. A full_holdings
+// snapshot and a legacy empty-coverage snapshot are read; top_n_only,
+// quarterly_composition and unknown snapshots are skipped, so partial / quarterly
+// data can never reach CalculateFlows.
+func TestLoadHistorySkipsNonFlowEligibleCoverage(t *testing.T) {
+	dir := t.TempDir()
+	saveSnapCov(t, dir, "00981A", "2026-06-09", CoverageFullHoldings)         // eligible
+	saveSnap(t, dir, "00981A", "2026-06-10")                                  // empty coverage → eligible (legacy)
+	saveSnapCov(t, dir, "00981A", "2026-06-11", CoverageTopNOnly)             // skip
+	saveSnapCov(t, dir, "00981A", "2026-06-12", CoverageQuarterlyComposition) // skip
+	saveSnapCov(t, dir, "00981A", "2026-06-13", CoverageUnknown)              // skip
+	saveSnapCov(t, dir, "00981A", "2026-06-14", "some_future_type")           // skip (fail closed)
+
+	got, err := LoadHistory(dir, "00981A", 10)
+	if err != nil {
+		t.Fatalf("LoadHistory: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 flow-eligible snapshots, got %d: %+v", len(got), got)
+	}
+	for _, s := range got {
+		if !s.IsFlowEligible() {
+			t.Errorf("LoadHistory returned non-flow-eligible snapshot %s (%q)", s.AsOfDate, s.CoverageType)
+		}
+	}
+	// Ascending order: the full one then the legacy-empty one.
+	if got[0].AsOfDate != "2026-06-09" || got[1].AsOfDate != "2026-06-10" {
+		t.Errorf("order/window wrong: %s..%s", got[0].AsOfDate, got[1].AsOfDate)
+	}
+}
+
 func TestLoadHistoryFiltersByETFAndSkipsBadFiles(t *testing.T) {
 	dir := t.TempDir()
 	saveSnap(t, dir, "00981A", "2026-06-10")

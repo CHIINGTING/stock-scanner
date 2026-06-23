@@ -16,6 +16,11 @@ import (
 //   - dir unreadable for other reasons → (nil, err): caller may log + skip the ETF.
 //   - a malformed / foreign file   → skipped silently (not fatal).
 //
+// Coverage guardrail (R8-6): only flow-eligible snapshots (full_holdings or an empty
+// legacy tag) are returned. Partial (top_n_only), quarterly_composition and unknown
+// snapshots are skipped here, so they can never reach CalculateFlows and fabricate a
+// sell-pressure signal. This is the single chokepoint feeding R8 flow.
+//
 // maxDays <= 0 means "all available".
 func LoadHistory(dir, etfCode string, maxDays int) ([]*Snapshot, error) {
 	entries, err := os.ReadDir(dir)
@@ -43,6 +48,9 @@ func LoadHistory(dir, etfCode string, maxDays int) ([]*Snapshot, error) {
 		s, err := Load(dir, etfCode, asOf)
 		if err != nil {
 			continue // malformed or unrelated file → skip, never fatal
+		}
+		if !s.IsFlowEligible() {
+			continue // partial / quarterly / unknown coverage must never feed R8 flow
 		}
 		snaps = append(snaps, s)
 	}
