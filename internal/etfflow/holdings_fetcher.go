@@ -70,6 +70,17 @@ type HoldingsParser interface {
 	Parse(body string) (asOfDate string, holdings []RawHolding, err error)
 }
 
+// SelfValidatingParser is an optional capability for full-holdings parsers whose source
+// declares a category total they can reconcile against (e.g. ezMoney's ST.Value vs
+// sum(Amount)). When a parser implements it, the Fetcher uses ParseValidated and records
+// the reconciliation on the snapshot (Snapshot.Validation). Partial sources (MoneyDJ
+// top-N) do NOT implement it — they have nothing complete to reconcile against. This is
+// provenance only; flow eligibility is still gated solely by Coverage.
+type SelfValidatingParser interface {
+	HoldingsParser
+	ParseValidated(body string) (asOfDate string, holdings []RawHolding, v *HoldingsValidation, err error)
+}
+
 // Pager fetches a page's body text. Injected so tests can supply fixtures offline.
 type Pager func(url string) (string, error)
 
@@ -112,6 +123,9 @@ type Fetcher struct {
 	Parser HoldingsParser
 	Get    Pager
 	Now    func() time.Time
+	// DryRun fetches, parses and validates but never persists a snapshot (no Save). The
+	// FetchResult still reports the status it WOULD have written, with OutputPath "".
+	DryRun bool
 }
 
 // NewFetcher returns a Fetcher wired to a live Pager (real network) for the given parser
@@ -179,7 +193,19 @@ func (f Fetcher) Fetch(snapshotDir string, meta SnapshotMeta, requireDate string
 		return res
 	}
 
-	asOf, raws, err := f.Parser.Parse(body)
+	// Full-holdings parsers that can reconcile against a source-declared total produce
+	// validation metadata; partial sources just Parse. Either way a parse error means
+	// no snapshot is built (the parser refuses to emit degraded data).
+	var (
+		asOf       string
+		raws       []RawHolding
+		validation *HoldingsValidation
+	)
+	if sv, ok := f.Parser.(SelfValidatingParser); ok {
+		asOf, raws, validation, err = sv.ParseValidated(body)
+	} else {
+		asOf, raws, err = f.Parser.Parse(body)
+	}
 	if err != nil {
 		res.Status, res.Err = StatusFailed, err
 		return res
@@ -199,6 +225,7 @@ func (f Fetcher) Fetch(snapshotDir string, meta SnapshotMeta, requireDate string
 	snap.CoverageType = cov.Type
 	snap.TopN = cov.TopN
 	snap.CoverageNote = cov.Note
+	snap.Validation = validation
 	res.Snapshot = snap
 	res.DataLagDays = lagDays(asOf, f.Now())
 
@@ -207,7 +234,7 @@ func (f Fetcher) Fetch(snapshotDir string, meta SnapshotMeta, requireDate string
 	// LoadHistory still skips — it does NOT make the data flow-eligible.
 	if !cov.IsFull() {
 		res.Status = StatusPartial
-		if !allowPartial {
+		if !allowPartial || f.DryRun {
 			return res
 		}
 		if err := Save(snapshotDir, snap); err != nil {
@@ -237,6 +264,9 @@ func (f Fetcher) Fetch(snapshotDir string, meta SnapshotMeta, requireDate string
 		res.Status = StatusOK
 	}
 
+	if f.DryRun {
+		return res // validated; deliberately not persisted
+	}
 	if err := Save(snapshotDir, snap); err != nil {
 		res.Status, res.Err = StatusFailed, err
 		return res

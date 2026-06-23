@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"math"
 	"regexp"
 	"strings"
 )
@@ -73,86 +74,139 @@ var reEzDataAsset = regexp.MustCompile(`id="DataAsset"[^>]*\sdata-content="([^"]
 
 // ezAssetCategory is one entry of the DataAsset array. Only AssetCode == "ST" carries
 // stock holdings; Details is kept as RawMessage because non-ST categories render it as
-// a non-array (empty string / null), which would otherwise break a typed decode.
+// a non-array (empty string / null), which would otherwise break a typed decode. Value
+// is the category's declared total (for ST: the stock book value), reconciled against
+// sum(Details.Amount).
 type ezAssetCategory struct {
 	AssetCode string          `json:"AssetCode"`
+	Value     float64         `json:"Value"`
 	Details   json.RawMessage `json:"Details"`
 }
 
-// ezStockDetail is one stock position inside the 股票 (ST) category.
+// ezStockDetail is one stock position inside the 股票 (ST) category. Share and Amount
+// are pointers so a MISSING field (JSON key absent) is distinguishable from a legitimate
+// zero (e.g. a position being exited) — the parser must error on the former, never guess.
 type ezStockDetail struct {
-	DetailCode string  `json:"DetailCode"` // 股票代號 e.g. "2330"
-	DetailName string  `json:"DetailName"` // 股票名稱 e.g. "台積電"
-	Share      float64 `json:"Share"`      // 股數 (already in 股)
-	NavRate    float64 `json:"NavRate"`    // 持股權重 (percent)
-	TranDate   string  `json:"TranDate"`   // 資料日期 e.g. "2026-06-23T00:00:00"
+	DetailCode string   `json:"DetailCode"` // 股票代號 e.g. "2330"
+	DetailName string   `json:"DetailName"` // 股票名稱 e.g. "台積電"
+	Share      *float64 `json:"Share"`      // 股數 (already in 股)
+	Amount     *float64 `json:"Amount"`     // 市值 (source currency)
+	NavRate    float64  `json:"NavRate"`    // 持股權重 (percent)
+	TranDate   string   `json:"TranDate"`   // 資料日期 e.g. "2026-06-23T00:00:00"
 }
 
-// Parse extracts the full stock holdings and their as-of date from the ezMoney fund
-// page HTML. It reads ONLY the 股票 (ST) category of DataAsset — never futures (GD),
-// cash, or NAV summary rows — and returns an error rather than guess when the holdings
-// blob, the ST category, the share counts, or the as-of date are absent (R8 flow needs
-// real delta_shares, so a degraded snapshot is worse than none).
-func (EzMoney) Parse(body string) (string, []RawHolding, error) {
+// ezAmountTolerance is the relative tolerance for reconciling sum(Details.Amount)
+// against the ST category's declared Value. It is loose enough to absorb the source's
+// own rounding, but far tighter than any truncation (a top-N slice would miss a large
+// fraction of the book value and fail this check). SPEC R8-6d Hard-Stop §5.
+const ezAmountTolerance = 0.005 // 0.5%
+
+// Parse implements HoldingsParser by delegating to ParseValidated and dropping the
+// reconciliation metadata. Callers that want the audit trail (the Fetcher) use
+// ParseValidated via the SelfValidatingParser interface.
+func (e EzMoney) Parse(body string) (string, []RawHolding, error) {
+	asOf, holdings, _, err := e.ParseValidated(body)
+	return asOf, holdings, err
+}
+
+// ParseValidated extracts the full stock holdings, their as-of date, and a source
+// reconciliation record from the ezMoney fund page HTML. It reads ONLY the 股票 (ST)
+// category of DataAsset — never futures (GD), cash, or NAV summary rows.
+//
+// It returns an error (never a partial snapshot) when ANY of these is wrong, so R8 flow
+// — which needs real delta_shares — never sees degraded data (SPEC R8-6d §T3):
+//   - the DataAsset blob is absent or not valid JSON;
+//   - there is no 股票 (ST) category, or it has zero positions;
+//   - any position is missing its code, name, Share, Amount, or a parseable TranDate;
+//   - the ST category's declared Value cannot be reconciled with sum(Details.Amount)
+//     within ezAmountTolerance (guards against truncated / top-N data).
+func (EzMoney) ParseValidated(body string) (string, []RawHolding, *HoldingsValidation, error) {
 	m := reEzDataAsset.FindStringSubmatch(body)
 	if m == nil {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: DataAsset holdings blob not found")
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: DataAsset holdings blob not found")
 	}
 	raw := html.UnescapeString(m[1])
 
 	var cats []ezAssetCategory
 	if err := json.Unmarshal([]byte(raw), &cats); err != nil {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: decode DataAsset: %w", err)
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: decode DataAsset: %w", err)
 	}
 
-	var stRaw json.RawMessage
-	for _, c := range cats {
-		if c.AssetCode == "ST" {
-			stRaw = c.Details
+	var st *ezAssetCategory
+	for i := range cats {
+		if cats[i].AssetCode == "ST" {
+			st = &cats[i]
 			break
 		}
 	}
-	if len(stRaw) == 0 {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: no 股票 (ST) asset category in DataAsset")
+	if st == nil || len(st.Details) == 0 {
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: no 股票 (ST) asset category in DataAsset")
 	}
 
 	var details []ezStockDetail
-	if err := json.Unmarshal(stRaw, &details); err != nil {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: decode ST details: %w", err)
+	if err := json.Unmarshal(st.Details, &details); err != nil {
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: decode ST details: %w", err)
 	}
 	if len(details) == 0 {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: ST category has no holdings")
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: ST category has no holdings")
 	}
 
 	holdings := make([]RawHolding, 0, len(details))
 	asOf := ""
-	for _, d := range details {
+	var sumAmount float64
+	for i, d := range details {
 		code := strings.TrimSpace(d.DetailCode)
 		if code == "" {
-			continue // skip non-stock filler rows defensively
+			return "", nil, nil, fmt.Errorf("etfflow: ezMoney: ST detail #%d missing stock code", i+1)
+		}
+		name := strings.TrimSpace(d.DetailName)
+		if name == "" {
+			return "", nil, nil, fmt.Errorf("etfflow: ezMoney: %s missing stock name", code)
+		}
+		if d.Share == nil {
+			return "", nil, nil, fmt.Errorf("etfflow: ezMoney: %s missing Share (股數)", code)
+		}
+		if d.Amount == nil {
+			return "", nil, nil, fmt.Errorf("etfflow: ezMoney: %s missing Amount (市值)", code)
+		}
+		parsedDate, err := ezAsOfDate(d.TranDate)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("etfflow: ezMoney: %s: %w", code, err)
 		}
 		if asOf == "" {
-			parsed, err := ezAsOfDate(d.TranDate)
-			if err != nil {
-				return "", nil, err
-			}
-			asOf = parsed
+			asOf = parsedDate
 		}
+		sumAmount += *d.Amount
 		holdings = append(holdings, RawHolding{
 			StockCode: code,
-			StockName: strings.TrimSpace(d.DetailName),
-			Quantity:  d.Share,
+			StockName: name,
+			Quantity:  *d.Share,
 			RawUnit:   unitShare, // ezMoney Share is already in shares (schema: 股數)
 			Weight:    d.NavRate,
+			Amount:    *d.Amount,
 		})
 	}
-	if len(holdings) == 0 {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: no parseable stock holdings")
+
+	// Reconcile against the source's own declared stock-category total. A truncated /
+	// top-N response would miss a large fraction of the book value and fail here.
+	if st.Value <= 0 {
+		return "", nil, nil, fmt.Errorf("etfflow: ezMoney: ST category has no positive Value to reconcile against")
 	}
-	if asOf == "" {
-		return "", nil, fmt.Errorf("etfflow: ezMoney: holdings present but no as-of date (TranDate)")
+	matched := math.Abs(sumAmount-st.Value) <= st.Value*ezAmountTolerance
+	if !matched {
+		return "", nil, nil, fmt.Errorf(
+			"etfflow: ezMoney: holdings do not reconcile: sum(Amount)=%.0f vs ST.Value=%.0f (>%.1f%% off)",
+			sumAmount, st.Value, ezAmountTolerance*100)
 	}
-	return asOf, holdings, nil
+
+	v := &HoldingsValidation{
+		StockCategory: "ST",
+		HoldingCount:  len(holdings),
+		SumAmount:     sumAmount,
+		CategoryValue: st.Value,
+		AmountMatched: true,
+	}
+	return asOf, holdings, v, nil
 }
 
 // ezAsOfDate turns ezMoney's "2026-06-23T00:00:00" (or a bare "2026-06-23") TranDate

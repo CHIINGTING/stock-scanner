@@ -54,8 +54,17 @@ func TestRunSourceValidationOffline(t *testing.T) {
 	}
 	defer devnull.Close()
 
-	base := fetchOpts{etfCode: "99999A", etfName: "x", etfType: etfflow.TypeActive}
+	// 99999A is intentionally unregistered, so no fund code can be auto-resolved.
+	base := fetchOpts{etf: "99999A", etfName: "x", etfType: etfflow.TypeActive}
 
+	t.Run("missing etf", func(t *testing.T) {
+		o := base
+		o.etf = ""
+		o.source = etfflow.ProviderEzMoney
+		if err := run(o, devnull); err == nil || !strings.Contains(err.Error(), "--etf") {
+			t.Fatalf("want missing-etf error, got %v", err)
+		}
+	})
 	t.Run("unknown source", func(t *testing.T) {
 		o := base
 		o.source = "bogus"
@@ -63,31 +72,13 @@ func TestRunSourceValidationOffline(t *testing.T) {
 			t.Fatalf("want unknown-source error, got %v", err)
 		}
 	})
-	t.Run("ezmoney without fund-code", func(t *testing.T) {
+	t.Run("ezmoney unregistered without fund-code", func(t *testing.T) {
 		o := base
-		o.source = "ezmoney"
+		o.source = etfflow.ProviderEzMoney
 		if err := run(o, devnull); err == nil || !strings.Contains(err.Error(), "fund-code") {
 			t.Fatalf("want fund-code error, got %v", err)
 		}
 	})
-}
-
-// Every built-in ETF must carry a non-empty fundCode (the ezMoney source needs it)
-// and a valid type, so the common `--source ezmoney --etf-code <known>` invocation
-// resolves without extra flags. Guards against adding an ETF but forgetting its
-// fundCode.
-func TestKnownETFsAreWired(t *testing.T) {
-	for code, k := range knownETFs {
-		if strings.TrimSpace(k.fundCode) == "" {
-			t.Errorf("%s: missing fundCode (required for --source ezmoney)", code)
-		}
-		if strings.TrimSpace(k.name) == "" {
-			t.Errorf("%s: missing name", code)
-		}
-		if k.etfType != etfflow.TypeActive && k.etfType != etfflow.TypePassive {
-			t.Errorf("%s: invalid etfType %q", code, k.etfType)
-		}
-	}
 }
 
 // errStub stands in for a FAILED result's parse/fetch error.

@@ -29,6 +29,7 @@ type RawHolding struct {
 	Quantity  float64 // in RawUnit
 	RawUnit   string  // "股" | "張" | "千股"
 	Weight    float64 // percent
+	Amount    float64 // market value (source currency); 0 if the source does not report it
 }
 
 // HoldingsSource loads the raw holdings of one ETF for one as-of trading day. An
@@ -220,6 +221,8 @@ type SnapshotMeta struct {
 	ETFType   string // TypeActive | TypePassive
 	AsOfDate  string // YYYY-MM-DD trading day the holdings correspond to
 	SourceURL string // provenance note; for ManualCSVSource a free-text description
+	Source    string // provider id, e.g. "ezmoney" | "moneydj" | "manual"
+	FundCode  string // issuer internal fund code (provenance), e.g. "49YTW"
 }
 
 // Ingest loads raw holdings via src, normalises units to 股, and assembles a
@@ -245,6 +248,7 @@ func Ingest(src HoldingsSource, meta SnapshotMeta, now time.Time) (*Snapshot, er
 			HoldingShares:  shares,
 			HoldingRawUnit: rh.RawUnit,
 			HoldingWeight:  rh.Weight,
+			HoldingAmount:  rh.Amount,
 		})
 	}
 	s := &Snapshot{
@@ -254,6 +258,8 @@ func Ingest(src HoldingsSource, meta SnapshotMeta, now time.Time) (*Snapshot, er
 		AsOfDate:  meta.AsOfDate,
 		Holdings:  holdings,
 		SourceURL: meta.SourceURL,
+		Source:    meta.Source,
+		FundCode:  meta.FundCode,
 		FetchedAt: now,
 	}
 	if err := s.Validate(); err != nil {

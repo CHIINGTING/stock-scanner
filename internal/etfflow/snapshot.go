@@ -39,9 +39,24 @@ const (
 type Holding struct {
 	StockCode      string  `json:"stock_code"`
 	StockName      string  `json:"stock_name"`
-	HoldingShares  int64   `json:"holding_shares"`   // normalised to 股
-	HoldingRawUnit string  `json:"holding_raw_unit"` // "股" | "張" | "千股"
-	HoldingWeight  float64 `json:"holding_weight"`   // percent
+	HoldingShares  int64   `json:"holding_shares"`           // normalised to 股
+	HoldingRawUnit string  `json:"holding_raw_unit"`         // "股" | "張" | "千股"
+	HoldingWeight  float64 `json:"holding_weight"`           // percent
+	HoldingAmount  float64 `json:"holding_amount,omitempty"` // market value (source currency); 0 if source omits it
+}
+
+// HoldingsValidation is the source-reconciliation audit trail for a full-holdings
+// snapshot: the stock category's own declared total vs the sum of the parsed
+// positions. A full-holdings source (ezMoney) populates it so the snapshot self-proves
+// it was internally consistent at parse time; partial sources (MoneyDJ top-N) leave it
+// nil. AmountMatched is always true when present — the parser errors instead of
+// emitting a snapshot whose amounts do not reconcile (SPEC R8-6d Hard-Stop §5).
+type HoldingsValidation struct {
+	StockCategory string  `json:"stock_category"` // source's stock asset-category code, e.g. "ST"
+	HoldingCount  int     `json:"holding_count"`
+	SumAmount     float64 `json:"sum_amount"`     // Σ holdings' market value
+	CategoryValue float64 `json:"category_value"` // source's declared stock-category total
+	AmountMatched bool    `json:"amount_matched"` // sum reconciles with category total within tolerance
 }
 
 // Snapshot is one ETF's full holdings for one trading day. AsOfDate is the trading
@@ -57,7 +72,14 @@ type Snapshot struct {
 	NAVOrAUM         float64   `json:"nav_or_aum,omitempty"`
 	Holdings         []Holding `json:"holdings"`
 	SourceURL        string    `json:"source_url"`
+	Source           string    `json:"source,omitempty"`    // provider id, e.g. "ezmoney" | "moneydj" | "manual"
+	FundCode         string    `json:"fund_code,omitempty"` // issuer internal fund code (provenance), e.g. "49YTW"
 	FetchedAt        time.Time `json:"fetched_at"`
+
+	// Validation is the source-reconciliation audit trail (R8-6d). Set by full-holdings
+	// sources that can reconcile against a declared category total; nil for partial /
+	// manual sources. It is provenance only — flow eligibility is gated by CoverageType.
+	Validation *HoldingsValidation `json:"validation,omitempty"`
 
 	// Coverage metadata (R8-6). Optional: an empty CoverageType means a legacy /
 	// manual full snapshot (treated as full_holdings). A non-full tag marks the
