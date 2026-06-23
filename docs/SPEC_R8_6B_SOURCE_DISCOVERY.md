@@ -85,11 +85,14 @@ R8 ETF flow（`CalculateFlows` / `delta_shares` / sell-pressure / 連續賣出�
 |------|---------------|
 | MoneyDJ basic0007 | `partial_top_n`（top_n = 10） |
 | WantGoo constituent | `quarterly_composition` |
-| 統一投信 ezMoney PCF（49YTW） | `full_daily_holdings`（**內容符合**，但自動抓取 **BLOCKED**，見 §5） |
-| 手動匯出 full holdings CSV | `full_holdings`（經 `cmd/etfflow-ingest`，目前唯一可進 flow 路徑） |
+| 統一投信 ezMoney 官方頁（49YTW） | `full_daily_holdings`（**自動抓取已落地**：純 HTTP，見 R8-6c） |
+| 手動匯出 full holdings CSV | `full_holdings`（經 `cmd/etfflow-ingest`） |
 
-> 目前**沒有任何「公開純 HTTP、無 browser automation」的自動來源**達到 `full_daily_holdings`。
-> R8 flow 目前**只應**接手動匯出的 full holdings CSV（empty / `full_holdings` 標籤）。
+> **R8-6c 更新（2026-06-24）**：ezMoney 已確立為**公開、純 HTTP、無 browser automation**
+> 的 `full_daily_holdings` 自動來源（`EzMoney` adapter），可進 R8 flow。R8 flow 進入路徑因此
+> 為：**ezMoney 自動抓取** 或 **手動匯出 full holdings CSV**（empty / `full_holdings` 標籤）。
+> MoneyDJ（top_n_only）/ WantGoo（quarterly）仍不可進 flow。詳見
+> [SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md](SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md)。
 
 ### 3.1 Snapshot `coverage_type` 欄位對照（registry → code）
 
@@ -149,7 +152,14 @@ PCF:      https://www.ezmoney.com.tw/ETF/Transaction/PCF?fundCode=49YTW
 股數 + 權重 + 資料日期。已有一份**人工匯出**樣本可佐證（`data/00981A_TW_holding_20260430.csv`，
 date/ticker/stock_name/weight_pct/shares，含 2330/2383/2454/2327…，明顯多於 top-10）。
 
-### 5.2 為何目前判定為 BLOCKED（不接自動 flow）
+> **更新（R8-6c，2026-06-24）：本節對 ezMoney 的 BLOCKED 判定已被推翻。** ezMoney 完整每日
+> 持股其實 **server-side 內嵌**於頁面 `<div id="DataAsset">`，純 HTTP GET 即可解析，**不需**
+> browser automation。先前 BLOCKED 是因既有 Playwright 原型只會「找下載按鈕」而誤判。已實作
+> `EzMoney` adapter（`full_holdings`，可進 flow）。詳見
+> [SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md](SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md)。
+> 下方 §5.2 / §5.3 / §5.4 保留為歷史紀錄。
+
+### 5.2 為何（曾）判定為 BLOCKED（不接自動 flow）— 已由 R8-6c 推翻
 
 | 約束（§4.7 / hard-stop） | ezMoney 現況 |
 |---------------------------|--------------|

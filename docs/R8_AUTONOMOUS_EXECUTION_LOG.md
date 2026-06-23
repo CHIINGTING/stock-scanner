@@ -184,3 +184,54 @@ R8 flow 暫時只能使用人工匯出 full holdings CSV（cmd/etfflow-ingest）
 3. WantGoo 若要做，務必標 `quarterly_composition`、只作季度結構 context。
 4. 既有 dirty（config 本機 enable、index.html、official CSV、scripts、fetch_00981a）保留未動，
    待使用者決定是否各自處理；**不**併入本線 commit。
+
+---
+
+## Phase R8-6c — Full daily holdings 來源探查 + 官方 adapter（2026-06-24）
+
+**時間**：2026-06-24（autonomous execution）。
+
+**做了什麼**：替 00981A 找 `full_daily_holdings` 的**非 browser-automation 公開來源**，
+找到後實作官方 adapter。詳見 [SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md](SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md)。
+
+**來源 URL / 候選評估**：
+
+- 統一投信 ezMoney 官方頁 `https://www.ezmoney.com.tw/ETF/Fund/Info?fundCode=49YTW`
+  → **完整每日持股 server-side 內嵌**於 `<div id="DataAsset" data-content="...JSON...">`，
+  ST(股票) 類別 `Details` = 全 50 檔成分。**採用**。
+- TWSE `zh/ETFortune/etfInfo/00981A`：JS 渲染、靜態 HTML 無完整持股，OpenAPI 無主動式 ETF 投組 → 不採用。
+- TWSE / TPEx / TDCC OpenAPI：無主動式 ETF 每日完整持股 dataset → 不採用。
+- MoneyDJ = `partial_top_n`、WantGoo = `quarterly_composition`（沿用 R8-6b 判定，不進 flow）。
+
+**是否有 full holdings**：是（50 檔，`sum(Amount)==ST.Value` 證明非 top-N 截斷）。
+**是否有 holding_shares**：是（`Share`，單位 股）。
+**是否有 as_of_date**：是（`TranDate`，逐日；探測當下 2026-06-23）。
+**是否需要 browser automation**：**否**。單次純 HTTP GET 即取得；首次 302+`__nxquid`
+session cookie 由 `cookiejar` 自動處理（非登入 / 無 captcha / 無私有 API）。
+→ **推翻 R8-6b §5.2 對 ezMoney 的 BLOCKED**（先前誤判源於既有 Playwright 原型只會「找下載按鈕」）。
+
+**改了哪些檔案**：
+
+- 新增 `internal/etfflow/ezmoney.go`（`EzMoney` parser，coverage = full_holdings）。
+- 新增 `internal/etfflow/ezmoney_test.go` + `testdata/ezmoney_test_holdings.html`（合成 fixture，非真實持股）。
+- 改 `internal/etfflow/holdings_fetcher.go`：`defaultPager` 加 `net/http/cookiejar`（處理 session bootstrap）。
+- 改 `cmd/etfflow-fetch/main.go`：新增 `--source ezmoney` + `--fund-code`，`knownETFs` 補 00981A→49YTW。
+- 改 `cmd/etfflow-fetch/main_test.go`：`TestRunSourceValidationOffline`。
+- 新增 `docs/SPEC_R8_6C_FULL_HOLDINGS_DISCOVERY.md`；本檔追加本節。
+
+**測試結果**：`go build ./...` / `go vet ./...` / `go test ./...` 全過（fixture-only，未打外網）。
+
+**是否 commit / commit hash**：feat 與 docs 各一 atomic commit，hash 見「Commit 清單」。
+
+**是否觸 hard stop**：否。session cookie 非登入；無 browser automation / crawler / 私有 API；
+未改 scoring / sorting / RocketScore / WatchAction / ExplosionProb / broker；未 push。
+
+**既有 dirty files**：`.gitignore`、`configs/config.yaml`、`index.html`、`stocks.yaml`、
+`data/00981A_TW_holding_20260430.csv`、`fetch_00981a_official.py`、`scripts/`、`.agents/`
+全程未動、未混入 commit。
+
+**風險 / 限制**：ezMoney 若改版（DataAsset 結構變動），解析層會先失敗、不會默默產生壞資料；
+真實 snapshot JSON 仍 gitignore、不 commit；抓取維持單次公開 GET，勿高頻打站。
+
+**下一步**：其他統一投信主動式 ETF（00403A/00988A…）沿用 `EzMoney` + 各自 `--fund-code`；
+可把 code→fundCode 對照集中；每日抓取以低頻 cron / 人工觸發。
