@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="utf-8"><title>統一投信輕鬆理財網 — 測試 fixture（合成資料，非真實持股）</title></head>
+<body>
+<!-- Synthetic R8-6c/R8-6d fixture. The live ezMoney page inlines the full daily
+     holdings here as an HTML-escaped JSON blob; only the 股票 (ST) category carries
+     stock positions, and its Value reconciles with sum(Details.Amount). This is
+     hand-crafted test data, NOT downloaded real holdings. -->
+<div id="DataAssetDetailSchema" data-content="[]"></div>
+<div id="DataAsset" data-content="[{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;AssetCode&quot;:&quot;NAV&quot;,&quot;AssetName&quot;:&quot;淨資產&quot;,&quot;Value&quot;:1000.0,&quot;Details&quot;:null},{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;AssetCode&quot;:&quot;GD&quot;,&quot;AssetName&quot;:&quot;期貨(名目本金)&quot;,&quot;Value&quot;:50.0,&quot;Details&quot;:null},{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;AssetCode&quot;:&quot;ST&quot;,&quot;AssetName&quot;:&quot;股票&quot;,&quot;Value&quot;:52351145000.0,&quot;Details&quot;:[{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;TranDate&quot;:&quot;2026-06-23T00:00:00&quot;,&quot;Type&quot;:&quot;2&quot;,&quot;AssetCode&quot;:&quot;ST&quot;,&quot;DetailCode&quot;:&quot;2330&quot;,&quot;DetailName&quot;:&quot;台積電&quot;,&quot;Share&quot;:11960000.0,&quot;Amount&quot;:29780400000.0,&quot;NavRate&quot;:10.13},{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;TranDate&quot;:&quot;2026-06-23T00:00:00&quot;,&quot;Type&quot;:&quot;2&quot;,&quot;AssetCode&quot;:&quot;ST&quot;,&quot;DetailCode&quot;:&quot;2454&quot;,&quot;DetailName&quot;:&quot;聯發科&quot;,&quot;Share&quot;:4977000.0,&quot;Amount&quot;:22570695000.0,&quot;NavRate&quot;:7.68},{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;TranDate&quot;:&quot;2026-06-23T00:00:00&quot;,&quot;Type&quot;:&quot;2&quot;,&quot;AssetCode&quot;:&quot;ST&quot;,&quot;DetailCode&quot;:&quot;3999&quot;,&quot;DetailName&quot;:&quot;測試新進股&quot;,&quot;Share&quot;:1000.0,&quot;Amount&quot;:50000.0,&quot;NavRate&quot;:0.0}]},{&quot;FundCode&quot;:&quot;TEST1&quot;,&quot;AssetCode&quot;:&quot;CASH&quot;,&quot;AssetName&quot;:&quot;現金&quot;,&quot;Value&quot;:50.0,&quot;Details&quot;:null}]"></div>
+</body>
+</html>

@@ -6,3 +6,10 @@ docs/
 *.log
 .DS_Store
 .claude/settings.local.json
+
+# R8 ETF flow data products (keep dir structure via .gitkeep; ignore real data).
+data/etf_holdings/*.json
+data/etf_holdings/raw/*.csv
+
+# 00981A official daily holdings download products (XLSX/XLS/CSV/debug png).
+data/official/

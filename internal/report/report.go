@@ -9,8 +9,36 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 )
+
+// etfSignalLabel maps an ETF flow signal to a Chinese display label for report ⑨.
+// It deliberately avoids the raw enum value (which contains the identifiers SELL/BUY)
+// so the rendered HTML stays free of trade-instruction tokens. "賣壓"/"加碼" are
+// descriptive context, NOT the forbidden "賣出"/"買進" instructions.
+func etfSignalLabel(s etfflow.FlowSignal) string {
+	switch s {
+	case etfflow.PassiveSellPressure:
+		return "高股息／規則型 ETF 賣壓"
+	case etfflow.PassiveBuySupport:
+		return "高股息／規則型 ETF 加碼支撐"
+	case etfflow.ActiveSellPressure:
+		return "主動式 ETF 賣壓"
+	case etfflow.ActiveBuySupport:
+		return "主動式 ETF 加碼支撐"
+	case etfflow.ActiveConsensusSell:
+		return "多檔主動式 ETF 一致賣壓"
+	case etfflow.ActiveConsensusBuy:
+		return "多檔主動式 ETF 一致加碼"
+	case etfflow.AggregateSellPressure:
+		return "ETF 合計賣壓"
+	case etfflow.AggregateBuySupport:
+		return "ETF 合計加碼支撐"
+	default:
+		return "中性 / 無顯著 flow"
+	}
+}
 
 type Config struct {
 	OutputDir string `yaml:"output_dir"`
@@ -59,6 +87,11 @@ type GuardrailViewOptions struct {
 	// no such tab. Display-only; never reads reports/r6_*, never touches score /
 	// action / probability / sorting / stop / WatchAction.
 	ShowBacktestInsights bool
+
+	// ShowETFFlow gates the report ⑨ "ETF Flow / Active Rotation Context" section
+	// (R8-4). Default false → no such section. Display-only; never touches score /
+	// action / probability / sorting / stop / WatchAction.
+	ShowETFFlow bool
 
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
@@ -296,8 +329,9 @@ func (r *Report) Generate(
 			}
 			return fmt.Sprintf("%.0f", v)
 		},
-		"fmtVol": fmtVolume,
-		"inc":    func(i int) int { return i + 1 },
+		"fmtVol":         fmtVolume,
+		"etfSignalLabel": etfSignalLabel,
+		"inc":            func(i int) int { return i + 1 },
 		"intsSlash": func(xs []int) string {
 			parts := make([]string, len(xs))
 			for i, x := range xs {
@@ -383,7 +417,7 @@ func (r *Report) Generate(
 				return "pv-down-vol-down"
 			}
 		},
-		"f0pct":   func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
+		"f0pct":    func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
 		"pctSign1": func(v float64) string { return fmt.Sprintf("%+.1f%%", v) },
 		"sectorScoreBar": func(v float64) template.HTML {
 			s := int(v + 0.5)
@@ -1271,6 +1305,23 @@ th.rotscore{min-width:120px}
             {{- end }}
           </div>
           {{- end }}{{- end }}
+          {{- if $.GV.ShowETFFlow }}{{- with $e.ETFFlow }}{{- if .Computed }}
+          <div class="wl-sec wl-etfflow">
+            <h4>⑨ ETF Flow / Active Rotation Context</h4>
+            <div class="wl-note">此為延遲揭露資料，不代表盤中即時買賣。（資料日 {{ .AsOfDate }}，延遲 {{ .DataLagDays }} 個交易日）</div>
+            <div>ETF Flow Pressure：<b>{{ if .Strength }}{{ .Strength }}{{ else }}—{{ end }}</b>　{{ etfSignalLabel .Signal }}</div>
+            <div>主動式 ETF：Δ{{ .ActiveDeltaShares }} 股　壓力比 {{ f1 .ActivePressureRatio }}　連續加 {{ .ActiveConsecutiveBuyDays }} 日／減 {{ .ActiveConsecutiveSellDays }} 日</div>
+            <div>高股息／規則型 ETF：Δ{{ .PassiveDeltaShares }} 股　壓力比 {{ f1 .PassivePressureRatio }}　連續加 {{ .PassiveConsecutiveBuyDays }} 日／減 {{ .PassiveConsecutiveSellDays }} 日</div>
+            {{- if .Reasons }}
+            <div class="wl-gs-h">解讀：</div>
+            <ul class="wl-gs-list">{{- range .Reasons }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- end }}
+            {{- if .Caveats }}
+            <div class="wl-gs-h">注意：</div>
+            <ul class="wl-gs-list">{{- range .Caveats }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- end }}
+          </div>
+          {{- end }}{{- end }}{{- end }}
         </div>
       </div>
     </td>

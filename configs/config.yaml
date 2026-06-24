@@ -24,13 +24,13 @@ scanner:
 
   # 還原收盤（AdjClose）總開關。預設 false → 所有計算沿用原始 Close，輸出與今日完全一致。
   # 設 true 後，後續 RS / 新高 / VCP / 回測才會改用還原收盤（AdjClose 缺值時自動 fallback Close）。
-  use_adjusted_close: false
+  use_adjusted_close: true
 
   # ── 訊號 guardrail scoring 總開關（C6b）────────────────────────────────────
   # 雙層 flag 的第二層：下方四個 enable_* 只決定「是否計算 shadow」；唯有此 master
   # flag=true 時，shadow（RS/NewHigh/VCP/MomentumFlow）才可影響 rocket 分數/動作/機率。
   # 預設 false → 即使四個訊號全開，也維持 C6a shadow-only，不改任何既有分數。
-  enable_signal_guardrail_scoring: false
+  enable_signal_guardrail_scoring: true
 
   # 純顯示開關（C7）：true 時 Watchlist 卡片顯示 Guardrail Signals 解釋區塊（實驗性）。
   # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
@@ -70,7 +70,7 @@ scanner:
 
   nh_vol_confirm_ratio: 1.5                     # 60 日新高量增確認門檻（NewHighScore 用）
   nh_overext_rsi: 75                            # 創 250 日高且 RSI ≥ 此值 → 過熱抑制 ×0.6
-  nh_use_adjusted_close: false                  # 與 use_adjusted_close 取 OR
+  nh_use_adjusted_close: true                  # 與 use_adjusted_close 取 OR
 
   # ── VCP / 波動收縮型態（C4）──────────────────────────────────────────────
   # enable_vcp=false（預設）時完全不計算、不影響既有 scoring / report / watchlist /
@@ -80,7 +80,7 @@ scanner:
   vcp_min_history_days: 40                      # 不足此歷史長度不計算
   vcp_min_contractions: 2                       # 最少收縮段數（成立門檻）
   vcp_min_quality_score: 70                     # 品質分門檻（valid = 段數達標 && 品質≥此值）
-  vcp_use_adjusted_close: false                 # 與 use_adjusted_close 取 OR
+  vcp_use_adjusted_close: true                 # 與 use_adjusted_close 取 OR
 
   # 品質分權重（和 = 100）
   vcp_tightness_weight: 30                       # 末段收緊程度
@@ -117,7 +117,7 @@ scanner:
   # enable_multi_timeframe=false（預設）時完全不計算、不影響任何既有 scoring / action /
   # probability / sort / report。週線由日線聚合（不新增抓取、不用盤中/逐筆/五檔）。
   enable_multi_timeframe: true
-  mtf_use_adjusted_close: false                    # 與 use_adjusted_close 取 OR
+  mtf_use_adjusted_close: true                    # 與 use_adjusted_close 取 OR
   # R4-2b：SignalStrength 達 STRONG 所需的 Daily/Weekly TrendScore 門檻（離散值，85≈100）
   mtf_strong_daily_score_threshold: 85
   mtf_strong_weekly_score_threshold: 85
@@ -138,7 +138,7 @@ scanner:
   # enable_holding_horizon=false（預設）時完全不計算、WatchlistEntry.HoldingHorizon 為 nil，
   # 不影響 RocketScore / WatchAction / ExplosionProb / 排序 / 停損 / backtest stop / report。
   # 第一版最小 3 旋鈕；stage 幾何門檻（slope/dev/near-high）先固定在 holdinghorizon.go 內部常數。
-  enable_holding_horizon: false                  # 總開關，預設 false
+  enable_holding_horizon: true                  # 總開關，預設 false
   hh_min_history_days: 70                         # 不足則 HoldingHorizon.Computed=false（60 MA60 + 10 slope）
   hh_atr_compress_pct: 4.0                        # 高波動壓縮閾值（待校準；最重要的可調參數）
 
@@ -146,7 +146,23 @@ scanner:
   # (C/B/A/D/Default) 由既有 shadow + 日線指標推估，主要觀察週期 = 20d（由 R6-6 近期強多頭
   # 驗證支撐）。show_horizon_hint=false（預設）時 WatchlistEntry.HorizonHint 為 nil、report
   # 不變。純顯示：不影響 RocketScore / WatchAction / ExplosionProb / 排序 / 停損 / backtest。
-  show_horizon_hint: false                        # 總開關，預設 false
+  show_horizon_hint: true                        # 總開關，預設 false
+
+  # ETF Flow / Active Rotation Context（R8）— display/context only，延遲揭露資料。
+  # enable_etf_flow=false（預設）時完全不載 snapshot、不 attach，WatchlistEntry.ETFFlow 為 nil。
+  # show_etf_flow=false（預設）時 report ⑨ 不顯示。兩者皆不影響 RocketScore / WatchAction /
+  # ExplosionProb / 排序 / 停損 / rotation。資料來源 / 正式 watch_etfs / 校準屬 R8-5。
+  enable_etf_flow: true                           # 本機驗證暫開（勿 commit）
+  show_etf_flow: true                             # 本機驗證暫開（勿 commit）
+  etf_flow:
+    snapshot_dir: "data/etf_holdings"             # snapshot JSON 目錄（R8-1 schema）
+    history_days: 10                              # 連續天數回看窗
+    watch_etfs:                                   # 填清單≠啟用；enable_etf_flow=false 仍不載 snapshot
+      - code: "00981A"
+        type: "active"
+      - code: "00919"
+        type: "passive"
+    # strength: {}                                # 省略 → etfflow.DefaultStrengthThresholds()
 
   kdj:
     k_period: 9

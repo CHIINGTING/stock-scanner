@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/report"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
@@ -189,6 +190,13 @@ func main() {
 		// C6a: full-market RS table (nil when RS disabled); attached as shadow only.
 		rsTable := s.BuildRSTable(marketStocks)
 		watchlistResults = s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped, rsTable)
+
+		// R8-4: ETF flow / active-rotation CONTEXT (display-only). Post-pass attach
+		// AFTER enrichment, so it never touches score/action/probability/order. Off by
+		// default; snapshot gaps degrade quietly and never interrupt the scan.
+		if cfg.Scanner.EnableETFFlow {
+			attachETFFlow(watchlistResults, cfg.Scanner, analysisDate)
+		}
 	}
 
 	// ── 4. Report ─────────────────────────────────────────────────────────────
@@ -198,6 +206,7 @@ func main() {
 		Show:                        cfg.Scanner.ShowGuardrailSignals,
 		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
 		ShowBacktestInsights:        cfg.Scanner.ShowBacktestInsights,
+		ShowETFFlow:                 cfg.Scanner.ShowETFFlow,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
@@ -253,6 +262,35 @@ func collectWatchCandidates(results []scanner.StockAnalysis) []fetcher.WatchCand
 		out = append(out, fetcher.WatchCandidate{Code: r.Symbol, Name: r.Name})
 	}
 	return out
+}
+
+// attachETFFlow (R8-4) loads each watched ETF's recent snapshots, computes per-stock
+// holdings flow, and attaches the classified ETF / active-rotation CONTEXT to the
+// watchlist entries. Display-only: it runs after enrichment and never affects score /
+// action / probability / order. Missing or malformed snapshots degrade quietly — an
+// ETF with no data is skipped, and the scan is never interrupted.
+func attachETFFlow(entries []scanner.WatchlistEntry, sc scanner.Config, reportDate time.Time) {
+	dir := sc.ETFFlow.SnapshotDir
+	if dir == "" {
+		dir = "data/etf_holdings"
+	}
+	var histories []etfflow.History
+	for _, w := range sc.ETFFlow.WatchETFs {
+		snaps, err := etfflow.LoadHistory(dir, w.Code, sc.ETFFlow.HistoryDays)
+		if err != nil {
+			log.Printf("etf-flow: skip %s: %v", w.Code, err)
+			continue
+		}
+		if len(snaps) == 0 {
+			continue
+		}
+		histories = append(histories, etfflow.History{ETFCode: w.Code, ETFType: w.Type, Snapshots: snaps})
+	}
+	if len(histories) == 0 {
+		return
+	}
+	flows := etfflow.CalculateFlows(histories)
+	scanner.AttachETFFlow(entries, flows, reportDate, sc.ETFFlow.Strength.Thresholds())
 }
 
 // qualifiesForWatchlist reports whether an action should land a stock on the
