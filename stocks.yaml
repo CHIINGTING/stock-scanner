@@ -1168,3 +1168,5 @@ watchlist:
     name: "南電"
   - code: "2633"
     name: "台灣高鐵"
+  - code: "2415"
+    name: "錩新"
