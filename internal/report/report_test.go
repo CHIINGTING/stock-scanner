@@ -40,7 +40,7 @@ func genHTML(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailViewOpt
 	dir := t.TempDir()
 	r := New(Config{OutputDir: dir})
 	date := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
-	if err := r.Generate(nil, nil, entries, nil, "-", date, gv); err != nil {
+	if err := r.Generate(nil, nil, entries, nil, "-", date, gv, nil); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "report_20260605.html"))

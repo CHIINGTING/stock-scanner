@@ -5,6 +5,7 @@ import (
 
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/news"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -87,6 +88,14 @@ type WatchlistEntry struct {
 	// stop. Rendered in report ⑨ only when show_etf_flow is on. Deliberately a dedicated
 	// field, NOT inside ShadowSignals.
 	ETFFlow *etfflow.StockFlowSignal `json:"etf_flow,omitempty"`
+
+	// News (Phase 1): display-only 消息面 CONTEXT (external market notes, delayed).
+	// nil unless enable_news is on AND a resolved signal exists for this stock. Attached
+	// by the AttachNews post-pass (NOT EnrichWatchlist), so it is never read by
+	// computeRocket / the C6b guardrail. SHADOW MODE: never affects RocketScore /
+	// WatchAction / ExplosionProb / Action / sort / stop. Rendered in report ⑩ only when
+	// show_news is on. Deliberately a dedicated field, NOT inside ShadowSignals.
+	News *news.StockNewsView `json:"news,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
+	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 )
 
@@ -39,6 +40,69 @@ func etfSignalLabel(s etfflow.FlowSignal) string {
 		return "中性 / 無顯著 flow"
 	}
 }
+
+// ── News (⑩) display helpers (Phase 1) ──────────────────────────────────────────
+// All labels are descriptive CONTEXT only. They deliberately avoid the forbidden
+// trade-instruction tokens 買進/賣出/買入/賣出/BUY/SELL/下單 — news never issues an order.
+
+// newsSignalLabel maps a news signal type to a Chinese context label.
+func newsSignalLabel(s news.SignalType) string {
+	switch s {
+	case news.SignalBullish:
+		return "偏多"
+	case news.SignalBearish:
+		return "偏空"
+	case news.SignalRotationIn:
+		return "資金輪動進場"
+	case news.SignalRotationOut:
+		return "資金輪動出場"
+	case news.SignalRiskWarning:
+		return "風險提示"
+	default:
+		return "中性"
+	}
+}
+
+// newsDot maps a signal type to a status dot for quick scanning.
+func newsDot(s news.SignalType) string {
+	switch s {
+	case news.SignalBullish, news.SignalRotationIn:
+		return "🟢"
+	case news.SignalBearish, news.SignalRotationOut, news.SignalRiskWarning:
+		return "🔴"
+	default:
+		return "🟡"
+	}
+}
+
+// newsEpisodeLabel renders a friendly episode label from an event id ("gooaye-ep-677"
+// → "股癌EP677"); non-episodic events show "事件".
+func newsEpisodeLabel(eventID string) string {
+	if n := news.EpisodeNumber(eventID); n > 0 {
+		return fmt.Sprintf("股癌EP%d", n)
+	}
+	return "事件"
+}
+
+// newsAge renders a whole-day age label from a publish time ("1天" / "剛更新").
+func newsAge(published time.Time) string {
+	d := news.AgeInDays(published, time.Now())
+	if d <= 0 {
+		return "剛更新"
+	}
+	return fmt.Sprintf("%d天", d)
+}
+
+// newsSectors joins a signal's sector labels for display.
+func newsSectors(sig news.NewsSignal) string {
+	if len(sig.Sectors) == 0 {
+		return "族群"
+	}
+	return strings.Join(sig.Sectors, "、")
+}
+
+// joinDot joins labels with a Chinese enumeration comma for the market banner.
+func joinDot(xs []string) string { return strings.Join(xs, "、") }
 
 type Config struct {
 	OutputDir string `yaml:"output_dir"`
@@ -92,6 +156,12 @@ type GuardrailViewOptions struct {
 	// (R8-4). Default false → no such section. Display-only; never touches score /
 	// action / probability / sorting / stop / WatchAction.
 	ShowETFFlow bool
+
+	// ShowNews gates the report ⑩ "消息面" per-card section + the market news banner
+	// (Phase 1). Default false → no such section/banner and byte-identical output.
+	// SHADOW MODE, display-only; never touches score / action / probability / sorting /
+	// stop / WatchAction.
+	ShowNews bool
 
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
@@ -279,6 +349,7 @@ type reportData struct {
 	Rotation     []scanner.SectorRotation
 	PortfolioSum PortfolioSummary
 	GV           GuardrailViewOptions
+	NewsSummary  *news.MarketNewsSummary
 }
 
 // OutputPath returns the HTML report path the scanner writes for the given date.
@@ -293,6 +364,7 @@ func (r *Report) Generate(
 	marketLabel string,
 	date time.Time,
 	gv GuardrailViewOptions,
+	newsSummary *news.MarketNewsSummary,
 ) error {
 	if err := os.MkdirAll(r.cfg.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
@@ -309,6 +381,7 @@ func (r *Report) Generate(
 		Rotation:     rotation,
 		PortfolioSum: calcSummary(portfolio),
 		GV:           gv,
+		NewsSummary:  newsSummary,
 	}
 
 	fname := r.OutputPath(date)
@@ -329,9 +402,15 @@ func (r *Report) Generate(
 			}
 			return fmt.Sprintf("%.0f", v)
 		},
-		"fmtVol":         fmtVolume,
-		"etfSignalLabel": etfSignalLabel,
-		"inc":            func(i int) int { return i + 1 },
+		"fmtVol":           fmtVolume,
+		"etfSignalLabel":   etfSignalLabel,
+		"newsSignalLabel":  newsSignalLabel,
+		"newsDot":          newsDot,
+		"newsEpisodeLabel": newsEpisodeLabel,
+		"newsAge":          newsAge,
+		"newsSectors":      newsSectors,
+		"joinDot":          joinDot,
+		"inc":              func(i int) int { return i + 1 },
 		"intsSlash": func(xs []int) string {
 			parts := make([]string, len(xs))
 			for i, x := range xs {
@@ -1065,6 +1144,10 @@ th.rotscore{min-width:120px}
 .wl-sec ul{margin:0;padding-left:16px}
 .wl-sec li{margin:2px 0}
 .wl-note{color:#94a3b8;font-size:.7rem;margin-top:3px;font-style:italic}
+.wl-news{border-color:#243a2e}
+.news-divergence{color:#fbbf24;font-weight:600;margin-top:2px}
+.news-banner{background:#0f1d30;border:1px solid #16263d;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.8rem;color:#cbd5e1;line-height:1.9}
+.news-banner-h{font-weight:700;color:#e2e8f0;margin-bottom:4px}
 .wl-gs-summary{background:#0b1626;border-left:3px solid #38bdf8;border-radius:6px;padding:7px 10px;margin:4px 0 6px}
 .wl-gs-headline{color:#e2e8f0;font-size:.78rem;margin-bottom:3px}
 .wl-gs-h{color:#7dd3fc;font-weight:700;margin-top:4px}
@@ -1322,6 +1405,22 @@ th.rotscore{min-width:120px}
             {{- end }}
           </div>
           {{- end }}{{- end }}{{- end }}
+          {{- if $.GV.ShowNews }}{{- with $e.News }}{{- if .Computed }}
+          <div class="wl-sec wl-news">
+            <h4>⑩ 消息面（僅供參考，不影響 BUY／WATCH／SELL）</h4>
+            {{- range .StockItems }}
+            <div>{{ newsDot .Signal }} 個股 {{ newsSignalLabel .Signal }}　來源：{{ newsEpisodeLabel .EventID }}　強度 {{ .Strength }}/10　Age：{{ newsAge .PublishedAt }}{{ if .Conflict }}　<span class="news-divergence">⚠來源分歧</span>{{ end }}</div>
+            {{- if .Summary }}<ul class="wl-gs-list"><li>{{ .Summary }}</li></ul>{{- end }}
+            {{- end }}
+            {{- range .SectorItems }}
+            <div>{{ newsDot .Signal }} {{ newsSectors . }} {{ newsSignalLabel .Signal }}　來源：{{ newsEpisodeLabel .EventID }}　強度 {{ .Strength }}/10{{ if .Conflict }}　<span class="news-divergence">⚠來源分歧</span>{{ end }}</div>
+            {{- end }}
+            {{- if .Divergence }}
+            <div class="news-divergence">⚠ DIVERGENCE：個股訊號與族群訊號方向分歧（僅標示，不改動作）</div>
+            {{- end }}
+            <div class="wl-note">消息面為延遲外部觀點，僅作 context，非交易指令。</div>
+          </div>
+          {{- end }}{{- end }}{{- end }}
         </div>
       </div>
     </td>
@@ -1334,6 +1433,17 @@ th.rotscore{min-width:120px}
 
 <!-- ══ MARKET SCAN ══════════════════════════════════════════════════════════ -->
 <div id="tab-market" class="tab-pane">
+{{- if $.GV.ShowNews }}{{- with $.NewsSummary }}
+<div class="news-banner">
+  <div class="news-banner-h">📰 市場消息面（as of {{ .AsOf.Format "2006-01-02" }}｜Fresh {{ .Fresh }} / Active {{ .Active }} / Expired {{ .Expired }}）</div>
+  {{- if .RotationIn }}<div>🟢 資金輪動進場：{{ joinDot .RotationIn }}</div>{{- end }}
+  {{- if .Bullish }}<div>🟢 偏多：{{ joinDot .Bullish }}</div>{{- end }}
+  {{- if .RiskWarning }}<div>🟡 風險警示：{{ joinDot .RiskWarning }}</div>{{- end }}
+  {{- if .RotationOut }}<div>🔴 資金輪動流出：{{ joinDot .RotationOut }}</div>{{- end }}
+  {{- if .Bearish }}<div>🔴 偏空：{{ joinDot .Bearish }}</div>{{- end }}
+  <div class="wl-note">消息面僅作 regime／context 參考，不影響 BUY／WATCH／SELL 與排序。</div>
+</div>
+{{- end }}{{- end }}
 {{ if eq (len .Market) 0 }}
 <div class="empty">市場掃描無資料（請執行 make run 或 make run-top100）</div>
 {{ else }}

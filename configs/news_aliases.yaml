@@ -1,0 +1,39 @@
+# News resolver dictionary (Phase 1) — EXPLICIT mappings only, no fuzzy guessing.
+#
+# stock_aliases: 別名/簡稱 → 股票代號。多數正式公司名已由 configs/sectors.yaml +
+#   stocks.yaml 自動載入，這裡只補「不在那些清單、或口語簡稱」的對應。代號務求正確；
+#   寧可留空 unresolved，也不要亂綁（見 SPEC §5）。
+# themes: 主題關鍵字 → 族群名稱。族群名稱盡量對齊 configs/sectors.yaml 的 name，
+#   如此個股訊號才能與族群訊號連動、偵測 DIVERGENCE。
+#
+# 這是可編輯的 seed；隨節目常提到的個股/主題自行增補。
+
+stock_aliases:
+  國巨: "2327"
+  華新科: "2492"
+  大中: "6435"
+  群聯: "8299"
+  華邦電: "2344"
+  旺宏: "2337"
+  南亞科: "2408"
+
+themes:
+  CCL: "CCL 銅箔基板"
+  銅箔基板: "CCL 銅箔基板"
+  Low Dk: "CCL 銅箔基板"
+  ABF: "ABF 載板"
+  載板: "ABF 載板"
+  MLCC: "被動元件"
+  電阻: "被動元件"
+  晶圓: "矽晶圓"
+  矽晶圓: "矽晶圓"
+  記憶體: "記憶體"
+  NOR Flash: "記憶體"
+  NAND: "記憶體"
+  DRAM: "記憶體"
+  光通訊: "矽光子"
+  矽光子: "矽光子"
+  BBU: "伺服器"
+  散熱: "散熱"
+  伺服器: "伺服器"
+  ASIC: "ASIC"
