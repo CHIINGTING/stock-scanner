@@ -101,6 +101,8 @@ var (
 		// generic / Chinese
 		"ADD", "ADD BUY", "ACCUMULATE", "HOLD STRONG", "CONTINUE HOLD",
 		"加買", "買進", "續抱", "強勢續抱", "偏多",
+		// Chinese labels emitted by the report (actionLabel / watchActionText)
+		"強勢買進", "準備進場", "突破買進", "拉回買進",
 	)
 	reduceActions = set(
 		// scanner.Action
@@ -110,6 +112,8 @@ var (
 		// generic / Chinese
 		"EXIT", "FORCE EXIT", "AVOID",
 		"減碼", "賣出", "出場", "停損", "停利", "避開", "風險升高", "轉弱",
+		// Chinese labels emitted by the report (actionLabel / watchActionText)
+		"移出觀察",
 	)
 	watchActions = set(
 		// scanner.Action
@@ -119,6 +123,8 @@ var (
 		// generic / Chinese
 		"NEUTRAL",
 		"觀察", "等待", "中性", "震盪",
+		// Chinese labels emitted by the report (actionLabel / watchActionText)
+		"持有", "密切觀察",
 	)
 )
 

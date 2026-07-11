@@ -104,6 +104,57 @@ func newsSectors(sig news.NewsSignal) string {
 // joinDot joins labels with a Chinese enumeration comma for the market banner.
 func joinDot(xs []string) string { return strings.Join(xs, "、") }
 
+// actionLabel maps a market/position Action to its Chinese label. The words are chosen
+// to match the validator's Chinese action vocabulary (internal/validator/signal.go) so
+// historical validation keeps classifying them; the language-independent CSS class
+// (action-buy / action-watch …) is what the buy-watch-candidates skill keys off.
+func actionLabel(a scanner.Action) string {
+	switch a {
+	case scanner.ActionStrongBuy:
+		return "強勢買進"
+	case scanner.ActionBuy:
+		return "買進"
+	case scanner.ActionWatch:
+		return "觀察"
+	case scanner.ActionHold:
+		return "持有"
+	case scanner.ActionReduce:
+		return "減碼"
+	case scanner.ActionTakeProfit:
+		return "停利"
+	case scanner.ActionStopLoss:
+		return "停損"
+	case scanner.ActionSell:
+		return "賣出"
+	default:
+		return string(a)
+	}
+}
+
+// watchActionText maps a watchlist WatchAction to its Chinese label. Words match the
+// validator's Chinese action vocabulary; the language-independent CSS class drives any
+// downstream parsing.
+func watchActionText(a scanner.WatchAction) string {
+	switch a {
+	case scanner.ActWait:
+		return "等待"
+	case scanner.ActWatchClose:
+		return "密切觀察"
+	case scanner.ActPrepare:
+		return "準備進場"
+	case scanner.ActBreakoutBuy:
+		return "突破買進"
+	case scanner.ActPullbackBuy:
+		return "拉回買進"
+	case scanner.ActTakeProfit:
+		return "停利"
+	case scanner.ActRemove:
+		return "移出觀察"
+	default:
+		return string(a)
+	}
+}
+
 type Config struct {
 	OutputDir string `yaml:"output_dir"`
 }
@@ -350,6 +401,7 @@ type reportData struct {
 	PortfolioSum PortfolioSummary
 	GV           GuardrailViewOptions
 	NewsSummary  *news.MarketNewsSummary
+	NewsEpisodes []news.EpisodeView
 }
 
 // OutputPath returns the HTML report path the scanner writes for the given date.
@@ -365,6 +417,7 @@ func (r *Report) Generate(
 	date time.Time,
 	gv GuardrailViewOptions,
 	newsSummary *news.MarketNewsSummary,
+	newsEpisodes []news.EpisodeView,
 ) error {
 	if err := os.MkdirAll(r.cfg.OutputDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
@@ -382,6 +435,7 @@ func (r *Report) Generate(
 		PortfolioSum: calcSummary(portfolio),
 		GV:           gv,
 		NewsSummary:  newsSummary,
+		NewsEpisodes: newsEpisodes,
 	}
 
 	fname := r.OutputPath(date)
@@ -655,7 +709,8 @@ func (r *Report) Generate(
 				return "rk-wait"
 			}
 		},
-		"watchActionLabel": func(a scanner.WatchAction) string { return string(a) },
+		"watchActionLabel": watchActionText,
+		"actionLabel":      actionLabel,
 		"watchActionCSS": func(a scanner.WatchAction) string {
 			switch a {
 			case scanner.ActBreakoutBuy, scanner.ActPullbackBuy:
@@ -1148,6 +1203,24 @@ th.rotscore{min-width:120px}
 .news-divergence{color:#fbbf24;font-weight:600;margin-top:2px}
 .news-banner{background:#0f1d30;border:1px solid #16263d;border-radius:8px;padding:10px 12px;margin:0 0 12px;font-size:.8rem;color:#cbd5e1;line-height:1.9}
 .news-banner-h{font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.news-table{border-collapse:collapse;margin:2px 0;font-size:.78rem}
+.news-table th,.news-table td{padding:2px 10px 2px 0;text-align:left;white-space:nowrap;border:0}
+.news-table th{color:#94a3b8;font-weight:600}
+.news-table td.c,.news-table th.c{text-align:left}
+.news-sec{font-weight:600;color:#e2e8f0}
+.gy-intro{color:#94a3b8;font-size:.8rem;margin:6px 0 12px}
+.gy-card{background:#0f1d30;border:1px solid #16263d;border-radius:8px;padding:10px 14px;margin:0 0 10px;font-size:.8rem;color:#cbd5e1;line-height:1.85}
+.gy-head{font-size:.9rem;color:#e2e8f0;margin-bottom:2px}
+.gy-ep{font-weight:700;color:#38bdf8}
+.gy-date{color:#94a3b8;font-size:.78rem}
+.gy-src{font-size:.74rem;margin-bottom:4px}
+.gy-link{color:#38bdf8;text-decoration:none;margin-right:6px}
+.gy-line{padding:1px 0}
+.gy-ev{color:#94a3b8}
+.gy-stocks{margin-top:4px;color:#cbd5e1;font-size:.76rem}
+.gy-excerpt{margin-top:4px;color:#94a3b8;font-size:.76rem}
+.gy-excerpt summary{cursor:pointer;color:#64748b}
+.gy-excerpt>div{margin-top:4px;white-space:pre-wrap}
 .wl-gs-summary{background:#0b1626;border-left:3px solid #38bdf8;border-radius:6px;padding:7px 10px;margin:4px 0 6px}
 .wl-gs-headline{color:#e2e8f0;font-size:.78rem;margin-bottom:3px}
 .wl-gs-h{color:#7dd3fc;font-weight:700;margin-top:4px}
@@ -1186,6 +1259,7 @@ th.rotscore{min-width:120px}
   <button class="tab-btn" onclick="tab(event,'watchlist')">🚀 飆股候選 ({{ len .Watchlist }})</button>
   <button class="tab-btn" onclick="tab(event,'market')">📊 市場掃描({{ .MarketLabel }})</button>
   <button class="tab-btn" onclick="tab(event,'rotation')">🔄 輪動 ({{ len .Rotation }})</button>
+  {{ if and .GV.ShowNews (gt (len .NewsEpisodes) 0) }}<button class="tab-btn" onclick="tab(event,'gooaye')">🎙️ 股癌情報 ({{ len .NewsEpisodes }})</button>{{ end }}
   {{ if .GV.ShowBacktestInsights }}<button class="tab-btn" onclick="tab(event,'backtest')">🔬 回測洞察</button>{{ end }}
 </div>
 
@@ -1229,7 +1303,7 @@ th.rotscore{min-width:120px}
     <td>
       {{ if eq .Action "STOP LOSS" }}<div class="alert-sl">⛔ 建議停損</div>{{ end }}
       {{ if eq .Action "TAKE PROFIT" }}<div class="alert-tp">✅ 建議獲利了結</div>{{ end }}
-      <span class="action-badge {{ actionCSS .Action }}">{{ .Action }}</span>
+      <span class="action-badge {{ actionCSS .Action }}">{{ actionLabel .Action }}</span>
     </td>
     <td class="r t-stop">{{ f2 .StopLoss }}</td>
     <td class="r t-t1">{{ f2 .Target1 }}</td>
@@ -1436,12 +1510,15 @@ th.rotscore{min-width:120px}
 {{- if $.GV.ShowNews }}{{- with $.NewsSummary }}
 <div class="news-banner">
   <div class="news-banner-h">📰 市場消息面（as of {{ .AsOf.Format "2006-01-02" }}｜Fresh {{ .Fresh }} / Active {{ .Active }} / Expired {{ .Expired }}）</div>
-  {{- if .RotationIn }}<div>🟢 資金輪動進場：{{ joinDot .RotationIn }}</div>{{- end }}
-  {{- if .Bullish }}<div>🟢 偏多：{{ joinDot .Bullish }}</div>{{- end }}
-  {{- if .RiskWarning }}<div>🟡 風險警示：{{ joinDot .RiskWarning }}</div>{{- end }}
-  {{- if .RotationOut }}<div>🔴 資金輪動流出：{{ joinDot .RotationOut }}</div>{{- end }}
-  {{- if .Bearish }}<div>🔴 偏空：{{ joinDot .Bearish }}</div>{{- end }}
-  <div class="wl-note">消息面僅作 regime／context 參考，不影響 BUY／WATCH／SELL 與排序。</div>
+  <table class="news-table">
+    <thead><tr><th>族群</th>{{- range .Windows }}<th class="c">近{{ . }}日</th>{{- end }}<th>近期</th></tr></thead>
+    <tbody>
+    {{- range .Sectors }}
+      <tr><td class="news-sec">{{ .Name }}</td>{{- range .Cells }}<td class="c">{{ .Display }}</td>{{- end }}<td>{{ newsDot .LatestType }}{{ newsSignalLabel .LatestType }}{{ if .LatestEP }}({{ .LatestEP }}){{ end }}</td></tr>
+    {{- end }}
+    </tbody>
+  </table>
+  <div class="wl-note">消息面僅作 regime／context 參考，不影響 BUY／WATCH／SELL 與排序。🟢偏多 🟡風險 🔴偏空。短視窗看輪動速度。</div>
 </div>
 {{- end }}{{- end }}
 {{ if eq (len .Market) 0 }}
@@ -1467,7 +1544,7 @@ th.rotscore{min-width:120px}
     <td class="r {{ volCSS $a.VolumeRatio }}">{{ f1 $a.VolumeRatio }}x</td>
     <td>{{ bfpDots $a.BFPPoints }}</td>
     <td>{{ scoreBar $a.Score }}</td>
-    <td><span class="action-badge {{ actionCSS $a.Action }}">{{ $a.Action }}</span></td>
+    <td><span class="action-badge {{ actionCSS $a.Action }}">{{ actionLabel $a.Action }}</span></td>
     <td class="r t-stop">{{ f2 $a.StopLoss }}</td>
     <td class="r t-t1">{{ f2 $a.Target1 }}</td>
     <td class="r t-t2">{{ f2 $a.Target2 }}</td>
@@ -1543,7 +1620,7 @@ th.rotscore{min-width:120px}
           <td class="r {{ volCSS .VolumeRatio }}">{{ f1 .VolumeRatio }}x</td>
           <td class="c">{{ if .MA60Valid }}{{ boolMark .MA60Up }}{{ else }}<span class="no">—</span>{{ end }}</td>
           <td class="c">{{ flowArrow .MoneyFlow }}</td>
-          <td><span class="action-badge {{ actionCSS .Action }}">{{ .Action }}</span></td>
+          <td><span class="action-badge {{ actionCSS .Action }}">{{ actionLabel .Action }}</span></td>
         </tr>
         {{ end }}
         </tbody>
@@ -1555,6 +1632,24 @@ th.rotscore{min-width:120px}
 </table>
 {{ end }}
 </div>
+
+<!-- ══ 股癌 PODCAST 情報（逐集情報卡；純外部觀點，不影響策略） ═══════════════ -->
+{{ if and .GV.ShowNews (gt (len .NewsEpisodes) 0) }}
+<div id="tab-gooaye" class="tab-pane">
+  <div class="gy-intro">🎙️ <b>股癌 Podcast 情報</b> — 逐集情報卡（新→舊）。外部延遲觀點，僅作 context，<b>不影響 BUY／WATCH／SELL 與排序</b>。</div>
+  {{- range .NewsEpisodes }}
+  <div class="gy-card">
+    <div class="gy-head"><span class="gy-ep">{{ .Label }}</span>　<span class="gy-date">{{ .PublishedAt.Format "2006-01-02" }}</span>{{ if .RawTitle }}　{{ .RawTitle }}{{ end }}{{ if .Conflict }}　<span class="news-divergence">⚠ 觀點分歧</span>{{ end }}</div>
+    {{- if .Sources }}<div class="gy-src">來源：{{ range .Sources }}<a class="gy-link" href="{{ .URL }}" target="_blank" rel="noopener">{{ .Provider }}↗</a> {{ end }}</div>{{- end }}
+    {{- range .Lines }}
+    <div class="gy-line">{{ newsDot .Signal }} {{ newsSignalLabel .Signal }}　{{ .Entities }}{{ if .Evidence }}　<span class="gy-ev">「{{ .Evidence }}」</span>{{ end }}{{ if .Conflict }} <span class="news-divergence">⚠</span>{{ end }}</div>
+    {{- end }}
+    {{- if .Stocks }}<div class="gy-stocks">個股：{{ range $i, $s := .Stocks }}{{ if $i }}、{{ end }}{{ $s.Name }}({{ $s.Code }}){{ end }}</div>{{- end }}
+    {{- if .Excerpt }}<details class="gy-excerpt"><summary>內文摘錄</summary><div>{{ .Excerpt }}</div></details>{{- end }}
+  </div>
+  {{- end }}
+</div>
+{{ end }}
 
 <!-- ══ BACKTEST INSIGHT：R6 回測洞察（純顯示，完全不影響停損/排名/下單） ═════ -->
 {{ if .GV.ShowBacktestInsights }}

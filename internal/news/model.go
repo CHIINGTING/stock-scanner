@@ -96,17 +96,37 @@ type StockNewsView struct {
 	Divergence  bool         `json:"divergence"`             // stock-level vs sector-level direction conflict
 }
 
-// MarketNewsSummary is the market-wide banner object. Sectors are grouped by the actual
-// SignalType (NOT collapsed by polarity) so BULLISH is never mislabeled as ROTATION_IN.
-// A sector may appear in more than one group when signals genuinely conflict.
+// SectorWindowCell is one sector's news lean within one day-window. Counts fold the 6
+// SignalTypes into three polarity buckets (Pos = BULLISH+ROTATION_IN 🟢, Risk =
+// RISK_WARNING 🟡, Neg = BEARISH+ROTATION_OUT 🔴). Display is the pre-rendered compact
+// cell (net for short windows, tally for the widest).
+type SectorWindowCell struct {
+	Days    int    `json:"days"`
+	Pos     int    `json:"pos"`
+	Risk    int    `json:"risk"`
+	Neg     int    `json:"neg"`
+	Net     string `json:"net"`     // 偏多 / 風險 / 偏空 / 偏多轉風險 / 分歧 / "" (empty window)
+	Display string `json:"display"` // compact rendered cell (e.g. "🟢偏多" or "🟢5 🟡1 🔴3")
+}
+
+// SectorNewsRow is one sector across all configured windows (方案 A + multi-window). A
+// sector with mixed views is shown ONCE, letting you read its evolution 1日 → 3日 → 7日
+// and spot fast rotation (e.g. 7日 偏多 but 近1日 轉空).
+type SectorNewsRow struct {
+	Name       string             `json:"name"`
+	Cells      []SectorWindowCell `json:"cells"`               // one per MarketNewsSummary.Windows, same order
+	LatestType SignalType         `json:"latest_type"`         // most-recent signal's type (widest window)
+	LatestEP   string             `json:"latest_ep,omitempty"` // e.g. "EP677"
+}
+
+// MarketNewsSummary is the market-wide banner object: one row per sector (sorted by the
+// widest window's net lean) shown across Windows day-windows, plus age counts. Nothing
+// here feeds scoring.
 type MarketNewsSummary struct {
-	RotationIn  []string  `json:"rotation_in,omitempty"`  // ROTATION_IN sectors
-	RotationOut []string  `json:"rotation_out,omitempty"` // ROTATION_OUT sectors
-	Bullish     []string  `json:"bullish,omitempty"`      // BULLISH sectors
-	Bearish     []string  `json:"bearish,omitempty"`      // BEARISH sectors
-	RiskWarning []string  `json:"risk_warning,omitempty"` // RISK_WARNING sectors
-	Fresh       int       `json:"fresh"`
-	Active      int       `json:"active"`
-	Expired     int       `json:"expired"`
-	AsOf        time.Time `json:"as_of"`
+	Windows []int           `json:"windows,omitempty"` // day-windows, ascending (e.g. [1,3,7])
+	Sectors []SectorNewsRow `json:"sectors,omitempty"`
+	Fresh   int             `json:"fresh"`
+	Active  int             `json:"active"`
+	Expired int             `json:"expired"`
+	AsOf    time.Time       `json:"as_of"`
 }

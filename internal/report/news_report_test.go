@@ -38,24 +38,37 @@ func newsEntry() scanner.WatchlistEntry {
 }
 
 func newsSummary() *news.MarketNewsSummary {
+	cell := func(d, p, k, n int, net, disp string) news.SectorWindowCell {
+		return news.SectorWindowCell{Days: d, Pos: p, Risk: k, Neg: n, Net: net, Display: disp}
+	}
 	return &news.MarketNewsSummary{
-		RotationIn:  []string{"銅箔基板", "封測"},
-		Bullish:     []string{"被動元件"},
-		RotationOut: []string{"光通訊"},
-		RiskWarning: []string{"記憶體"},
-		Fresh:       4, Active: 3, Expired: 2,
-		AsOf: time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC),
+		Windows: []int{1, 3, 7},
+		Sectors: []news.SectorNewsRow{
+			{Name: "被動元件", LatestType: news.SignalRiskWarning, LatestEP: "EP677", Cells: []news.SectorWindowCell{
+				cell(1, 1, 0, 0, "偏多", "🟢偏多"), cell(3, 1, 1, 0, "偏多", "🟢🟡偏多"), cell(7, 3, 2, 1, "偏多轉風險", "🟢×3 🟡×2 🔴×1")}},
+			{Name: "CCL 銅箔基板", LatestType: news.SignalBullish, LatestEP: "EP677", Cells: []news.SectorWindowCell{
+				cell(1, 0, 0, 0, "", "－"), cell(3, 2, 0, 0, "偏多", "🟢偏多"), cell(7, 2, 0, 0, "偏多", "🟢×2")}},
+			{Name: "記憶體", LatestType: news.SignalBearish, LatestEP: "EP678", Cells: []news.SectorWindowCell{
+				cell(1, 0, 1, 0, "風險", "🟡風險"), cell(3, 0, 1, 1, "分歧", "🟡🔴分歧"), cell(7, 0, 1, 2, "偏空", "🟡×1 🔴×2")}},
+		},
+		Fresh: 2, Active: 18, Expired: 11,
+		AsOf: time.Date(2026, 7, 12, 0, 0, 0, 0, time.UTC),
 	}
 }
 
 // genHTMLNews renders with an explicit newsSummary + gv, returning the HTML.
 func genHTMLNews(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailViewOptions, sum *news.MarketNewsSummary) string {
+	return genHTMLNewsEp(t, entries, gv, sum, nil)
+}
+
+// genHTMLNewsEp additionally passes episode cards for the 股癌情報 tab.
+func genHTMLNewsEp(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailViewOptions, sum *news.MarketNewsSummary, eps []news.EpisodeView) string {
 	t.Helper()
 	dir := t.TempDir()
 	r := New(Config{OutputDir: dir})
 	date := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
 	market := []scanner.StockAnalysis{{Symbol: "2327", Name: "國巨", Close: 100}}
-	if err := r.Generate(market, nil, entries, nil, "-", date, gv, sum); err != nil {
+	if err := r.Generate(market, nil, entries, nil, "-", date, gv, sum, eps); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "report_20260605.html"))
@@ -63,6 +76,46 @@ func genHTMLNews(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailVie
 		t.Fatalf("read report: %v", err)
 	}
 	return string(b)
+}
+
+func sampleEpisodes() []news.EpisodeView {
+	return []news.EpisodeView{
+		{
+			EP: 678, Label: "EP678", PublishedAt: time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC),
+			RawTitle: "股癌筆記EP678", Conflict: true,
+			Sources: []news.NewsSource{{Provider: "socialworkerdaily", URL: "https://socialworkerdaily.com/notes-of-gooaye-ep-678/"}},
+			Lines: []news.EpisodeLine{
+				{Signal: news.SignalBearish, Entities: "記憶體", Evidence: "利多不漲", Strength: 3, Conflict: true},
+				{Signal: news.SignalBullish, Entities: "CCL 銅箔基板、國巨(2327)", Evidence: "強勢族群", Strength: 4},
+			},
+			Stocks:  []news.StockReference{{Code: "2327", Name: "國巨", Resolved: true}},
+			Excerpt: "…內文摘錄…",
+		},
+	}
+}
+
+// TestGooayeTabShown: with ShowNews + episodes, the 股癌情報 tab + a card render.
+func TestGooayeTabShown(t *testing.T) {
+	html := genHTMLNewsEp(t, []scanner.WatchlistEntry{newsEntry()}, GuardrailViewOptions{ShowNews: true}, newsSummary(), sampleEpisodes())
+	for _, want := range []string{
+		"tab(event,'gooaye')", "股癌情報", "id=\"tab-gooaye\"",
+		"EP678", "股癌筆記EP678", "記憶體", "利多不漲", "觀點分歧",
+		"國巨(2327)", "內文摘錄", "socialworkerdaily",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("gooaye tab should contain %q", want)
+		}
+	}
+}
+
+// TestGooayeHiddenByDefault: no tab/pane when ShowNews=false, even with episodes present.
+func TestGooayeHiddenByDefault(t *testing.T) {
+	html := genHTMLNewsEp(t, []scanner.WatchlistEntry{newsEntry()}, GuardrailViewOptions{ShowNews: false}, newsSummary(), sampleEpisodes())
+	for _, bad := range []string{"tab(event,'gooaye')", "id=\"tab-gooaye\"", "股癌情報"} {
+		if strings.Contains(html, bad) {
+			t.Errorf("gooaye tab must be hidden when ShowNews=false, found %q", bad)
+		}
+	}
 }
 
 func TestNewsHiddenByDefault(t *testing.T) {
@@ -93,9 +146,10 @@ func TestNewsHiddenShadowIndependent(t *testing.T) {
 func TestNewsShown(t *testing.T) {
 	html := genHTMLNews(t, []scanner.WatchlistEntry{newsEntry()}, GuardrailViewOptions{ShowNews: true}, newsSummary())
 	for _, want := range []string{
-		"⑩ 消息面", "股癌EP677", "偏多", "資金輪動出場",
-		"DIVERGENCE", "市場消息面",
-		"資金輪動進場", "資金輪動流出", "風險警示", "銅箔基板",
+		"⑩ 消息面", "股癌EP677", "偏多", "資金輪動出場", "DIVERGENCE",
+		// market banner: per-sector multi-window table (方案 A + windows)
+		"市場消息面", "近1日", "近3日", "近7日",
+		"被動元件", "🟢偏多", "🟢×3", "CCL 銅箔基板", "－", "記憶體", "EP677",
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("expected rendered news to contain %q", want)

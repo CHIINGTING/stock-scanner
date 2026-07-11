@@ -13,6 +13,11 @@ type NewsConfig struct {
 	// MaxAgeDays: signals older than this are EXPIRED (kept in snapshot, de-emphasized).
 	MaxAgeDays int `yaml:"max_age_days"`
 
+	// BannerWindows are the day-windows shown side-by-side per sector in the market
+	// banner (fast-rotation view). Default [1,3,7]; the widest window also gates which
+	// sectors appear as rows.
+	BannerWindows []int `yaml:"banner_windows"`
+
 	// Age holds the FRESH/ACTIVE/DECAYING day boundaries (centralized lifecycle).
 	Age AgeConfig `yaml:"age"`
 
@@ -67,6 +72,9 @@ func (c NewsConfig) Defaulted() NewsConfig {
 	out.Age = out.Age.withDefaults()
 	if out.TimeoutSeconds <= 0 {
 		out.TimeoutSeconds = 15
+	}
+	if len(out.BannerWindows) == 0 {
+		out.BannerWindows = []int{1, 3, 7}
 	}
 	return out
 }
