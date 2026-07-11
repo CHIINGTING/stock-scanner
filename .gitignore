@@ -13,3 +13,5 @@ data/etf_holdings/raw/*.csv
 
 # 00981A official daily holdings download products (XLSX/XLS/CSV/debug png).
 data/official/
+index.html
+stocks.yaml
