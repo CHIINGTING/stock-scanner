@@ -99,8 +99,8 @@ type SectorRotation struct {
 	MidTermLabel    string  // 強 | 中 | 弱
 
 	// 3) 波段趨勢（60 日）。
-	TrendStrength float64 // 0~100
-	TrendLabel    string  // 確認上升 | 尚未確認 | 轉弱
+	TrendStrength  float64 // 0~100
+	TrendLabel     string  // 確認上升 | 尚未確認 | 轉弱
 	AboveMA60Ratio float64 // 站上 MA60 比例（%）
 
 	Raw    RotationScore
@@ -114,19 +114,19 @@ const (
 	wBreakout      = 0.20
 	wVolExpansion  = 0.15
 	wMA60Slope     = 0.10
-	volExpRatioMin = 1.5 // 量能放大門檻（倍 MA20 量）
-	flowDays       = 5   // 資金流向回看天數
+	volExpRatioMin = 1.5  // 量能放大門檻（倍 MA20 量）
+	flowDays       = 5    // 資金流向回看天數
 	flowInThresh   = 0.20 // 族群淨流向 ≥ 此值視為「流入」
 
 	// 短線流向綜合分數權重（和為 1.0）。
-	wST1dGain        = 0.10 // 近 1 日漲幅
-	wST3dGain        = 0.15 // 近 3 日漲幅
-	wST5dGain        = 0.10 // 近 5 日漲幅
-	wSTUpRatio       = 0.15 // 上漲家數比例
-	wSTVolExp        = 0.15 // 量能放大比例
-	wSTAboveMA       = 0.15 // 站上 5/10 日均線比例
-	wSTNewHigh20     = 0.10 // 創 20 日新高比例
-	wSTAccel         = 0.10 // 動能加速（短線 vs 中期步調）
+	wST1dGain    = 0.10 // 近 1 日漲幅
+	wST3dGain    = 0.15 // 近 3 日漲幅
+	wST5dGain    = 0.10 // 近 5 日漲幅
+	wSTUpRatio   = 0.15 // 上漲家數比例
+	wSTVolExp    = 0.15 // 量能放大比例
+	wSTAboveMA   = 0.15 // 站上 5/10 日均線比例
+	wSTNewHigh20 = 0.10 // 創 20 日新高比例
+	wSTAccel     = 0.10 // 動能加速（短線 vs 中期步調）
 )
 
 // ScanRotation aggregates per-sector rotation scores from grouped member data.
@@ -184,7 +184,7 @@ func (s *Scanner) buildSector(name string, stocks []fetcher.StockData) *SectorRo
 	sr := &SectorRotation{Name: name}
 
 	var (
-		newHighN, breakoutN, volExpN int
+		newHighN, breakoutN, volExpN    int
 		ma60UpN, ma60ValidN, ma60AboveN int
 		upN, aboveShortMAN, newHigh20N  int
 		sumReturn, sumRSI, sumFlow      float64

@@ -46,7 +46,7 @@ func TestRSUniverseExcludesNonCommon(t *testing.T) {
 		code, name string
 		want       bool
 	}{
-		{"0050", "元大台灣50", false},  // ETF (leading 0)
+		{"0050", "元大台灣50", false},   // ETF (leading 0)
 		{"00878", "國泰永續高股息", false}, // ETF (5-digit)
 		{"2891B", "中信金乙特", false},   // 特別股 (letter suffix)
 		{"9136", "巨騰-DR", false},    // DR by name

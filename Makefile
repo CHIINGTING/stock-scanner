@@ -1,7 +1,7 @@
 BIN  := bin/scanner
 CMD  := ./cmd/scanner
 
-.PHONY: build run run-fast run-rotation run-top100 run-top500 run-all tidy lint clean test
+.PHONY: build run run-fast run-rotation run-top100 run-top500 run-all merge-watchlist tidy lint clean test
 
 build:
 	go build -o $(BIN) $(CMD)
@@ -27,9 +27,15 @@ run-top100: build
 run-top500: build
 	./$(BIN) -config configs/config.yaml --top 500
 
-# 市場掃描全部上市股票
+# 市場掃描全部上市股票；掃完把最新報告的 BUY & WATCH 併入 stocks.yaml 觀察清單
 run-all: build
 	./$(BIN) -config configs/config.yaml --all
+	$(MAKE) merge-watchlist
+
+# 把最新報告（reports/report_YYYYMMDD.html）市場掃描分頁的 BUY & WATCH
+# 併入 stocks.yaml 的 watchlist（去重、保留 positions 與註解、冪等）
+merge-watchlist:
+	python3 .claude/skills/buy-watch-candidates/extract.py
 
 # 指定日期
 run-date: build

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Extract BUY & WATCH candidates from a daily report's 市場掃描 (market-scan) tab.
+"""Merge a daily report's 市場掃描 (market-scan) BUY & WATCH stocks into stocks.yaml.
 
 The report HTML (reports/report_YYYYMMDD.html) renders every scanned stock in the
 `<div id="tab-market">` section with an action badge — STRONG BUY / BUY / WATCH /
 HOLD / REDUCE / SELL. This script keeps only the actionable signals (STRONG BUY +
-BUY -> `buy`, WATCH -> `watch`) and writes them to reports/candidates_YYYYMMDD.yaml.
+BUY + WATCH) and merges them into the `watchlist:` block of stocks.yaml.
+
+stocks.yaml has no buy:/watch: levels — only positions: and watchlist:. Both BUY
+and WATCH candidates go into watchlist:. Codes already in positions: or already on
+the watchlist are skipped, so the merge is idempotent. Comments, positions, and the
+existing watchlist order are preserved; new entries are appended to the watchlist.
 
 Usage:
     python3 extract.py [report.html]      # explicit report file
@@ -20,6 +25,7 @@ from datetime import date
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 REPORTS_DIR = os.path.join(ROOT, "reports")
+STOCKS_PATH = os.path.join(ROOT, "stocks.yaml")
 NAME_MAP_PATH = os.path.join(ROOT, "data", "stock_names_zh.yaml")
 CJK_RE = re.compile(r"[一-鿿]")
 
@@ -83,6 +89,11 @@ def market_segment(html_text: str) -> str:
 
 
 def extract(report_path: str):
+    """Return the actionable candidates (STRONG BUY / BUY / WATCH) as [{code,name}].
+
+    BUY-tier signals are listed before WATCH so the more actionable names land
+    first in the watchlist, but both tiers go into the same watchlist block.
+    """
     text = open(report_path, encoding="utf-8").read()
     seg = market_segment(text)
     name_map = load_name_map()
@@ -101,48 +112,106 @@ def extract(report_path: str):
     return buy, watch
 
 
-def render(report_path: str, buy, watch) -> str:
-    base = os.path.basename(report_path)            # report_20260609.html
-    stamp = re.search(r"(\d{8})", base).group(1)    # 20260609
-    rdate = f"{stamp[:4]}-{stamp[4:6]}-{stamp[6:]}"
-    lines = [
-        "# 飆股候選清單 — 市場掃描 BUY & WATCH",
-        f"# 來源：{base}（市場掃描分頁）",
-        f"# 產生日期：{rdate}",
-        "meta:",
-        f"  report_date: {rdate}",
-        f"  source: {base}",
-        "  section: 市場掃描 (tab-market)",
-        f"  total_candidates: {len(buy) + len(watch)}",
-        f"  buy_count: {len(buy)}",
-        f"  watch_count: {len(watch)}",
-        "",
-        "# === BUY：訊號成立，可考慮進場 ===",
-        "buy:" if buy else "buy: []",
-    ]
-    for it in buy:
-        lines.append(f'  - code: "{it["code"]}"')
-        lines.append(f'    name: "{it["name"]}"')
-    lines.append("")
-    lines.append("# === WATCH：觀察中，等待進場訊號確認 ===")
-    lines.append("watch:" if watch else "watch: []")
-    for it in watch:
-        lines.append(f'  - code: "{it["code"]}"')
-        lines.append(f'    name: "{it["name"]}"')
-    return "\n".join(lines) + "\n", stamp
+# --- stocks.yaml merge -------------------------------------------------------
+
+TOPLEVEL_RE = re.compile(r"^(?P<key>\w[\w-]*)\s*:")
+CODE_RE = re.compile(r'^\s*-\s*code:\s*"?(?P<code>[0-9A-Za-z]+)"?')
+
+
+def section_codes(lines: list[str]) -> dict[str, set[str]]:
+    """map top-level key (positions / watchlist / …) -> set of its codes."""
+    current = None
+    codes: dict[str, set[str]] = {}
+    for line in lines:
+        if line[:1] not in (" ", "\t", "#", "") and TOPLEVEL_RE.match(line):
+            current = TOPLEVEL_RE.match(line).group("key")
+            codes.setdefault(current, set())
+            continue
+        m = CODE_RE.match(line)
+        if m and current:
+            codes[current].add(m.group("code"))
+    return codes
+
+
+def watchlist_insert_at(lines: list[str]) -> int | None:
+    """Index at which to insert new watchlist entries (after the last item).
+
+    Returns None if there is no watchlist: block. The insert point is placed
+    right after the final non-blank line of the block so trailing blank lines
+    and any following top-level section stay put.
+    """
+    start = None
+    for i, line in enumerate(lines):
+        if re.match(r"^watchlist\s*:", line):
+            start = i
+            break
+    if start is None:
+        return None
+    end = len(lines)
+    for i in range(start + 1, len(lines)):
+        line = lines[i]
+        if line[:1] not in (" ", "\t", "#", "") and TOPLEVEL_RE.match(line):
+            end = i
+            break
+    j = end - 1
+    while j > start and not lines[j].strip():
+        j -= 1
+    return j + 1
+
+
+def merge_into_stocks(buy, watch):
+    """Append new BUY+WATCH codes to stocks.yaml's watchlist. Returns (added, skipped)."""
+    with open(STOCKS_PATH, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    codes = section_codes(lines)
+    held = codes.get("positions", set())
+    watching = codes.get("watchlist", set())
+    seen = set(held) | set(watching)
+
+    added, skipped = [], []
+    new_lines: list[str] = []
+    for item in buy + watch:
+        code = item["code"]
+        if code in seen:
+            skipped.append(item)
+            continue
+        seen.add(code)
+        added.append(item)
+        new_lines.append(f'  - code: "{code}"')
+        new_lines.append(f'    name: "{item["name"]}"')
+
+    if not added:
+        return added, skipped
+
+    at = watchlist_insert_at(lines)
+    if at is None:
+        # No watchlist: block — create one at the end of the file.
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append("watchlist:")
+        lines.extend(new_lines)
+    else:
+        lines[at:at] = new_lines
+
+    with open(STOCKS_PATH, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return added, skipped
 
 
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     report = resolve_report(arg)
     buy, watch = extract(report)
-    content, stamp = render(report, buy, watch)
-    out = os.path.join(REPORTS_DIR, f"candidates_{stamp}.yaml")
-    with open(out, "w", encoding="utf-8") as f:
-        f.write(content)
+    added, skipped = merge_into_stocks(buy, watch)
+
     print(f"來源報告：{report}")
-    print(f"輸出：{out}")
-    print(f"BUY {len(buy)} 檔｜WATCH {len(watch)} 檔｜合計 {len(buy) + len(watch)} 檔")
+    print(f"掃描訊號：BUY {len(buy)} 檔｜WATCH {len(watch)} 檔")
+    print(f"寫入 stocks.yaml：新增 {len(added)} 檔｜已存在跳過 {len(skipped)} 檔")
+    if added:
+        preview = "、".join(f'{it["code"]} {it["name"]}' for it in added[:20])
+        more = f" …(+{len(added) - 20})" if len(added) > 20 else ""
+        print(f"新增：{preview}{more}")
 
 
 if __name__ == "__main__":

@@ -259,6 +259,15 @@ func computeRocket(in rocketInput) rocketOutput {
 		(ma20[n-1] > 0 && latest.Close < ma20[n-1] && ret5 < -5) ||
 		(in.flowDir == FlowOutflow && ret1 < 0 && ma10[n-1] > 0 && latest.Close < ma10[n-1])
 	climax := climaxDistribution || (upperShadow && volRatio >= 2)
+	// An OVERHEATED reading is a genuine exit (TAKE_PROFIT) only when there is
+	// real distribution (climax) OR the trend structure has already cracked.
+	// Pure price-extension while MAs are still bull-aligned and price holds MA20
+	// is a strong trend, not a top — the right call is "wait for a pullback to
+	// enter" (PULLBACK_BUY), not "get out". Validation of the June window showed
+	// extension-driven TAKE_PROFIT benched names that then ran +26% (median max
+	// runup) — see docs/SIGNAL_VALIDATION_REDUCE_FEEDBACK.md.
+	trendIntact := bullAlign && aboveMA20
+	overheatExit := climax || !trendIntact
 	mainRun := bullAlign && ret20 >= 15 && aboveMA5 && !extended
 	preBreak := in.consol.NearPreviousHigh && in.consol.BaseQualityScore >= 50 &&
 		in.consol.VolumeDryUpRatio < 1.0 && breakoutLevel > 0 &&
@@ -297,9 +306,9 @@ func computeRocket(in rocketInput) rocketOutput {
 	out.ExplosionProb = applyRSLeadershipGate(prob, useRS, rsRank, in.rsWatchThreshold)
 
 	out.DaysToWatch = daysToWatch(out.Stage)
-	out.WatchAction = watchActionFor(out.Stage, ret1, volRatio)
+	out.WatchAction = watchActionFor(out.Stage, ret1, volRatio, overheatExit)
 	if useMomentum {
-		out.WatchAction = jointWatchAction(out.Stage, in.momentum.Flow, out.WatchAction)
+		out.WatchAction = jointWatchAction(out.Stage, in.momentum.Flow, overheatExit, out.WatchAction)
 	}
 
 	// ── 價位計畫 ──────────────────────────────────────────────────────────────
@@ -408,9 +417,15 @@ func momentumScoreModifier(flow MomentumFlow, m momentumModifiers) float64 {
 
 // jointWatchAction combines RocketStage with MomentumFlow. NEUTRAL (or anything not
 // listed) returns the existing fallback. SHIFT_DOWN and FAILED take top priority.
-func jointWatchAction(stage RocketStage, flow MomentumFlow, fallback WatchAction) WatchAction {
+func jointWatchAction(stage RocketStage, flow MomentumFlow, overheatExit bool, fallback WatchAction) WatchAction {
 	if flow == StructuralShiftDown || stage == StageFailed {
 		return ActRemove
+	}
+	// A hot-but-trend-intact OVERHEATED (overheatExit=false) is an entry-timing
+	// call, not an exit: a fading pulse is the pullback we want to buy, so keep
+	// the PULLBACK_BUY/WAIT fallback instead of flipping to TAKE_PROFIT.
+	if stage == StageOverheated && !overheatExit {
+		return fallback
 	}
 	switch {
 	case stage == StagePreBreakout && flow == MomentumBuilding:
@@ -476,7 +491,7 @@ func daysToWatch(stage RocketStage) string {
 	}
 }
 
-func watchActionFor(stage RocketStage, ret1, volRatio float64) WatchAction {
+func watchActionFor(stage RocketStage, ret1, volRatio float64, overheatExit bool) WatchAction {
 	switch stage {
 	case StageBaseBuilding:
 		return ActWatchClose
@@ -490,7 +505,12 @@ func watchActionFor(stage RocketStage, ret1, volRatio float64) WatchAction {
 		}
 		return ActWatchClose
 	case StageOverheated:
-		return ActTakeProfit
+		// Real distribution / broken structure → get out. Otherwise the stock is
+		// simply extended in a healthy trend → wait for the pullback to enter.
+		if overheatExit {
+			return ActTakeProfit
+		}
+		return ActPullbackBuy
 	case StageFailed:
 		return ActRemove
 	default:

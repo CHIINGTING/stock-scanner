@@ -46,11 +46,11 @@ func hhRamp(n int, start, step float64) []float64 {
 
 func TestHHCalcStageRuleTable(t *testing.T) {
 	cases := []struct {
-		name                          string
-		price, ma20, ma60, slope, hi  float64
-		wantStage                     HoldingStage
-		wantBucket                    HoldingHorizonBucket
-		wantMin, wantMax              int
+		name                         string
+		price, ma20, ma60, slope, hi float64
+		wantStage                    HoldingStage
+		wantBucket                   HoldingHorizonBucket
+		wantMin, wantMax             int
 	}{
 		{"BASE", 100, 100, 100, 0.0, 100, HHStageBase, HoldingMedium, 10, 20},
 		{"BREAKOUT", 110, 105, 100, 1.0, 110, HHStageBreakout, HoldingLong, 20, 30},

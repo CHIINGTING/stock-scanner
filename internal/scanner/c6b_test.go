@@ -114,7 +114,7 @@ func TestC6b2NewHighComputedZeroScoreUsesNewHighBranch(t *testing.T) {
 	// With NearPreviousHigh=true, original g3 would get +6; NewHigh branch (score 0)
 	// gives 0 for that slot. So the NewHigh-branch score must be LOWER than the
 	// original-with-NearHigh score — proving we took the NewHigh branch deliberately.
-	original := computeRocket(rocketInputWithBQ(50, nil, nil, true, false)).Score      // BQ*12 + 6
+	original := computeRocket(rocketInputWithBQ(50, nil, nil, true, false)).Score           // BQ*12 + 6
 	newHighZero := computeRocket(rocketInputWithBQ(50, nil, nh(0, true), true, true)).Score // BQ*10 + 0
 	if newHighZero >= original {
 		t.Errorf("Computed=true score=0 should take NewHigh branch (lower, no NearHigh fallback): nh0=%d original=%d",
@@ -192,13 +192,13 @@ func TestC6b3RSLeadershipGate(t *testing.T) {
 		rank, thr float64
 		want      string
 	}{
-		{"HIGH", true, 60, 70, "MEDIUM"},  // below threshold → capped
-		{"HIGH", true, 80, 70, "HIGH"},    // at/above → unchanged
+		{"HIGH", true, 60, 70, "MEDIUM"},   // below threshold → capped
+		{"HIGH", true, 80, 70, "HIGH"},     // at/above → unchanged
 		{"MEDIUM", true, 60, 70, "MEDIUM"}, // medium stays medium
-		{"LOW", true, 60, 70, "LOW"},      // never pushed to/from LOW
-		{"HIGH", false, 60, 70, "HIGH"},   // RS inactive → unchanged
-		{"HIGH", true, 0, 70, "HIGH"},     // invalid rank → unchanged
-		{"HIGH", true, 60, 0, "MEDIUM"},   // threshold≤0 → default 70 → capped
+		{"LOW", true, 60, 70, "LOW"},       // never pushed to/from LOW
+		{"HIGH", false, 60, 70, "HIGH"},    // RS inactive → unchanged
+		{"HIGH", true, 0, 70, "HIGH"},      // invalid rank → unchanged
+		{"HIGH", true, 60, 0, "MEDIUM"},    // threshold≤0 → default 70 → capped
 	}
 	for _, c := range cases {
 		if got := applyRSLeadershipGate(c.prob, c.useRS, c.rank, c.thr); got != c.want {
@@ -210,8 +210,8 @@ func TestC6b3RSLeadershipGate(t *testing.T) {
 // RS replaces the g2 relative-strength sub-score (no new group, g2≤20). Score delta
 // vs the all-off baseline equals exactly the g2 sub-score change (RS only touches g2).
 func TestC6b3RSReplacesG2RelStrength(t *testing.T) {
-	off := computeRocket(rsRocketInput(rsResult(95, true), false, 70)).Score        // master off → fallback
-	baseFallback := computeRocket(rsRocketInput(nil, true, 70)).Score               // RS nil → fallback (==off semantics)
+	off := computeRocket(rsRocketInput(rsResult(95, true), false, 70)).Score // master off → fallback
+	baseFallback := computeRocket(rsRocketInput(nil, true, 70)).Score        // RS nil → fallback (==off semantics)
 	if off != baseFallback {
 		t.Fatalf("master-off and nil-RS should both use fallback: %d vs %d", off, baseFallback)
 	}
@@ -301,26 +301,28 @@ func TestC6b4ScoreModifier(t *testing.T) {
 func TestC6b4JointWatchAction(t *testing.T) {
 	fb := ActWait
 	cases := []struct {
-		stage RocketStage
-		flow  MomentumFlow
-		want  WatchAction
+		stage        RocketStage
+		flow         MomentumFlow
+		overheatExit bool
+		want         WatchAction
 	}{
-		{StageMainRun, StructuralShiftDown, ActRemove},       // SHIFT_DOWN top priority
-		{StageFailed, MomentumBuilding, ActRemove},           // FAILED top priority
-		{StagePreBreakout, MomentumBuilding, ActPrepare},
-		{StagePreBreakout, StructuralShiftUp, ActPrepare},
-		{StagePreBreakout, MomentumFading, ActWait},
-		{StageBreakoutStart, MomentumBuilding, ActBreakoutBuy},
-		{StageBreakoutStart, MomentumContinuation, ActWatchClose},
-		{StageMainRun, MomentumFading, ActTakeProfit},
-		{StageOverheated, MomentumFading, ActTakeProfit},
-		{StageBaseBuilding, StructuralShiftUp, ActWatchClose},
-		{StageMainRun, MomentumNeutral, fb},                  // NEUTRAL → fallback
-		{StageNotReady, MomentumBuilding, fb},                // unlisted → fallback
+		{StageMainRun, StructuralShiftDown, false, ActRemove}, // SHIFT_DOWN top priority
+		{StageFailed, MomentumBuilding, false, ActRemove},     // FAILED top priority
+		{StagePreBreakout, MomentumBuilding, false, ActPrepare},
+		{StagePreBreakout, StructuralShiftUp, false, ActPrepare},
+		{StagePreBreakout, MomentumFading, false, ActWait},
+		{StageBreakoutStart, MomentumBuilding, false, ActBreakoutBuy},
+		{StageBreakoutStart, MomentumContinuation, false, ActWatchClose},
+		{StageMainRun, MomentumFading, false, ActTakeProfit},
+		{StageOverheated, MomentumFading, true, ActTakeProfit}, // climax/broken → exit
+		{StageOverheated, MomentumFading, false, fb},           // trend intact → keep fallback, not TAKE_PROFIT
+		{StageBaseBuilding, StructuralShiftUp, false, ActWatchClose},
+		{StageMainRun, MomentumNeutral, false, fb},   // NEUTRAL → fallback
+		{StageNotReady, MomentumBuilding, false, fb}, // unlisted → fallback
 	}
 	for _, c := range cases {
-		if got := jointWatchAction(c.stage, c.flow, fb); got != c.want {
-			t.Errorf("joint(%s,%s)=%s want %s", c.stage, c.flow, got, c.want)
+		if got := jointWatchAction(c.stage, c.flow, c.overheatExit, fb); got != c.want {
+			t.Errorf("joint(%s,%s,exit=%v)=%s want %s", c.stage, c.flow, c.overheatExit, got, c.want)
 		}
 	}
 }

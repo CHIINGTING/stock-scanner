@@ -10,9 +10,9 @@ import (
 
 func TestClassifyStage(t *testing.T) {
 	tests := []struct {
-		name                                            string
+		name                                           string
 		avgReturn20, avgRSI, newHigh, breakout, volExp float64
-		want                                            RotationStage
+		want                                           RotationStage
 	}{
 		{"late: overextended", 30, 75, 80, 60, 50, LateRotation},
 		{"hot: many new highs + high rsi", 18, 66, 60, 30, 40, HotRotation},
@@ -73,11 +73,11 @@ func TestShortFlowDirection(t *testing.T) {
 
 func TestClassifyShortStage(t *testing.T) {
 	tests := []struct {
-		name                  string
-		stScore, midScore     float64
-		dir                   string
-		avgRSI                float64
-		want                  string
+		name              string
+		stScore, midScore float64
+		dir               string
+		avgRSI            float64
+		want              string
 	}{
 		// 短線強、20日仍弱 → 早期輪動（核心情境：資金剛流入）
 		{"early: short strong mid weak", 60, 30, FlowInflow, 55, STEarlyRotation},

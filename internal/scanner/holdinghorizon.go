@@ -63,7 +63,7 @@ var hhStageNames = map[HoldingStage]string{
 
 // HoldingHorizonResult is the structured, display-oriented output.
 type HoldingHorizonResult struct {
-	Computed      bool                 `json:"computed"`       // false = 資料不足（其餘欄位皆零值）
+	Computed      bool                 `json:"computed"` // false = 資料不足（其餘欄位皆零值）
 	Stage         HoldingStage         `json:"stage"`
 	StageZh       string               `json:"stage_zh"`
 	Bucket        HoldingHorizonBucket `json:"bucket"`

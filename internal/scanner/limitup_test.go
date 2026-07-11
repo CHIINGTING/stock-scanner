@@ -47,7 +47,7 @@ func TestDetectLimitStatus(t *testing.T) {
 		{
 			name:     "distribution: prev locked limit-up, today down on volume",
 			prevPrev: bar(100, 100, 100, 100, 5000),
-			prev:     bar(110, 110, 110, 110, 600), // prev day locked +10%
+			prev:     bar(110, 110, 110, 110, 600),   // prev day locked +10%
 			today:    bar(109, 109, 100, 101, 25000), // today down, big volume
 			volRatio: 2.5,
 			want:     LimitDistribution,

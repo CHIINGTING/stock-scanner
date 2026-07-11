@@ -15,15 +15,15 @@ import (
 
 // Backtest holds historical stats for the current pattern.
 type Backtest struct {
-	PatternName      string
-	StockSampleCount int
-	StockWinRate     float64
+	PatternName       string
+	StockSampleCount  int
+	StockWinRate      float64
 	SectorSampleCount int
-	SectorWinRate    float64
-	AvgReturn        float64 // 5 日平均報酬（%）
-	AvgDrawdown      float64 // 平均最大回撤（%，負）
-	RiskReward       float64
-	Confidence       string // HIGH | MEDIUM | LOW
+	SectorWinRate     float64
+	AvgReturn         float64 // 5 日平均報酬（%）
+	AvgDrawdown       float64 // 平均最大回撤（%，負）
+	RiskReward        float64
+	Confidence        string // HIGH | MEDIUM | LOW
 }
 
 // patternFn evaluates whether a named setup is present at bar i (no look-ahead).

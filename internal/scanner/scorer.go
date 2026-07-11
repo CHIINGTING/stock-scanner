@@ -32,8 +32,8 @@ func detectLimitStatus(candles []fetcher.Candle, volRatio float64) (status, note
 		return "", ""
 	}
 
-	gain := (today.Close/prev.Close - 1) * 100     // 收盤漲幅
-	highGain := (today.High/prev.Close - 1) * 100  // 盤中最高漲幅（是否曾觸及漲停）
+	gain := (today.Close/prev.Close - 1) * 100      // 收盤漲幅
+	highGain := (today.High/prev.Close - 1) * 100   // 盤中最高漲幅（是否曾觸及漲停）
 	closedAtHigh := today.Close >= today.High*0.998 // 收在當日最高（封住）
 
 	// 1) 漲停打開後放量下殺：盤中觸及漲停，但收盤大幅拉回且放量。
@@ -266,13 +266,13 @@ func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicat
 // ──────────────────────────────────────────────────────────────────────────────
 
 type volumeResult struct {
-	score         int     // 0–25
-	ratio         float64
-	signal        string  // 價漲量增 / 價漲量縮 / 價跌量增 / 價跌量縮
-	buySellRatio  float64
-	isLargeOrder  bool
-	avgVol20      int64
-	reasons       []string
+	score        int // 0–25
+	ratio        float64
+	signal       string // 價漲量增 / 價漲量縮 / 價跌量增 / 價跌量縮
+	buySellRatio float64
+	isLargeOrder bool
+	avgVol20     int64
+	reasons      []string
 }
 
 func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result, limitStatus, limitNote string) volumeResult {

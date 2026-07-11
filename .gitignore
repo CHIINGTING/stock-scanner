@@ -6,7 +6,7 @@ docs/
 *.log
 .DS_Store
 .claude/settings.local.json
-
+git
 # R8 ETF flow data products (keep dir structure via .gitkeep; ignore real data).
 data/etf_holdings/*.json
 data/etf_holdings/raw/*.csv
