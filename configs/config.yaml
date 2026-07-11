@@ -164,6 +164,34 @@ scanner:
         type: "passive"
     # strength: {}                                # 省略 → etfflow.DefaultStrengthThresholds()
 
+  # News / 消息面（Phase 1）— SHADOW MODE，display / record / store only。
+  # enable_news=false（預設）時完全不 fetch、不 attach，WatchlistEntry.News 為 nil。
+  # show_news=false（預設）時 report ⑩ 與市場消息 banner 不顯示。兩者皆不影響
+  # RocketScore / WatchAction / ExplosionProb / Action / 排序 / 停損。SocialWorkerDaily
+  # 走 WordPress REST API（主要來源）；TWETQ 為 Cloudflare 站，best-effort（/podcast 為
+  # JS 渲染，多半降級為空）。不使用 LLM、不新增 DB、不下單、不接 broker。
+  enable_news: false                              # 總開關，預設 false
+  show_news: false                                # 顯示開關，預設 false
+  news:
+    shadow_mode: true                             # Phase 1 恆為 true（保留給 Phase 2）
+    max_age_days: 10                              # 超過此天數的訊號視為 EXPIRED（仍保存於 snapshot）
+    age:                                          # 生命週期邊界（集中管理，勿散落程式）
+      fresh_days: 2
+      active_days: 5
+      decaying_days: 10
+    aliases_file: "configs/news_aliases.yaml"     # 明確別名 / 主題字典（缺檔 → 只用族群字典）
+    snapshot_dir: ""                              # 空 → 沿用 report.output_dir（reports/）
+    timeout_seconds: 15
+    user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+    providers:
+      socialworkerdaily:
+        enabled: true
+        api_base: "https://socialworkerdaily.com/wp-json/wp/v2"
+        max_items: 8
+      twetq:
+        enabled: true                            # best-effort；失敗自動隔離、不影響掃描
+        base_url: "https://twetq.com"
+
   kdj:
     k_period: 9
     d_smooth: 3

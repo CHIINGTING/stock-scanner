@@ -231,8 +231,8 @@ func accelPath() []float64 {
 
 // 10. adjusted-close off → uses Close (SlopeAccel reflects Close path).
 func TestMomentumUsesCloseWhenAdjOff(t *testing.T) {
-	closes := accelPath()                  // accelerating on Close
-	adj := constSlice(len(closes), 100)    // flat adj must be ignored
+	closes := accelPath()               // accelerating on Close
+	adj := constSlice(len(closes), 100) // flat adj must be ignored
 	r := ComputeMomentum(candlesFrom(closes, adj, constSlice(len(closes), 1000)), constSlice(len(closes), 50), 1.0, testMFCfg())
 	if r.SlopeAccel <= 0.005 {
 		t.Errorf("flag off must use Close (accelerating) → SlopeAccel>0.005, got %.5f", r.SlopeAccel)
@@ -243,8 +243,8 @@ func TestMomentumUsesCloseWhenAdjOff(t *testing.T) {
 func TestMomentumUsesAdjWhenOn(t *testing.T) {
 	cfg := testMFCfg()
 	cfg.UseAdjustedClose = true
-	adj := accelPath()                       // accelerating AdjClose
-	closes := constSlice(len(adj), 100)      // flat Close
+	adj := accelPath()                  // accelerating AdjClose
+	closes := constSlice(len(adj), 100) // flat Close
 	r := ComputeMomentum(candlesFrom(closes, adj, constSlice(len(adj), 1000)), constSlice(len(adj), 50), 1.0, cfg)
 	if r.SlopeAccel <= 0.005 {
 		t.Errorf("flag on with valid AdjClose (accelerating) → SlopeAccel>0.005, got %.5f", r.SlopeAccel)
@@ -255,8 +255,8 @@ func TestMomentumUsesAdjWhenOn(t *testing.T) {
 func TestMomentumAdjInvalidFallbackClose(t *testing.T) {
 	cfg := testMFCfg()
 	cfg.UseAdjustedClose = true
-	closes := accelPath()                // accelerating Close
-	adj := constSlice(len(closes), 0)    // invalid → fallback Close
+	closes := accelPath()             // accelerating Close
+	adj := constSlice(len(closes), 0) // invalid → fallback Close
 	r := ComputeMomentum(candlesFrom(closes, adj, constSlice(len(closes), 1000)), constSlice(len(closes), 50), 1.0, cfg)
 	if r.SlopeAccel <= 0.005 {
 		t.Errorf("invalid AdjClose should fall back to Close (accelerating) → SlopeAccel>0.005, got %.5f", r.SlopeAccel)

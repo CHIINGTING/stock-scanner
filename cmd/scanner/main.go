@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,6 +10,9 @@ import (
 
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/news"
+	"github.com/deep-huang/stock-scanner/internal/news/socialworkerdaily"
+	"github.com/deep-huang/stock-scanner/internal/news/twetq"
 	"github.com/deep-huang/stock-scanner/internal/report"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 	"gopkg.in/yaml.v3"
@@ -101,7 +105,8 @@ func main() {
 	// ── 1. Portfolio & Watchlist ──────────────────────────────────────────────
 	var portfolioResults []scanner.StockAnalysis
 	var watchlistResults []scanner.WatchlistEntry
-	var wStocks []fetcher.StockData // raw watchlist OHLCV (enriched after rotation)
+	var wStocks []fetcher.StockData  // raw watchlist OHLCV (enriched after rotation)
+	var stockList *fetcher.StockList // retained for the news resolver dictionary
 
 	if _, statErr := os.Stat(cfg.StocksFile); statErr == nil {
 		fmt.Printf("[1/4] 讀取 %s ...\n", cfg.StocksFile)
@@ -109,6 +114,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("load stocks file: %v", err)
 		}
+		stockList = sl
 
 		if len(sl.AllPositions()) > 0 {
 			fmt.Printf("      抓取 Positions (%d 支)...\n", len(sl.AllPositions()))
@@ -199,6 +205,21 @@ func main() {
 		}
 	}
 
+	// ── 3.6 News / 消息面 (Phase 1) — SHADOW MODE, display/context only ──────────
+	// Gated post-pass AFTER enrichment. Never touches score/action/probability/order.
+	// Provider failures are isolated & logged; the scan always completes. Off by default.
+	var newsSummary *news.MarketNewsSummary
+	if cfg.Scanner.EnableNews {
+		// Look-ahead guard: only live-fetch news when the analysis date IS today. A
+		// historical run must not stamp today's fetched news with a past ObservedAt.
+		if now := time.Now(); news.SameDay(analysisDate, now) {
+			newsSummary = collectNews(cfg.Scanner, cfg.Report.OutputDir, sectorList, stockList, watchlistResults, now)
+		} else {
+			log.Printf("news: skip live fetch for historical date %s (avoid look-ahead); read stored snapshot instead",
+				analysisDate.Format("2006-01-02"))
+		}
+	}
+
 	// ── 4. Report ─────────────────────────────────────────────────────────────
 	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
@@ -207,6 +228,7 @@ func main() {
 		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
 		ShowBacktestInsights:        cfg.Scanner.ShowBacktestInsights,
 		ShowETFFlow:                 cfg.Scanner.ShowETFFlow,
+		ShowNews:                    cfg.Scanner.ShowNews,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
@@ -214,7 +236,7 @@ func main() {
 		MFScoreModifierFading:       cfg.Scanner.MFScoreModifierFading,
 		MFScoreModifierShiftDown:    cfg.Scanner.MFScoreModifierShiftDown,
 	}
-	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv); err != nil {
+	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv, newsSummary); err != nil {
 		log.Fatalf("report: %v", err)
 	}
 
@@ -291,6 +313,61 @@ func attachETFFlow(entries []scanner.WatchlistEntry, sc scanner.Config, reportDa
 	}
 	flows := etfflow.CalculateFlows(histories)
 	scanner.AttachETFFlow(entries, flows, reportDate, sc.ETFFlow.Strength.Thresholds())
+}
+
+// collectNews runs the Phase-1 SHADOW-MODE news pass: build the resolver dictionary from
+// the sector + stock universe (+ aliases file), fetch enabled providers (isolated
+// failures), classify, attach per-stock views onto entries, and return the market summary
+// for the report banner. It never changes score/action/probability/order. observedAt is
+// the real wall-clock time (passed only when analysisDate == today) and becomes each
+// signal's ObservedAt + the snapshot filename — the look-ahead guard.
+func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.SectorList, stockList *fetcher.StockList, entries []scanner.WatchlistEntry, observedAt time.Time) *news.MarketNewsSummary {
+	idx := news.NewResolveIndex()
+	if sectorList != nil {
+		for _, sec := range sectorList.Sectors {
+			idx.AddSectorName(sec.Name)
+			for _, st := range sec.Stocks {
+				idx.AddStock(st.Code, st.Name)
+				idx.AddStockSector(st.Code, sec.Name)
+			}
+		}
+	}
+	if stockList != nil {
+		for _, p := range stockList.AllPositions() {
+			idx.AddStock(p.Code, p.Name)
+		}
+		for _, w := range stockList.Watchlist {
+			idx.AddStock(w.Code, w.Name)
+		}
+	}
+	if d, err := news.LoadAliases(sc.News.AliasesFile); err != nil {
+		log.Printf("news: aliases load error: %v", err)
+	} else {
+		idx.ApplyAliases(d)
+	}
+
+	ncfg := sc.News.Defaulted()
+	if ncfg.SnapshotDir == "" {
+		ncfg.SnapshotDir = reportDir
+	}
+	timeout := time.Duration(ncfg.TimeoutSeconds) * time.Second
+
+	var providers []news.NewsProvider
+	if ncfg.Providers.SocialWorkerDaily.Enabled {
+		providers = append(providers, socialworkerdaily.New(ncfg.Providers.SocialWorkerDaily, ncfg.UserAgent, timeout))
+	}
+	if ncfg.Providers.TWETQ.Enabled {
+		providers = append(providers, twetq.New(ncfg.Providers.TWETQ, ncfg.UserAgent, timeout))
+	}
+	if len(providers) == 0 {
+		log.Printf("news: enabled but no providers configured — skipping")
+		return nil
+	}
+
+	svc := news.NewService(providers, idx, ncfg, log.Printf)
+	res := svc.Collect(context.Background(), observedAt)
+	scanner.AttachNews(entries, res.Views)
+	return res.Summary
 }
 
 // qualifiesForWatchlist reports whether an action should land a stock on the

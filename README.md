@@ -22,7 +22,9 @@ Stock Radar 不是技術指標展示工具。
 9. [量價分析說明](#量價分析說明)
 10. [市場別：TW vs TWO](#市場別tw-vs-two)
 11. [執行參數](#執行參數)
-12. [常見問題](#常見問題)
+12. [消息面（News Shadow Module）](#消息面news-shadow-module)
+13. [設定檔與所有開關（config.yaml）](#設定檔與所有開關configyaml)
+14. [常見問題](#常見問題)
 
 ---
 
@@ -508,6 +510,203 @@ make run-all       # 全部（上市 + 上櫃）
 
 ---
 
+## 消息面（News Shadow Module）
+
+> Phase 1 為 **Shadow Mode（純影子模式）**：只做「顯示 / 記錄 / 保存」，
+> **完全不改變任何 BUY / WATCH / SELL、飆股分數、排序、RocketScore、WatchAction、ExplosionProb**。
+
+消息面模組把外部市場觀點（目前為股癌 Podcast 筆記）疊加到既有技術面掃描結果上，
+作為「背景 context」，**不是交易指令**。關閉時（預設）報告與行為與過去完全一致。
+
+### 資料來源
+
+| 來源 | 方式 | 說明 |
+|------|------|------|
+| **SocialWorkerDaily** | WordPress REST API（主）+ RSS fallback | 股癌 Podcast 筆記，穩定、有 EP 集數、完整內文與可靠發布時間，**主要來源** |
+| **TWETQ** | 瀏覽器 UA 直連（best-effort） | Cloudflare 台股量化站；`/podcast` 為 JS 渲染，多半降級為空。抓取失敗會被隔離，**不影響**掃描完成 |
+
+### 運作流程
+
+抓取 → **同集去重**（跨來源同一 EP 合併為單一事件，不重複計分）→ **個股 / 族群解析**
+（明確字典，不亂猜；無法確定就保留 unresolved）→ **語意分類**（規則式，不使用 LLM）→
+**跨來源衝突偵測** → 產生每檔卡片消息 + 市場消息總結 → 寫入**時間戳快照**。
+
+分類型別：`BULLISH` / `BEARISH` / `ROTATION_IN` / `ROTATION_OUT` / `RISK_WARNING` / `NEUTRAL`。
+
+- 具備負向與複合語意：「突破失敗」不判多、「沒有轉弱」不判空、
+  「修正…但仍在季線之上」→ `RISK_WARNING`（不會粗暴判強空、也不會誤判 `ROTATION_IN`）。
+- 同一事件不同來源方向相反時（例：SWD 被動元件 `ROTATION_OUT` vs TWETQ `BULLISH`），
+  **兩邊證據都保留**並標記 `conflict`，不會靜默覆蓋。
+
+### 報告呈現（需 `show_news: true`）
+
+- 每檔股票卡片新增 **⑩ 消息面** 區塊：個股 / 族群訊號、來源 EP、強度、
+  Age（訊號新鮮度）、來源分歧標記。
+- 市場掃描頁頂端新增 **市場消息面 banner**，依 SignalType 分組顯示：
+  🟢 資金輪動進場／🟢 偏多／🟡 風險警示／🔴 資金輪動流出／🔴 偏空，
+  並附 Fresh / Active / Expired 計數。**（BULLISH 不會被誤標成 ROTATION_IN。）**
+
+### 歷史快照與防止 look-ahead
+
+- 每次執行寫出 `reports/news_YYYYMMDD_HHMMSS.json`——**每次執行一份、不覆蓋**，
+  盤中多次執行（08:30 / 09:30 / …）都各自保留。
+- 快照保存：`event_id`、來源與 URL、EP、`raw_title`、內文摘要、`evidence`、
+  解析出的個股 / 族群、SignalType、`strength`、`confidence`、`conflict`，以及
+  `published_at`（來源發布時間）與 `observed_at`（實際觀察 wall-clock 時間）——兩者分離。
+- **防 look-ahead：** 以 `--date` 指定「非今日」執行時，**不會即時抓取當前新聞**
+  （避免用今天的新聞假裝是過去看到的）；未來回測只能從 `observed_at` 起算才可使用該訊號。
+
+### 啟用方式
+
+消息面**沒有 CLI 旗標**，透過 `configs/config.yaml` 開啟（預設全關）：
+
+```yaml
+scanner:
+  enable_news: true    # 抓取 + 解析 + 寫快照（背景計算）
+  show_news: true      # 報告顯示 ⑩ 消息面 + 市場 banner
+```
+
+| 組合 | 行為 |
+|------|------|
+| `enable_news: false`（預設） | 完全不抓取、不 attach、不寫快照，報告與行為零改變 |
+| `enable_news: true, show_news: false` | **有抓取、有寫快照**，但報告不顯示（純記錄模式） |
+| `enable_news: true, show_news: true` | 抓取 + 顯示（完整） |
+| `enable_news: false, show_news: true` | 不抓取，報告也沒有東西可顯示 |
+
+> 別名字典：`configs/news_aliases.yaml`（個股別名 → 代號、主題關鍵字 → 族群），可自行增補。
+
+---
+
+## 設定檔與所有開關（config.yaml）
+
+所有行為集中在 `configs/config.yaml`。多數進階功能採**雙層開關**：
+
+- **`enable_*`**：是否**計算 / 抓取**該功能（關 → 完全不算，對既有輸出零影響）。
+- **`show_*`**：是否在報告**顯示**（純顯示，不影響分數 / 排序 / 動作）。
+- 另有一個 **master flag** `enable_signal_guardrail_scoring`：唯有它為 `true` 時，
+  RS / 新高 / VCP / MomentumFlow 這些 shadow 訊號才會**真的影響**飆股分數；
+  否則即使各自 `enable` 也只是 shadow-only（只計算、不改分數，即「觀察模式」）。
+
+### fetcher（抓取 / 快取）
+
+| 變數 | 預設 | 說明 |
+|------|------|------|
+| `concurrency` | 3 | 同時請求數，建議 ≤5 避免 Yahoo 限速 |
+| `request_delay_ms` | 400 | 每個 worker 請求間隔（ms），建議 300~500 |
+| `timeout_sec` | 30 | 單次 HTTP timeout |
+| `cache_ttl_min` | 15 | OHLCV 快取時效（分鐘） |
+| `cache_dir` | `.cache` | 快取目錄 |
+| `eof_cooldown_min` | 5 | 遇 EOF / 連線重置後該 ticker 冷卻分鐘數 |
+| `history_range` | `2y` | 歷史抓取範圍（6mo / 1y / 2y），越長回測樣本越多 |
+
+### scanner — 基礎
+
+| 變數 | 預設 | 說明 |
+|------|------|------|
+| `min_price` | 10.0 | 最低收盤價（過濾低價股） |
+| `min_avg_volume` | 500000 | MA20 量能門檻 |
+| `top_n` | 50 | 市場掃描顯示前 N（`--top` 可覆蓋） |
+| `use_adjusted_close` | false | 還原收盤總開關；true → RS / 新高 / VCP / 回測改用 AdjClose |
+
+### scanner — 訊號 guardrail / 顯示總開關
+
+| 變數 | 層級 | 說明 |
+|------|------|------|
+| `enable_signal_guardrail_scoring` | **master** | 唯有 true，shadow 訊號才可影響分數 / 動作 / 機率；預設 false = shadow-only |
+| `show_guardrail_signals` | 顯示 | Watchlist 卡片顯示 Guardrail Signals 解釋（實驗性），不影響分數 |
+| `show_backtest_insights` | 顯示 | 多一個「🔬 回測洞察」分頁（靜態摘要），不影響分數 |
+
+### scanner — RS 相對強弱（C2）
+
+`enable_rs_rank`（總開關）｜`rs_lookback_days`(120)｜`rs_min_history_days`(100)｜
+`rs_universe_exclude_non_common_stock`(true)｜`rs_use_adjusted_close`｜
+`rs_leadership_threshold`(80)｜`rs_watch_threshold`(70)
+
+### scanner — 52 週 / 多週期新高（C3）
+
+`enable_new_high`（總開關）｜`nh_lookbacks`([20,60,120,250])｜`nh_min_history_days`(60)｜
+`nh_leader_within_pct`(25)｜`nh_near_52w_high_pct`(15)｜`nh_breakout_watch_pct`(5)｜
+`nh_leader_strong_pct`(10)｜`nh_leader_far_pct`(50)｜`nh_vol_confirm_ratio`(1.5)｜
+`nh_overext_rsi`(75)｜`nh_use_adjusted_close`
+
+### scanner — VCP 波動收縮型態（C4）
+
+`enable_vcp`（總開關）｜`vcp_lookback_days`(60)｜`vcp_min_history_days`(40)｜
+`vcp_min_contractions`(2)｜`vcp_min_quality_score`(70)｜`vcp_use_adjusted_close`｜
+品質權重 `vcp_tightness_weight`(30) / `vcp_volume_dryup_weight`(25) /
+`vcp_monotonic_weight`(20) / `vcp_support_hold_weight`(15) / `vcp_near_breakout_weight`(10)｜
+`vcp_zigzag_reversal_pct`(2.5)｜`vcp_min_contraction_depth_pct`(2)｜`vcp_max_contractions`(5)
+
+### scanner — MomentumFlow 個股動能（C5）
+
+`enable_momentum_flow`（總開關）｜`mf_min_history_days`(30)｜
+`mf_accel_short_window`(3) / `mf_accel_long_window`(20)｜
+`mf_accel_pos_thresh`(0.0008) / `mf_accel_neg_thresh`(-0.0008) / `mf_accel_scale`(12000)｜
+`mf_key_ma`(20)｜`mf_reclaim_lookback`(5)｜`mf_zigzag_reversal_pct`(1.5)｜
+`mf_rsi_div_lookback`(20)｜`mf_use_adjusted_close`｜
+`mf_shift_up_min_below_days`(2) / `mf_shift_up_confirm_days`(2)
+
+### scanner — 多週期 Multi-Timeframe（R4-2，shadow-only）
+
+`enable_multi_timeframe`（總開關）｜`mtf_use_adjusted_close`｜
+`mtf_strong_daily_score_threshold`(85) / `mtf_strong_weekly_score_threshold`(85)｜
+`mtf_risk_warning_enabled`(true)｜`mtf_sort_tiebreaker_enabled`(true)｜
+`mtf_sort_tiebreaker_score_gap`(3)
+
+### scanner — MomentumFlow 分數修正（僅 master flag 開時生效）
+
+`mf_score_modifier_building`(5)｜`mf_score_modifier_continuation`(6)｜
+`mf_score_modifier_shift_up`(8)｜`mf_score_modifier_fading`(-6)｜
+`mf_score_modifier_shift_down`(-12)｜`mf_score_modifier_cap`(12)
+
+### scanner — HoldingHorizon（R7-1，shadow-only 參考持有區間）
+
+`enable_holding_horizon`（總開關）｜`hh_min_history_days`(70)｜`hh_atr_compress_pct`(4.0)
+
+### scanner — HorizonHint（R6-7，display-only，報告 ⑧）
+
+`show_horizon_hint`（總開關）— 顯示回測觀察週期提示，不影響分數 / 排序 / 動作。
+
+### scanner — ETF Flow（R8，display / context，報告 ⑨）
+
+| 變數 | 說明 |
+|------|------|
+| `enable_etf_flow` | 是否載入 ETF snapshot 並 attach（預設 false） |
+| `show_etf_flow` | 報告 ⑨ 是否顯示（預設 false） |
+| `etf_flow.snapshot_dir` | snapshot JSON 目錄（`data/etf_holdings`） |
+| `etf_flow.history_days` | 連續天數回看窗（10） |
+| `etf_flow.watch_etfs` | 追蹤的 ETF 清單（`code` + `type`: active / passive） |
+
+### scanner — News 消息面（Phase 1，詳見上一節）
+
+| 變數 | 說明 |
+|------|------|
+| `enable_news` | 抓取 + 解析 + 寫快照（預設 false） |
+| `show_news` | 報告 ⑩ + 市場 banner 顯示（預設 false） |
+| `news.shadow_mode` | Phase 1 恆 true（保留給 Phase 2） |
+| `news.max_age_days` | 超過此天數視為 EXPIRED（仍存快照，10） |
+| `news.age.{fresh_days,active_days,decaying_days}` | 生命週期邊界（2 / 5 / 10） |
+| `news.aliases_file` | 別名 / 主題字典路徑 |
+| `news.snapshot_dir` | 快照目錄（空 → 沿用 `report.output_dir`） |
+| `news.timeout_seconds` | 單來源抓取 timeout（15） |
+| `news.user_agent` | 瀏覽器 UA（TWETQ 過 Cloudflare 用） |
+| `news.providers.socialworkerdaily.{enabled,api_base,max_items}` | SWD 來源設定 |
+| `news.providers.twetq.{enabled,base_url}` | TWETQ 來源設定（best-effort） |
+
+### scanner — 技術指標參數
+
+`kdj.k_period`(9) / `d_smooth`(3) / `j_smooth`(3)｜`bollinger.period`(20) / `std_dev`(2.0)
+
+### 其他
+
+| 變數 | 說明 |
+|------|------|
+| `report.output_dir` | 報告輸出目錄（`./reports`） |
+| `stocks_file` | 持股 / 觀察清單（`stocks.yaml`） |
+| `sectors_file` | 族群輪動清單（`configs/sectors.yaml`） |
+
+---
+
 ## 常見問題
 
 **Q：報告顯示「無資料」？**
@@ -527,6 +726,15 @@ A：系統同時使用兩者，取較保守的結果。BFP 條件是質性判斷
 
 **Q：如何設定自己的停損線？**
 A：目前停損由 ATR（平均真實波幅）和布林通道下軌動態計算。若想自訂，可修改 `internal/scanner/scorer.go` 的 `priceTargets` 函式。
+
+**Q：消息面（News）會不會影響 BUY / WATCH / SELL 或飆股分數？**
+A：不會。Phase 1 為純 Shadow Mode，只做顯示 / 記錄 / 保存。關閉時（預設 `enable_news: false`）報告與行為與過去完全一致。
+
+**Q：TWETQ 抓不到東西（`fetched=0`）正常嗎？**
+A：正常。TWETQ 的 `/podcast` 為 JS 渲染，多半降級為空；抓取失敗會被隔離，不影響掃描完成。主要消息來源是 SocialWorkerDaily。
+
+**Q：為什麼用 `--date` 指定過去日期時看不到當天的新聞？**
+A：這是**防 look-ahead** 的刻意設計——歷史日期執行不會即時抓取當前新聞，以免用今天的消息假裝是過去看到的。要看歷史消息請讀當時寫出的 `reports/news_YYYYMMDD_HHMMSS.json` 快照。
 
 **Q：Yahoo Finance 速率限制怎麼辦？**
 A：調高 `configs/config.yaml` 中的 `request_delay_ms`（建議 500–1000ms），或降低 `concurrency`（建議 3–5）。

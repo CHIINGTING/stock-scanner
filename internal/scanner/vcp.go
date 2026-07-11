@@ -44,14 +44,14 @@ const (
 	defaultVCPMaxContractions = 5   // R5-2: keep only the most recent N significant legs
 
 	// Internal scoring bounds (待 R5 校準).
-	vcpTightTargetPct = 5.0  // final contraction ≤ this → full tightness
-	vcpTightLoosePct  = 20.0 // final contraction ≥ this → zero tightness
-	vcpDryFullRatio   = 0.5  // last/first leg volume ≤ this → full dry-up
-	vcpDryZeroRatio   = 1.0  // ratio ≥ this → zero dry-up
-	vcpNearTargetPct  = 3.0  // within this of base high → full near-breakout
-	vcpNearLoosePct   = 15.0 // beyond this → zero
-	vcpBigBlackVolX   = 2.0  // volume ≥ X × window avg …
-	vcpBigBlackDrop   = -0.03 // … and (close-open)/open ≤ this → destructive long black
+	vcpTightTargetPct  = 5.0   // final contraction ≤ this → full tightness
+	vcpTightLoosePct   = 20.0  // final contraction ≥ this → zero tightness
+	vcpDryFullRatio    = 0.5   // last/first leg volume ≤ this → full dry-up
+	vcpDryZeroRatio    = 1.0   // ratio ≥ this → zero dry-up
+	vcpNearTargetPct   = 3.0   // within this of base high → full near-breakout
+	vcpNearLoosePct    = 15.0  // beyond this → zero
+	vcpBigBlackVolX    = 2.0   // volume ≥ X × window avg …
+	vcpBigBlackDrop    = -0.03 // … and (close-open)/open ≤ this → destructive long black
 	vcpBigBlackPenalty = 40.0
 )
 
@@ -79,20 +79,20 @@ type VCPConfig struct {
 // vcpConfigFrom resolves a VCPConfig from the scanner Config, applying defaults.
 func vcpConfigFrom(cfg Config) VCPConfig {
 	vc := VCPConfig{
-		Enable:           cfg.EnableVCP,
-		LookbackDays:     cfg.VCPLookbackDays,
-		MinHistoryDays:   cfg.VCPMinHistoryDays,
-		MinContractions:  cfg.VCPMinContractions,
-		MinQualityScore:  cfg.VCPMinQualityScore,
+		Enable:                 cfg.EnableVCP,
+		LookbackDays:           cfg.VCPLookbackDays,
+		MinHistoryDays:         cfg.VCPMinHistoryDays,
+		MinContractions:        cfg.VCPMinContractions,
+		MinQualityScore:        cfg.VCPMinQualityScore,
 		UseAdjustedClose:       cfg.UseAdjustedClose || cfg.VCPUseAdjustedClose,
 		ZigzagReversal:         cfg.VCPZigzagReversalPct,
 		MinContractionDepthPct: cfg.VCPMinContractionDepthPct,
 		MaxContractions:        cfg.VCPMaxContractions,
 		WTightness:             cfg.VCPTightnessWeight,
-		WVolumeDryUp:     cfg.VCPVolumeDryUpWeight,
-		WMonotonic:       cfg.VCPMonotonicWeight,
-		WSupportHold:     cfg.VCPSupportHoldWeight,
-		WNearBreakout:    cfg.VCPNearBreakoutWeight,
+		WVolumeDryUp:           cfg.VCPVolumeDryUpWeight,
+		WMonotonic:             cfg.VCPMonotonicWeight,
+		WSupportHold:           cfg.VCPSupportHoldWeight,
+		WNearBreakout:          cfg.VCPNearBreakoutWeight,
 	}
 	if vc.LookbackDays <= 0 {
 		vc.LookbackDays = defaultVCPLookbackDays

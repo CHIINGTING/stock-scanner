@@ -36,13 +36,13 @@ const (
 // Lookbacks is fixed to 4 buckets mapped to the H20/H60/H120/H250 result fields
 // (the labels are conventional; actual windows come from config).
 type NewHighConfig struct {
-	Enable bool
+	Enable         bool
 	Lookbacks      [4]int
 	MinHistoryDays int
 
 	// Distance-to-52w-high bands (each compared against the |distance| magnitude).
-	LeaderWithinPct float64 // → NewHighLeadershipEligible
-	Near52wHighPct  float64 // → Near52wHigh
+	LeaderWithinPct  float64 // → NewHighLeadershipEligible
+	Near52wHighPct   float64 // → Near52wHigh
 	BreakoutWatchPct float64 // → BreakoutWatch
 
 	// Score-only knobs (do NOT define the boolean bands above).
@@ -115,9 +115,9 @@ type NewHighResult struct {
 	Computed bool // history sufficient + valid prices
 
 	// Multi-period new high (close >= prior-window high, window excludes today).
-	H20, H60, H120, H250         bool
-	H20Valid, H60Valid           bool
-	H120Valid, H250Valid         bool
+	H20, H60, H120, H250 bool
+	H20Valid, H60Valid   bool
+	H120Valid, H250Valid bool
 
 	High52w                   float64 // highest adjusted close over the 52-week window
 	DistanceFrom52wHighPct    float64 // (close/High52w - 1)*100, <= 0

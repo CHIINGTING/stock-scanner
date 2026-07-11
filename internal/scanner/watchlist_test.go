@@ -26,23 +26,25 @@ func TestBucketOf(t *testing.T) {
 
 func TestWatchActionFor(t *testing.T) {
 	cases := []struct {
-		stage RocketStage
-		ret1  float64
-		vol   float64
-		want  WatchAction
+		stage        RocketStage
+		ret1         float64
+		vol          float64
+		overheatExit bool
+		want         WatchAction
 	}{
-		{StageBaseBuilding, 0, 1, ActWatchClose},
-		{StagePreBreakout, 0, 1, ActPrepare},
-		{StageBreakoutStart, 0, 1, ActBreakoutBuy},
-		{StageMainRun, -1, 0.8, ActPullbackBuy}, // pulling back on low volume
-		{StageMainRun, 1, 1.5, ActWatchClose},   // still advancing
-		{StageOverheated, 0, 1, ActTakeProfit},
-		{StageFailed, 0, 1, ActRemove},
-		{StageNotReady, 0, 1, ActWait},
+		{StageBaseBuilding, 0, 1, false, ActWatchClose},
+		{StagePreBreakout, 0, 1, false, ActPrepare},
+		{StageBreakoutStart, 0, 1, false, ActBreakoutBuy},
+		{StageMainRun, -1, 0.8, false, ActPullbackBuy}, // pulling back on low volume
+		{StageMainRun, 1, 1.5, false, ActWatchClose},   // still advancing
+		{StageOverheated, 0, 1, true, ActTakeProfit},   // climax / broken trend → exit
+		{StageOverheated, 0, 1, false, ActPullbackBuy}, // extended but trend intact → wait for pullback
+		{StageFailed, 0, 1, false, ActRemove},
+		{StageNotReady, 0, 1, false, ActWait},
 	}
 	for _, c := range cases {
-		if got := watchActionFor(c.stage, c.ret1, c.vol); got != c.want {
-			t.Errorf("watchActionFor(%v,%v,%v)=%v want %v", c.stage, c.ret1, c.vol, got, c.want)
+		if got := watchActionFor(c.stage, c.ret1, c.vol, c.overheatExit); got != c.want {
+			t.Errorf("watchActionFor(%v,%v,%v,%v)=%v want %v", c.stage, c.ret1, c.vol, c.overheatExit, got, c.want)
 		}
 	}
 }
@@ -87,7 +89,7 @@ func TestEnrichWatchlistSmoke(t *testing.T) {
 
 	out := s.EnrichWatchlist(
 		[]fetcher.StockData{flat, strong},
-		map[string]string{},                  // no sector linkage
+		map[string]string{}, // no sector linkage
 		map[string]*SectorRotation{},
 		map[string][]fetcher.StockData{},
 		nil, // C6a: no RS table

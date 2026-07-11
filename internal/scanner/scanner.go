@@ -7,6 +7,7 @@ import (
 
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/indicator"
+	"github.com/deep-huang/stock-scanner/internal/news"
 )
 
 // Config holds scanner parameters.
@@ -164,6 +165,17 @@ type Config struct {
 	EnableETFFlow bool          `yaml:"enable_etf_flow"` // 預設 false
 	ShowETFFlow   bool          `yaml:"show_etf_flow"`   // 預設 false
 	ETFFlow       ETFFlowConfig `yaml:"etf_flow"`
+
+	// ── News / 消息面 (Phase 1) — SHADOW MODE, display/record/store only ───────
+	// EnableNews gates fetching external sources + attaching WatchlistEntry.News (via
+	// the AttachNews post-pass). Default false → never fetched/attached, field stays
+	// nil. ShowNews gates the report ⑩ section + market news banner. Both are
+	// display-only: NEVER affect RocketScore / WatchAction / ExplosionProb / Action /
+	// sort / stop / backtest. News is delayed CONTEXT, never a trade instruction. The
+	// data/dedup/resolve/snapshot layer lives in internal/news.
+	EnableNews bool            `yaml:"enable_news"` // 預設 false
+	ShowNews   bool            `yaml:"show_news"`   // 預設 false
+	News       news.NewsConfig `yaml:"news"`
 
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`

@@ -167,7 +167,7 @@ func CalculateRSRanks(items []RSInput, cfg RSConfig) []RSResult {
 			continue
 		}
 		v := results[i].RSReturnPct
-		below := sort.SearchFloat64s(sorted, v)                       // count strictly < v
+		below := sort.SearchFloat64s(sorted, v)                         // count strictly < v
 		hi := sort.Search(n, func(k int) bool { return sorted[k] > v }) // first > v
 		equal := hi - below
 		p := (float64(below) + 0.5*float64(equal)) / float64(n) * 100 // mid-rank

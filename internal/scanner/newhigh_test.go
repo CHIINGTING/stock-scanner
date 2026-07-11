@@ -154,9 +154,9 @@ func TestNewHighIsPure(t *testing.T) {
 
 // 8. adjusted-close off → uses Close.
 func TestNewHighUsesCloseWhenAdjOff(t *testing.T) {
-	cfg := testNHCfg()                // UseAdjustedClose false by default
-	closes := risingTo(300, 100, 99)  // today below prior high → NOT a new high
-	adj := risingTo(300, 100, 999)    // adj would be a huge new high, must be ignored
+	cfg := testNHCfg()               // UseAdjustedClose false by default
+	closes := risingTo(300, 100, 99) // today below prior high → NOT a new high
+	adj := risingTo(300, 100, 999)   // adj would be a huge new high, must be ignored
 	r := computeNewHigh(candleSeries(closes, adj), 1.0, 50, cfg)
 	if r.H60 {
 		t.Error("flag off must use Close (99 < prior 100) → no 60-day new high")

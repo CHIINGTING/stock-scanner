@@ -82,7 +82,7 @@ type StockAnalysis struct {
 	// ── Indicators ───────────────────────────────────────────────────────────
 	RSI         float64
 	MA20        float64
-	MA20Trend   string  // ↑↑↑ / ↑↑ / ↑ / → / ↓ / ↓↓ / ↓↓↓
+	MA20Trend   string // ↑↑↑ / ↑↑ / ↑ / → / ↓ / ↓↓ / ↓↓↓
 	KDJK        float64
 	KDJD        float64
 	KDJJ        float64
@@ -93,11 +93,11 @@ type StockAnalysis struct {
 	ATR         float64
 
 	// ── Volume analysis ──────────────────────────────────────────────────────
-	VolumeScore      int     // 0–25
-	AvgVolume20      int64   // 20-day average volume
+	VolumeScore       int     // 0–25
+	AvgVolume20       int64   // 20-day average volume
 	PriceVolumeSignal string  // "價漲量增" | "價漲量縮" | "價跌量增" | "價跌量縮" | "漲停鎖量" | "漲停失敗"
-	BuySellRatio     float64 // approximated buying pressure ratio (> 1 = bullish)
-	IsLargeOrder     bool    // volume > 3× MA20
+	BuySellRatio      float64 // approximated buying pressure ratio (> 1 = bullish)
+	IsLargeOrder      bool    // volume > 3× MA20
 
 	// ── Limit-up (漲停) chip dynamics ────────────────────────────────────────
 	LimitStatus string // "" | LOCKED_LIMIT_UP_LOW_VOLUME | LIMIT_UP_FAILED | DISTRIBUTION_AFTER_LIMIT_UP

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TWETQ 台股量化評估工具 | 股票、全市場、選股、權證、期貨、自選、PODCAST</title>
+    <link rel="icon" type="image/png" href="/assets/logo-a1-small.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-title" content="TWETQ" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta property="og:image" content="https://twetq.com/assets/app-icon-512.png" />
+    <link rel="stylesheet" href="/lofi.css?v=20260709-newbie-fixes-v5" />
+
+    <meta name="description" content="整合 TWSE、TPEx、TAIFEX 與 MOPS 官方資料的台股看盤網站，提供股票、全市場、選股、權證、期貨、自選與 PODCAST 分析。" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <link rel="canonical" href="https://twetq.com/" />
+    <meta property="og:site_name" content="TWETQ 台股量化評估工具" />
+    <meta property="og:locale" content="zh_TW" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TWETQ 台股量化評估工具 | 股票、全市場、選股、權證、期貨、自選、PODCAST" />
+    <meta property="og:description" content="整合 TWSE、TPEx、TAIFEX 與 MOPS 官方資料的台股看盤網站，提供股票、全市場、選股、權證、期貨、自選與 PODCAST 分析。" />
+    <meta property="og:url" content="https://twetq.com/" />
+    <meta property="og:image" content="https://twetq.com/og/card.svg?title=TWETQ+%E5%8F%B0%E8%82%A1%E9%87%8F%E5%8C%96%E8%A9%95%E4%BC%B0%E5%B7%A5%E5%85%B7&amp;subtitle=TWSE+%2F+TPEx+%2F+TAIFEX+%2F+MOPS" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="TWETQ 台股量化評估工具 | 股票、全市場、選股、權證、期貨、自選、PODCAST" />
+    <meta name="twitter:description" content="整合 TWSE、TPEx、TAIFEX 與 MOPS 官方資料的台股看盤網站，提供股票、全市場、選股、權證、期貨、自選與 PODCAST 分析。" />
+    <meta name="twitter:image" content="https://twetq.com/og/card.svg?title=TWETQ+%E5%8F%B0%E8%82%A1%E9%87%8F%E5%8C%96%E8%A9%95%E4%BC%B0%E5%B7%A5%E5%85%B7&amp;subtitle=TWSE+%2F+TPEx+%2F+TAIFEX+%2F+MOPS" />
+    <meta name="theme-color" content="#f7f1e3" />
+    <link rel="alternate" hreflang="zh-TW" href="https://twetq.com/" />
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3691584606938300" crossorigin="anonymous"></script>
+
+    <meta name="keywords" content="台股,股票,權證,期貨,選股,全市場,PODCAST,財務資料,公司基本資料" />
+    <script type="application/ld+json" nonce="home6165e5797bfd4b0cd2d468e6fb0d2cc4">{"@context":"https://schema.org","@type":"WebSite","name":"TWETQ 台股量化評估工具","url":"https://twetq.com/","inLanguage":"zh-Hant","description":"整合 TWSE、TPEx、TAIFEX 與 MOPS 官方資料的台股看盤網站，提供股票、全市場、選股、權證、期貨、自選與 PODCAST 分析。"}</script><script type="application/ld+json" nonce="home6165e5797bfd4b0cd2d468e6fb0d2cc4">{"@context":"https://schema.org","@type":"Organization","name":"TWETQ 台股量化評估工具","url":"https://twetq.com/","email":"service@twetq.com"}</script><script type="application/ld+json" nonce="home6165e5797bfd4b0cd2d468e6fb0d2cc4">{"@context":"https://schema.org","@type":"WebApplication","name":"TWETQ 台股量化評估工具","applicationCategory":"FinanceApplication","operatingSystem":"Web","url":"https://twetq.com/","description":"整合 TWSE、TPEx、TAIFEX 與 MOPS 官方資料的台股看盤網站，提供股票、全市場、選股、權證、期貨、自選與 PODCAST 分析。","offers":{"@type":"Offer","price":"0","priceCurrency":"TWD"}}</script>
+
+    <meta name="x-tq-home-listed" content="1368" />
+    <meta name="x-tq-home-otc" content="1012" />
+    <meta name="x-tq-home-taiex" content="46780.62" />
+    <meta name="x-tq-home-tpex" content="445.38" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="shell">
+        <header class="app-header">
+          <a id="brandHomeLink" class="brand-lockup" href="/" aria-label="回到首頁">
+            <div class="brand-mark"><img src="/assets/logo-a1-small.png" alt="" width="36" height="36" /></div>
+            <div>
+              <h1>台股量化評估工具</h1>
+            </div>
+          </a>
+
+          <nav id="desktopNavBar" class="desktop-nav-bar" aria-label="快速分頁">
+            <a class="desktop-nav-item" href="/market" data-mode-link="market">全市場</a>
+            <a class="desktop-nav-item" href="/rank" data-mode-link="rank">排行</a>
+            <a class="desktop-nav-item" href="/screen" data-mode-link="screen">選股</a>
+            <a class="desktop-nav-item active" href="/stock" data-mode-link="stock">股票</a>
+            <a class="desktop-nav-item" href="/podcast" data-mode-link="podcast">PODCAST</a>
+            <a class="desktop-nav-item" href="/support" data-mode-link="support">說明</a>
+          </nav>
+
+          <button id="navToggleButton" class="nav-toggle" type="button" aria-controls="siteNavDrawer" aria-expanded="false">
+            <span class="nav-toggle-mark" aria-hidden="true"></span>
+            <span>功能</span>
+          </button>
+
+          <div id="siteNavOverlay" class="site-nav-overlay" hidden></div>
+          <nav id="siteNavDrawer" class="site-nav-drawer" aria-label="主要功能分頁" aria-hidden="true">
+            <div class="site-nav-head">
+              <div>
+                <span class="site-nav-kicker">TWETQ</span>
+                <strong>功能選單</strong>
+              </div>
+              <button id="navCloseButton" class="site-nav-close" type="button" aria-label="關閉功能選單">×</button>
+            </div>
+            <div class="mode-switch nav-catalog" role="tablist" aria-label="主要功能分頁">
+              <a id="marketModeButton" class="mode-button nav-group-main" href="/market" role="tab" aria-selected="false">全市場</a>
+              <a id="rankModeButton" class="mode-button nav-group-main" href="/rank" role="tab" aria-selected="false">排行</a>
+              <a id="screenModeButton" class="mode-button nav-group-main" href="/screen" role="tab" aria-selected="false">選股</a>
+              <a id="stockModeButton" class="mode-button nav-group-main active" href="/stock" role="tab" aria-selected="true">股票</a>
+              <a id="podcastModeButton" class="mode-button nav-group-main" href="/podcast" role="tab" aria-selected="false">PODCAST</a>
+              <a id="supportModeButton" class="mode-button nav-group-main" href="/support" role="tab" aria-selected="false">說明</a>
+            </div>
+          </nav>
+        </header>
+
+        <section class="search-panel command-bar command-bar-stock" aria-label="主要查詢列">
+          <div id="inputRow" class="input-row">
+            <div class="input-wrap">
+              <div id="predictionGhost" class="prediction-ghost" aria-hidden="true"></div>
+              <input
+                id="stockInput"
+                class="stock-input"
+                autocomplete="off"
+                placeholder="輸入股票代號或名稱，例如 2330、台積電、0056..."
+              />
+              <div id="suggestions" class="suggestions" hidden></div>
+            </div>
+            <button id="runButton" class="run-button" type="button">開始評估</button>
+          </div>
+
+          <div id="warrantControls" class="warrant-controls" hidden>
+            <a id="warrantLookupButton" class="warrant-sub-button active" href="/warrant">權證查詢</a>
+            <a id="strategyModeButton" class="warrant-sub-button" href="/warrant/strategy">策略</a>
+            <label class="warrant-issuer-inline">
+              <span>發行公司</span>
+              <select id="warrantIssuer">
+                <option value="">全部發行公司</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="strategyControls" class="strategy-controls" hidden>
+            <div class="strategy-control-group">
+              <div class="strategy-control-title">到期日</div>
+              <label>
+                <span>最少天數</span>
+                <input id="strategyExpiryMin" type="number" min="1" step="1" value="110" inputmode="numeric" />
+              </label>
+              <label>
+                <span>最多天數</span>
+                <input id="strategyExpiryMax" type="number" min="1" step="1" value="150" inputmode="numeric" />
+              </label>
+            </div>
+
+            <div class="strategy-control-group">
+              <div class="strategy-control-title">認購履約價</div>
+              <label>
+                <span>最低倍率</span>
+                <input id="strategyCallMin" type="number" min="0.01" step="0.01" value="1.20" inputmode="decimal" />
+              </label>
+              <label>
+                <span>最高倍率</span>
+                <input id="strategyCallMax" type="number" min="0.01" step="0.01" value="1.50" inputmode="decimal" />
+              </label>
+            </div>
+
+            <div class="strategy-control-group">
+              <div class="strategy-control-title">認售履約價</div>
+              <label>
+                <span>最低倍率</span>
+                <input id="strategyPutMin" type="number" min="0.01" step="0.01" value="0.50" inputmode="decimal" />
+              </label>
+              <label>
+                <span>最高倍率</span>
+                <input id="strategyPutMax" type="number" min="0.01" step="0.01" value="0.80" inputmode="decimal" />
+              </label>
+            </div>
+
+            <div class="strategy-control-group strategy-issuer-group">
+              <div class="strategy-control-title">發行公司</div>
+              <label>
+                <span>篩選</span>
+                <select id="strategyIssuer">
+                  <option value="">全部發行公司</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="screenControls" class="screen-controls screen-controls-simple" hidden>
+            <div class="screen-control-group">
+              <div class="strategy-control-title">市場</div>
+              <label>
+                <span>範圍</span>
+                <select id="screenMarket">
+                  <option value="all">上市櫃合併</option>
+                  <option value="listed">只看上市</option>
+                  <option value="otc">只看上櫃</option>
+                </select>
+              </label>
+              <label>
+                <span>產業</span>
+                <select id="screenIndustry">
+                  <option value="">全部產業</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="screen-control-group screen-change-group">
+              <div class="strategy-control-title">價格基準值區間</div>
+              <label>
+                <span>區間</span>
+                <select id="screenBand">
+                  <option value="all">全部區間</option>
+                  <option value="head">魚頭區</option>
+                  <option value="body">魚身區</option>
+                  <option value="tail">魚尾區</option>
+                  <option value="bone">魚骨區</option>
+                  <option value="crazy">瘋狂區</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="futuresControls" class="screen-controls futures-controls" hidden>
+            <div class="screen-control-group">
+              <div class="strategy-control-title">期貨篩選</div>
+              <label>
+                <span>商品</span>
+                <select id="futuresContract">
+                  <option value="">全部商品</option>
+                  <option value="TX">台指期</option>
+                  <option value="MTX">小台指</option>
+                  <option value="TMF">微台指</option>
+                  <option value="TE">電子期</option>
+                  <option value="TF">金融期</option>
+                  <option value="GTF">櫃買期</option>
+                </select>
+              </label>
+              <label>
+                <span>盤別</span>
+                <select id="futuresSession">
+                  <option value="">全部盤別</option>
+                  <option value="一般">一般</option>
+                  <option value="盤後">盤後</option>
+                </select>
+              </label>
+            </div>
+            <div class="screen-control-group">
+              <div class="strategy-control-title">關鍵字</div>
+              <label>
+                <span>商品名稱或代碼</span>
+                <input id="futuresKeyword" type="search" autocomplete="off" placeholder="TX、台指期、202607..." />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section id="steps" class="steps" hidden></section>
+        <section id="liveSlot"></section>
+        <section id="errorSlot"></section>
+        <section id="resultSlot"></section>
+      </section>
+    </main>
+
+    <footer class="footer-note">
+      聯絡我們：<a href="mailto:service@twetq.com">service@twetq.com</a>
+    </footer>
+
+    <button id="backToTopButton" class="back-to-top" type="button" aria-label="回到頁面頂部" hidden>
+      TOP
+    </button>
+
+    <script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/app.js?v=20260709-newbie-fixes-v5"></script>
+  <script nonce="home6165e5797bfd4b0cd2d468e6fb0d2cc4">(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.nonce='home6165e5797bfd4b0cd2d468e6fb0d2cc4';d.innerHTML="window.__CF$cv$params={r:'a164b48e1dec604c',t:'MTc4MzIzNzA1NQ=='};var a=document.createElement('script');a.nonce='home6165e5797bfd4b0cd2d468e6fb0d2cc4';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a192ab88f9dc8458',t:'MTc4MzcxOTAzMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
