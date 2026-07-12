@@ -117,35 +117,87 @@ func TestBuildSummaryBuckets(t *testing.T) {
 	if sum.Fresh != 2 || sum.Expired != 1 {
 		t.Errorf("age tally wrong: fresh=%d expired=%d", sum.Fresh, sum.Expired)
 	}
-	if len(sum.RotationIn) != 1 || sum.RotationIn[0] != "銅箔基板" {
-		t.Errorf("RotationIn = %v", sum.RotationIn)
+	if ccl := widest(findRow(sum, "銅箔基板")); ccl == nil || ccl.Pos != 1 || ccl.Net != "偏多" {
+		t.Errorf("銅箔基板 widest cell = %+v (want Pos=1 Net=偏多)", ccl)
 	}
-	if len(sum.RotationOut) != 1 || sum.RotationOut[0] != "光通訊" {
-		t.Errorf("RotationOut = %v", sum.RotationOut)
+	if opt := widest(findRow(sum, "光通訊")); opt == nil || opt.Neg != 1 || opt.Net != "偏空" {
+		t.Errorf("光通訊 widest cell = %+v (want Neg=1 Net=偏空)", opt)
 	}
-	// expired 被動元件 must not appear in any label group.
-	all := append(append(append(append([]string{}, sum.RotationIn...), sum.RotationOut...), sum.Bullish...), sum.Bearish...)
-	all = append(all, sum.RiskWarning...)
-	for _, s := range all {
-		if s == "被動元件" {
-			t.Error("expired signal leaked into label groups")
-		}
+	// expired 被動元件 must not appear as a row at all.
+	if findRow(sum, "被動元件") != nil {
+		t.Error("expired signal leaked into a sector row")
 	}
 }
 
-// HIGH-1: a BULLISH sector must land in Bullish, NOT RotationIn.
+func findRow(sum *MarketNewsSummary, name string) *SectorNewsRow {
+	for i := range sum.Sectors {
+		if sum.Sectors[i].Name == name {
+			return &sum.Sectors[i]
+		}
+	}
+	return nil
+}
+
+func widest(r *SectorNewsRow) *SectorWindowCell {
+	if r == nil || len(r.Cells) == 0 {
+		return nil
+	}
+	return &r.Cells[len(r.Cells)-1]
+}
+
+// HIGH-1 (方案 A): a BULLISH sector reads 偏多, never a rotation-in label.
 func TestBuildSummaryDoesNotMislabelBullishAsRotationIn(t *testing.T) {
 	now := time.Date(2026, 7, 11, 8, 0, 0, 0, time.UTC)
 	signals := []NewsSignal{
 		{PublishedAt: now.Add(-24 * time.Hour), Signal: SignalBullish, Sectors: []string{"被動元件"}},
 	}
 	sum := BuildSummary(signals, now, NewsConfig{})
-	if len(sum.Bullish) != 1 || sum.Bullish[0] != "被動元件" {
-		t.Errorf("被動元件 BULLISH should be in Bullish, got Bullish=%v", sum.Bullish)
+	row := findRow(sum, "被動元件")
+	c := widest(row)
+	if c == nil || c.Pos != 1 || c.Net != "偏多" || row.LatestType != SignalBullish {
+		t.Errorf("被動元件 = %+v / widest %+v (want Pos=1 Net=偏多 latest BULLISH)", row, c)
 	}
-	for _, s := range sum.RotationIn {
-		if s == "被動元件" {
-			t.Error("BULLISH must not be mislabeled as ROTATION_IN")
+}
+
+// Multi-window: a signal 5 days old appears in the 7-day cell but NOT the 1/3-day cells.
+func TestBuildSummaryWindows(t *testing.T) {
+	now := time.Date(2026, 7, 12, 8, 0, 0, 0, time.UTC)
+	signals := []NewsSignal{
+		{PublishedAt: now.Add(-5 * 24 * time.Hour), Signal: SignalBullish, Sectors: []string{"功率"}},
+	}
+	sum := BuildSummary(signals, now, NewsConfig{})
+	row := findRow(sum, "功率")
+	if row == nil || len(row.Cells) != 3 {
+		t.Fatalf("功率 row = %+v (want 3 window cells)", row)
+	}
+	if row.Cells[0].Days != 1 || row.Cells[0].Pos != 0 { // 近1日 empty
+		t.Errorf("5d-old signal must not appear in 近1日 cell: %+v", row.Cells[0])
+	}
+	if row.Cells[1].Days != 3 || row.Cells[1].Pos != 0 { // 近3日 empty
+		t.Errorf("5d-old signal must not appear in 近3日 cell: %+v", row.Cells[1])
+	}
+	if row.Cells[2].Days != 7 || row.Cells[2].Pos != 1 { // 近7日 has it
+		t.Errorf("5d-old signal must appear in 近7日 cell: %+v", row.Cells[2])
+	}
+}
+
+// 方案 A net-conclusion rules: split, flip, and single-lean.
+func TestNetConclusion(t *testing.T) {
+	cases := []struct {
+		name           string
+		pos, risk, neg int
+		latest         string
+		want           string
+	}{
+		{"clean-bull", 2, 0, 0, "偏多", "偏多"},
+		{"clean-bear", 0, 1, 2, "偏空", "偏空"},
+		{"flip-to-risk", 3, 2, 1, "風險", "偏多轉風險"},
+		{"even-split", 2, 1, 1, "風險", "分歧"}, // pos2 vs neg1 comparable (1*2>=2) → 分歧
+		{"empty", 0, 0, 0, "", "—"},
+	}
+	for _, c := range cases {
+		if got := netConclusion(c.pos, c.risk, c.neg, c.latest); got != c.want {
+			t.Errorf("%s: netConclusion(%d,%d,%d,%q)=%q want %q", c.name, c.pos, c.risk, c.neg, c.latest, got, c.want)
 		}
 	}
 }

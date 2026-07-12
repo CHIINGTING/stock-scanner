@@ -170,11 +170,12 @@ scanner:
   # RocketScore / WatchAction / ExplosionProb / Action / 排序 / 停損。SocialWorkerDaily
   # 走 WordPress REST API（主要來源）；TWETQ 為 Cloudflare 站，best-effort（/podcast 為
   # JS 渲染，多半降級為空）。不使用 LLM、不新增 DB、不下單、不接 broker。
-  enable_news: false                              # 總開關，預設 false
-  show_news: false                                # 顯示開關，預設 false
+  enable_news: true                              # 總開關，預設 false
+  show_news: true                                # 顯示開關，預設 false
   news:
     shadow_mode: true                             # Phase 1 恆為 true（保留給 Phase 2）
     max_age_days: 10                              # 超過此天數的訊號視為 EXPIRED（仍保存於 snapshot）
+    banner_windows: [1, 3, 7]                     # 市場消息面每族群並列的短視窗（天）；看輪動速度
     age:                                          # 生命週期邊界（集中管理，勿散落程式）
       fresh_days: 2
       active_days: 5

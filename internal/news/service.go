@@ -57,9 +57,8 @@ func (s *Service) Collect(ctx context.Context, observedAt time.Time) *Result {
 
 	views := BuildViews(signals, s.index)
 	summary := BuildSummary(signals, observedAt, s.cfg)
-	s.logf("news signals total=%d stocks=%d rotation_in=%d bullish=%d rotation_out=%d bearish=%d risk=%d",
-		len(signals), len(views), len(summary.RotationIn), len(summary.Bullish),
-		len(summary.RotationOut), len(summary.Bearish), len(summary.RiskWarning))
+	s.logf("news signals total=%d stocks=%d sectors=%d (fresh=%d active=%d expired=%d)",
+		len(signals), len(views), len(summary.Sectors), summary.Fresh, summary.Active, summary.Expired)
 
 	if dir := s.cfg.SnapshotDir; dir != "" {
 		if path, err := SaveSnapshot(dir, observedAt, signals); err != nil {

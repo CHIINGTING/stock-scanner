@@ -21,9 +21,9 @@ func sampleEntry(withShadow bool) scanner.WatchlistEntry {
 	}
 	if withShadow {
 		e.Shadow = &scanner.ShadowSignals{
-			RS:      &scanner.RSResult{Computed: true, RSRankPercentile: 60, RSScore: 60},
-			NewHigh: &scanner.NewHighResult{Computed: true, NewHighScore: 70, DistanceFrom52wHighPct: -7, Near52wHigh: true, H20: true, H60: true},
-			VCP:     &scanner.VCPResult{Computed: true, Valid: true, Grade: scanner.VCPGradeStandard, QualityScore: 80, Depths: []float64{18, 10, 5}},
+			RS:       &scanner.RSResult{Computed: true, RSRankPercentile: 60, RSScore: 60},
+			NewHigh:  &scanner.NewHighResult{Computed: true, NewHighScore: 70, DistanceFrom52wHighPct: -7, Near52wHigh: true, H20: true, H60: true},
+			VCP:      &scanner.VCPResult{Computed: true, Valid: true, Grade: scanner.VCPGradeStandard, QualityScore: 80, Depths: []float64{18, 10, 5}},
 			Momentum: &scanner.MomentumState{Computed: true, Flow: scanner.MomentumBuilding, Score: 70, StructureTrend: "HH_HL"},
 			MultiTimeframe: &scanner.MultiTimeframe{
 				SignalStrength: "STRONG", AlignmentLabel: "FULL_BULL", LongTermFilter: "BULLISH",
@@ -40,7 +40,7 @@ func genHTML(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailViewOpt
 	dir := t.TempDir()
 	r := New(Config{OutputDir: dir})
 	date := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
-	if err := r.Generate(nil, nil, entries, nil, "-", date, gv, nil); err != nil {
+	if err := r.Generate(nil, nil, entries, nil, "-", date, gv, nil, nil); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 	b, err := os.ReadFile(filepath.Join(dir, "report_20260605.html"))
@@ -325,11 +325,11 @@ func TestBacktestInsightsHiddenByDefault(t *testing.T) {
 func TestBacktestInsightsShownWhenEnabled(t *testing.T) {
 	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: true})
 	for _, marker := range []string{
-		"回測洞察",            // 分頁標題
-		"tab-backtest",     // 分頁容器
-		"崩盤情境警告",         // 紅字警告標題
-		"不可外推到空頭／崩盤",    // 多頭結論不適用崩盤
-		"勿", "不要停損", // 不可當停損依據
+		"回測洞察",         // 分頁標題
+		"tab-backtest", // 分頁容器
+		"崩盤情境警告",       // 紅字警告標題
+		"不可外推到空頭／崩盤",   // 多頭結論不適用崩盤
+		"勿", "不要停損",    // 不可當停損依據
 		"Setup D 倖存者", "LOW confidence", // 唯一崩盤相關項標低信心
 		"不改變任何停損、排名或下單", // 純顯示框定
 	} {

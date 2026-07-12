@@ -124,6 +124,47 @@ sectors:
       - { code: "2478", name: "大毅" }
       - { code: "6173", name: "信昌電" }
 
+  - name: "功率"
+    stocks:
+      - { code: "6435", name: "大中" }
+      - { code: "8261", name: "富鼎" }
+      - { code: "3317", name: "尼克森" }
+      - { code: "5299", name: "杰力" }
+      - { code: "6525", name: "捷敏-KY" }
+      - { code: "3707", name: "漢磊" }
+
+  - name: "二極體"
+    stocks:
+      - { code: "2481", name: "強茂" }
+      - { code: "5425", name: "台半" }
+      - { code: "3675", name: "德微" }
+      - { code: "8255", name: "朋程" }
+      - { code: "6573", name: "虹揚-KY" }
+
+  - name: "電感"
+    # 註：奇力新(2456)/美磊(3068)併入國巨、乾坤(2452)併入台達電，皆已下市。
+    #     電感廠多被整併，現存上市櫃標的較少，可自行再補。
+    stocks:
+      - { code: "3236", name: "千如" }
+      - { code: "6284", name: "佳邦" }
+
+  - name: "封測"
+    stocks:
+      - { code: "3711", name: "日月光投控" }
+      - { code: "6239", name: "力成" }
+      - { code: "2449", name: "京元電子" }
+      - { code: "6147", name: "頎邦" }
+      - { code: "2441", name: "超豐" }
+      - { code: "8150", name: "南茂" }
+      - { code: "3374", name: "精材" }
+
+  - name: "玻璃纖維"
+    stocks:
+      - { code: "1815", name: "富喬" }
+      - { code: "1802", name: "台玻" }
+      - { code: "5340", name: "建榮" }
+      - { code: "5475", name: "德宏" }
+
   - name: "鑽孔"
     stocks:
       - { code: "8021", name: "尖點" }
@@ -314,7 +355,6 @@ sectors:
       - { code: "1907", name: "永豐餘" }
       - { code: "1905", name: "華紙" }
       - { code: "1909", name: "榮成" }
-      - { code: "1902", name: "台紙" }
       - { code: "1903", name: "士紙" }
 
   - name: "原料"

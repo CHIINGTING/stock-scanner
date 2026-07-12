@@ -99,15 +99,17 @@ def extract(report_path: str):
     name_map = load_name_map()
     buy, watch = [], []
     for m in ROW_RE.finditer(seg):
-        action = m.group("action").strip()
+        # Key off the language-independent CSS class (action-buy / action-watch …),
+        # not the visible badge text — the report now renders Chinese action labels.
+        css = m.group("css").strip()
         code = m.group("code").strip()
         item = {
             "code": code,
             "name": localise(code, html.unescape(m.group("name").strip()), name_map),
         }
-        if action in ("STRONG BUY", "BUY"):
+        if css in ("strong-buy", "buy"):
             buy.append(item)
-        elif action == "WATCH":
+        elif css == "watch":
             watch.append(item)
     return buy, watch
 

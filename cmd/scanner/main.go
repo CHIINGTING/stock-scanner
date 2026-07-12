@@ -209,11 +209,12 @@ func main() {
 	// Gated post-pass AFTER enrichment. Never touches score/action/probability/order.
 	// Provider failures are isolated & logged; the scan always completes. Off by default.
 	var newsSummary *news.MarketNewsSummary
+	var newsEpisodes []news.EpisodeView
 	if cfg.Scanner.EnableNews {
 		// Look-ahead guard: only live-fetch news when the analysis date IS today. A
 		// historical run must not stamp today's fetched news with a past ObservedAt.
 		if now := time.Now(); news.SameDay(analysisDate, now) {
-			newsSummary = collectNews(cfg.Scanner, cfg.Report.OutputDir, sectorList, stockList, watchlistResults, now)
+			newsSummary, newsEpisodes = collectNews(cfg.Scanner, cfg.Report.OutputDir, sectorList, stockList, watchlistResults, now)
 		} else {
 			log.Printf("news: skip live fetch for historical date %s (avoid look-ahead); read stored snapshot instead",
 				analysisDate.Format("2006-01-02"))
@@ -236,7 +237,7 @@ func main() {
 		MFScoreModifierFading:       cfg.Scanner.MFScoreModifierFading,
 		MFScoreModifierShiftDown:    cfg.Scanner.MFScoreModifierShiftDown,
 	}
-	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv, newsSummary); err != nil {
+	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv, newsSummary, newsEpisodes); err != nil {
 		log.Fatalf("report: %v", err)
 	}
 
@@ -321,7 +322,7 @@ func attachETFFlow(entries []scanner.WatchlistEntry, sc scanner.Config, reportDa
 // for the report banner. It never changes score/action/probability/order. observedAt is
 // the real wall-clock time (passed only when analysisDate == today) and becomes each
 // signal's ObservedAt + the snapshot filename — the look-ahead guard.
-func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.SectorList, stockList *fetcher.StockList, entries []scanner.WatchlistEntry, observedAt time.Time) *news.MarketNewsSummary {
+func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.SectorList, stockList *fetcher.StockList, entries []scanner.WatchlistEntry, observedAt time.Time) (*news.MarketNewsSummary, []news.EpisodeView) {
 	idx := news.NewResolveIndex()
 	if sectorList != nil {
 		for _, sec := range sectorList.Sectors {
@@ -361,13 +362,13 @@ func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.Sector
 	}
 	if len(providers) == 0 {
 		log.Printf("news: enabled but no providers configured — skipping")
-		return nil
+		return nil, nil
 	}
 
 	svc := news.NewService(providers, idx, ncfg, log.Printf)
 	res := svc.Collect(context.Background(), observedAt)
 	scanner.AttachNews(entries, res.Views)
-	return res.Summary
+	return res.Summary, news.BuildEpisodes(res.Signals)
 }
 
 // qualifiesForWatchlist reports whether an action should land a stock on the
