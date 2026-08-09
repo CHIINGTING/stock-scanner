@@ -116,6 +116,10 @@ var defaultWeights = map[string]float64{
 	ModuleMargin:         20,
 }
 
+// Defaulted fills every zero-valued knob with its baseline, for analyzers that receive a
+// hand-built threshold set.
+func (f FuturesThresholds) Defaulted() FuturesThresholds { return f.withDefaults() }
+
 func (f FuturesThresholds) withDefaults() FuturesThresholds {
 	if f.AggressiveShortChange == 0 {
 		f.AggressiveShortChange = -3000

@@ -125,7 +125,24 @@ const (
 	MetricBreadthBase120 = "breadth_base120"     // population behind breadth_above_ma120
 	MetricAdvRatio       = "advancing_ratio"
 	MetricRealizedVol20  = "realized_vol20"
-	MetricVolPercentile  = "realized_vol20_percentile"
+
+	// Institutional metric keys (M6). Same rule: add freely, never rename or repurpose.
+	MetricFutNetOI      = "fut_net_oi"
+	MetricFutLongOI     = "fut_long_oi"
+	MetricFutShortOI    = "fut_short_oi"
+	MetricFutChg1D      = "fut_net_oi_chg_1d"
+	MetricFutChg5D      = "fut_net_oi_chg_5d"
+	MetricFutPercentile = "fut_net_oi_percentile"
+	MetricCashNet1D     = "cash_foreign_net_1d_oku"
+	MetricCashNet5D     = "cash_foreign_net_5d_oku"
+	MetricCashNet20D    = "cash_foreign_net_20d_oku"
+	MetricMarginBalance = "margin_balance_lots"
+	MetricMarginChg1D   = "margin_chg_1d_lots"
+	MetricMarginChg5D   = "margin_chg_5d_lots"
+	MetricShortBalance  = "short_balance_lots"
+	MetricShortChg1D    = "short_chg_1d_lots"
+	MetricBenchRet5D    = "benchmark_ret_5d"
+	MetricVolPercentile = "realized_vol20_percentile"
 )
 
 // StructureView is the full layer-1 + layer-2 output. The four predicates are stored
