@@ -76,8 +76,16 @@ func ClassifyBreadth(v BreadthView, nearHigh bool, th model.StructureThresholds)
 	if v.AboveMA20 < th.BreadthCollapsePct {
 		return model.BreadthCollapsing
 	}
-	// ③ NARROWING — divergence at the highs, or a steep fall from the recent peak
-	if (v.AboveMA20 < th.BreadthNarrowPct && nearHigh) || v.Drop20 >= th.BreadthDropNarrowPP {
+	// ③ NARROWING — leadership narrowing WHILE price holds up. Both branches require
+	// nearHigh, because narrowing is a DIVERGENCE between price and internals; without the
+	// price half it is just "breadth is lower than it was", which is what a broad correction
+	// looks like and belongs in COOLING.
+	//
+	// Corrected in M3 on historical evidence: the drop-only branch used to fire without
+	// nearHigh and produced 51 of 130 NARROWING days, of which 45 were days when the
+	// benchmark itself had already fallen >=3% from its high — price and breadth receding
+	// together, the opposite of a divergence. See SPEC §16.1 Q1.
+	if nearHigh && (v.AboveMA20 < th.BreadthNarrowPct || v.Drop20 >= th.BreadthDropNarrowPP) {
 		return model.BreadthNarrowing
 	}
 	// ④ HEALTHY
@@ -121,7 +129,17 @@ func BuildStructureView(
 
 	if pv.Sufficient {
 		view.TrendIntact = pv.Close > pv.MA120 && pv.MA120 > 0 && pv.MA60Rising
-		view.PriceResilient = pv.DDHigh <= th.ResilientDDPct || (pv.MA60 > 0 && pv.Close > pv.MA60)
+		// priceResilient means "price has NOT meaningfully corrected" — it is the price half
+		// of the distribution signature (resilient tape, deteriorating internals) and the
+		// complement of orderlyCorrection.
+		//
+		// Corrected in M3: this used to be `dd <= 5% OR close > MA60`. The second clause is a
+		// TREND statement, not a "hasn't corrected" statement — a benchmark 12% off its high
+		// but still above its 60-day average has plainly corrected. Historically it made
+		// priceResilient true on 83% of days (53 of them purely via the MA60 clause while
+		// already >5% down) and overlap with orderlyCorrection on 61 days, all of which R3
+		// claimed before R8 could see them. See SPEC §16.1 Q2.
+		view.PriceResilient = pv.DDHigh <= th.ResilientDDPct
 		view.OrderlyCorrection = pv.DDHigh >= th.CorrectionMinPct &&
 			pv.DDHigh <= th.CorrectionMaxPct &&
 			pv.WorstDay20 > -th.CapitulationDayPct

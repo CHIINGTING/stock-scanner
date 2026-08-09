@@ -104,7 +104,11 @@ func TestClassifyBreadthTable(t *testing.T) {
 		{"healthy", bv(62, 4, 1900), false, model.BreadthHealthy},
 		{"collapsing beats everything", bv(22, 40, 1900), true, model.BreadthCollapsing},
 		{"narrowing: divergence at the high", bv(41, 5, 1900), true, model.BreadthNarrowing},
-		{"narrowing: steep fall from the peak", bv(58, 24, 1900), false, model.BreadthNarrowing},
+		// M3 correction: a steep fall in participation is only NARROWING when price is
+		// still at its high. Away from the high it is price and breadth receding together
+		// — a broad correction, which is COOLING. See SPEC §16.1 Q1.
+		{"steep fall AT the high is narrowing", bv(58, 24, 1900), true, model.BreadthNarrowing},
+		{"steep fall AWAY from the high is cooling", bv(58, 24, 1900), false, model.BreadthCooling},
 		{"cooling: mid level", bv(48, 12, 1900), false, model.BreadthCooling},
 		{"cooling: high level but receded", bv(60, 14, 1900), false, model.BreadthCooling},
 	}
@@ -157,9 +161,17 @@ func TestBuildStructureViewPredicates(t *testing.T) {
 			trendIntact: true, resilient: true, orderly: false,
 		},
 		{
-			name:        "orderly 8% pullback, still above MA120",
+			// M3 correction: an 8% drawdown is NOT resilient, even though price is still
+			// above MA60. "Resilient" means "has not meaningfully fallen"; being above a
+			// medium-term average is a trend statement. See SPEC §16.1 Q2.
+			name:        "orderly 8% pullback is corrected, not resilient",
 			price:       pv(101, 103, 100, 95, true, -4, 10, 8),
-			trendIntact: true, resilient: true, orderly: true, // above MA60 → resilient
+			trendIntact: true, resilient: false, orderly: true,
+		},
+		{
+			name:        "a 2% dip is resilient and not yet a correction",
+			price:       pv(108, 105, 100, 95, true, 3, 12, 2),
+			trendIntact: true, resilient: true, orderly: false,
 		},
 		{
 			name:        "20% drawdown is beyond orderly",

@@ -174,7 +174,7 @@ MVP 用 0050，因為 `.cache/0050_TW.json` 已有兩年日 K，可立刻全段�
 | --- | --- | --- |
 | 1 | `UNKNOWN` | 有效家數 < `MinBreadthUniverse`（預設 500） |
 | 2 | `COLLAPSING` | `b20 < BreadthCollapsePct`（預設 30%） |
-| 3 | `NARROWING` | （`b20 < BreadthNarrowPct`（45%）**且** `nearHigh`）← **背離特徵**　**或**　`drop20 ≥ BreadthDropNarrowPP`（20pp） |
+| 3 | `NARROWING` | `nearHigh` **且**（`b20 < BreadthNarrowPct` **或** `drop20 ≥ BreadthDropNarrowPP`）← **兩個分支都要求 `nearHigh`**，見 §16.1 Q1 |
 | 4 | `HEALTHY` | `b20 ≥ BreadthHealthyPct`（55%）且 `drop20 < BreadthDropCoolPP`（10pp） |
 | 5 | `COOLING` | 其餘 |
 
@@ -967,7 +967,7 @@ M1 只固定**詞彙與持久化形狀**，**不含任何分類邏輯**（分類
 | --- | --- | --- | --- | --- |
 | **M1** | model 層：Evidence 契約 + 三層列舉 + `Snapshot` + storage + config | ✅ 程式碼已寫、`go test ./...` 全綠、**尚未 commit** | — | 無 |
 | **M2** | Price + Breadth analyzer（吃 `.cache`）+ §3.2/§3.3 分類器 | ✅ 程式碼已寫、`go test ./...` 全綠、**尚未 commit** | M1 | 無 |
-| **M3** | §5.3 regime 決策表 + 三個不變量測試 + **兩個開放問題（見 §16.1）** | ⬜ 未開始 | M2 | 無 |
+| **M3** | §5.3 regime 決策表 + 不變量測試 + §16.1 兩題的裁決 | ✅ 已實作、測試綠、**兩處語意修正見 §16.1** | M2 | 無 |
 | **M4** | TWSE provider（BFI82U / MI_MARGN / MI_INDEX / FMTQIK）+ testdata 測試 | ⬜ 未開始 | M1 | 有 |
 | **M5** | TAIFEX provider（OpenAPI JSON）+ `cmd/market-backfill`（Big5，x/text） | ⬜ 未開始 | M1 | 有 |
 | **M6** | Futures / Cash / Margin analyzer + `InstitutionalPosture` | ⬜ 未開始 | M4, M5 | 無 |
@@ -975,55 +975,46 @@ M1 只固定**詞彙與持久化形狀**，**不含任何分類邏輯**（分類
 | **M8** | `cmd/market-fetch` 每日流程 + `configs/config.yaml` 的 `market:` 區塊 | ⬜ 未開始 | M7 | 有 |
 | **M9** | （另議）報告呈現 | ⬜ 未開始 | M8 | — |
 
-### 16.1 M3 必須回答的開放問題
+### 16.1 M3 對兩個開放問題的裁決（已結案）
 
-兩題都是**規格層級的設計問題**，不是 M2 的實作錯誤——M2 的職責是交出可回測的地基，它做到了。
-以下數字來自 M2 對真實 `.cache` 的全段重放（0050 487 根、universe 1986 檔、日期軸 486 日、
-**367 個已分類日**），是稀疏日修正**之後**的版本：
+兩題在 M3 用歷史證據診斷後，**都判定為語意錯誤而非門檻鬆緊**，依授權更正。
+兩處都不是為了製造某個比例——分布是修正的**結果**，不是目標。
+
+#### Q1 — `NARROWING` 的 `drop20` 分支缺 `nearHigh`
+
+| | |
+| --- | --- |
+| **舊邏輯** | `(b20 < BreadthNarrowPct 且 nearHigh) 或 drop20 ≥ BreadthDropNarrowPP` |
+| **觀察** | 130 個 NARROWING 日中，drop-only 分支獨立產生 51 日；其中 **45 日既不在高點、且 benchmark 自己已回檔 ≥3%** |
+| **推理** | 那 45 日是「價格跌了、廣度跟著退」——價格與內部**同向**，正好是背離的反面。§3.3 自己主張 NARROWING 是「價格與內部的比較，不是單一門檻」，舊邏輯與這個主張矛盾。這類日子屬於「廣度降溫但未潰散」，語意上就是 `COOLING`，也正是 `BULL_PULLBACK` 期待的內部狀態 |
+| **新邏輯** | `nearHigh 且 (b20 < BreadthNarrowPct 或 drop20 ≥ BreadthDropNarrowPP)`——**兩個分支都要求 `nearHigh`** |
+| **結果** | NARROWING 130 → **85**，COOLING 97 → **142**。門檻數值一個都沒動 |
+
+#### Q2 — `priceResilient` 的 `close > MA60` 分支
+
+| | |
+| --- | --- |
+| **舊邏輯** | `ddHigh60 ≤ ResilientDDPct` **或** `close > MA60` |
+| **觀察** | 命中 305/366 日（83%）；其中 **53 日僅靠 `close > MA60` 成立、而回檔已 >5%**。與 `orderlyCorrection` 重疊 **61 日**，因 R3 排在 R8 之前，這些日子全歸 DISTRIBUTION |
+| **推理** | `close > MA60` 是**趨勢**陳述，不是「還沒跌」的陳述。距高點 12% 但仍在 60 日均線上的 benchmark 顯然已經修正過。DISTRIBUTION 的定義是「價格**仍撐住**、內部先壞」，而 `priceResilient` 是它的價格半邊、也是 `orderlyCorrection` 的補集——用趨勢條件當補集，兩者必然重疊，重疊處又被順位在前的 R3 全數吃掉，`BULL_PULLBACK` 因此形同虛設 |
+| **新邏輯** | `ddHigh60 ≤ ResilientDDPct`（移除 MA60 分支） |
+| **結果** | 兩者重疊縮到 `dd ∈ [CorrectionMinPct, ResilientDDPct]` = 3–5% 這一段，且該段由 R3 決定性勝出。門檻數值同樣一個都沒動 |
+
+#### 修正後的歷史分布（366 個已分類日，posture 恆 UNKNOWN）
 
 ```
-structures: STRONG_UPTREND 166 / UPTREND 116 / DOWNTREND 39 / RANGE 32 / WEAKENING 14
-breadth:    NARROWING 131 / COOLING 97 / HEALTHY 80 / COLLAPSING 59 / UNKNOWN 0
+regime: BULL 104 (28%)  DISTRIBUTION 100 (27%)  SIDEWAYS 75 (20%)
+        BEAR 47 (13%)   BULL_PULLBACK 40 (11%)  UNKNOWN 0
+rules:  R6 104  R3 100  R11 50  R1 39  R8 35  R9 25  R2 8  R10 5
 ```
 
-**Q1 — `NARROWING` 有 63% 不是背離造成的，與 §3.3 自己的主張牴觸。**
+對照修正前：DISTRIBUTION 145(40%) → 100(27%)、BULL_PULLBACK 23(6%) → 40(11%)。
 
-拆解 131 天：`divergence-only`（`b20 < 45%` 且 `nearHigh`）48、`drop-only`
-（`drop20 ≥ 20pp`）51、兩者皆中 32。也就是 **83/131（63%）由不含 `nearHigh` 的
-`drop20` 分支單獨或主導產生**。但 §3.3 明白主張「`NARROWING` 是價格與內部的比較，
-不是單一門檻」——實測近三分之二的 `NARROWING` 日並不滿足這個主張。這是 OR 分支的設計
-後果（OR 是規格寫的），不是實作違規。M3 需決定：`drop20` 分支是否也該要求 `nearHigh`，
-或是否該獨立成另一個 BreadthQuality 值。
+**仍待觀察、但不在 M3 修正範圍的兩點**（留給校準，不是缺陷）：
 
-**Q2 — `DISTRIBUTION` 會是眾數 regime，`BULL_PULLBACK` 只佔 6%。**
+1. **`NARROWING` 幾乎等同 `DISTRIBUTION`**。修正後 `NARROWING ⟹ nearHigh ⟹ dd ≤ 3% ⟹ priceResilient`，因此非空頭結構下的 NARROWING 日必然命中 R3。這在語意上是自洽的（「領導性收斂而價格撐住」就是出貨特徵），但代表該情境下 regime 實質由廣度單獨決定。
+2. **R11（fallback）佔 14%**。它接住的是「結構不乾淨但也不屬於任何具名情境」的日子，例如 `UPTREND` + 廣度潰散 + 已明顯回檔。fallback 有實際用量不算 dead rule，但比例偏高，值得在有法人維度（M6）後重看。
 
-用 M2 的輸出預跑 §5.3 決策表（`posture` 恆 `UNKNOWN`，故 R4/R5 永不觸發——這正是 M3 落地
-初期的實際情況）：`R3 DISTRIBUTION 145（40%）`、`R8 18`、`R10 5`，`BULL_PULLBACK` 合計
-23（6%）。
-
-瓶頸**不是** `WEAKENING` 稀少：`WEAKENING` 只有 14 天是定義上的必然（全樣本
-`close < MA60` 僅 62 天，其中 39 天已破 MA120 被 `DOWNTREND` 先攔），而 R8 的入口本來就
-含 `UPTREND`。真正的瓶頸是**廣度**——`NARROWING`+`COLLAPSING` 佔 52%，而 R3 只需要
-「廣度惡化 + `priceResilient`」即命中，`priceResilient`（回檔 ≤5% 或站上 MA60）在多頭段
-幾乎恆真。
-
-建議順序：**先校準 `BreadthDropNarrowPP` 與 `NearHighDDPct`**（或依 §3.2 註的出口，替
-`STRONG_UPTREND` 拆出獨立的 `StrongUptrendDDPct`），再回頭驗 §7.2 的「R10 是否該排除
-`NARROWING`」。校準前不要對 R3/R8 的比例下結論——但也不要在門檻未校準的狀態下把 M3 當成
-已驗證。
-
-> 校準時請一併註明 `CacheFeed.Universe()` 的輕微 survivorship：它以**今日**的 bar 數
-> 過濾 symbol，因此歷史面板不含已下市的標的。對母體影響極小（那些標的在歷史上多半也
-> 不可測），但讀校準數字的人需要知道。
-
-
-**順序的關鍵取捨**：regime 決策表提前到 **M3**，在任何法人資料進來之前就完成。
-`PrimaryStructure`（M2）與決策表（M3）**完全不需要網路**，且有兩年歷史可立刻全段回測——
-先確認「結構判斷本身是對的」，再讓法人證據進來微調。反過來做的話，
-一旦 regime 判得不對，會分不清是結構邏輯錯還是法人資料錯。
-M3 完成時，系統就已經有一個**只靠結構、可回測、可用**的 regime 引擎（即 R9 的原始目標）。
-
-每階段獨立 commit、`go test ./...` 全綠、`market.enabled: false` 全程不變。
 
 ---
 
