@@ -20,9 +20,12 @@
 > commit 時必須 **三份一起** `git add -f`——只加本檔的話，canonical spec 會指向兩個
 > repo 裡不存在的檔案，而那兩份正是決策紀錄與端點驗證原文的唯一出處。
 >
-> **狀態（2026-08-09）**：M1（model 層）已落地並測試綠。M2 之後尚未實作。
-> 本文件描述的**型別**已存在於程式碼；本文件描述的**判斷邏輯**（分類器、決策表、引擎）
-> 尚未實作，僅為已核准的規格。
+> **狀態（2026-08-09）**：M1（model 層）與 M2（Price/Breadth analyzer + §3.2/§3.3 兩個
+> 分類器）已落地並測試綠，兩者皆尚未 commit。M3 之後尚未實作。
+>
+> 因此本文件目前有兩種內容，讀時請分辨：**型別、§3.2 與 §3.3 的分類器**描述的是已存在且
+> 有測試的程式碼；**§5.3 的 regime 決策表、§10 的官方端點、§14 的 score/confidence**
+> 仍只是已核准的規格，沒有對應實作。逐一狀態見 §16。
 
 ---
 
@@ -155,6 +158,12 @@ MVP 用 0050，因為 `.cache/0050_TW.json` 已有兩年日 K，可立刻全段�
 `PrimaryStructure.Bullish()` 定義為 `STRONG_UPTREND || UPTREND`，語意由型別自己擁有，
 決策表不重複這個判斷。
 
+
+> **「MA60 上揚」的定義**：`MA60(今日) > MA60(N 個交易日前)`，N = `StructureThresholds.MASlopeDays`
+> （預設 **5**，即一個交易週）。一天的均線跳動在 60 日均線上是雜訊，決策表講的是**斜率**。
+> 對應地，規格中的「MA60 下彎」實作為「**非上揚**」，因此也涵蓋完全持平的情形——長線支撐已破
+> 的市場裡，持平的 60 日均線不算健康證據。此門檻走 config，校準時不需改程式碼。
+
 ### 3.3 第二層之一：BreadthQuality（主來源 = 既有 universe）
 
 `b20` = universe 中收盤站上自身 MA20 的比例（`MetricBreadthMA20`）；
@@ -224,8 +233,23 @@ Metric key 常數（`structure.go`，已持久化，可新增、**不可改名�
 close  ma20  ma60  ma120  ma200(僅脈絡)  ret20  ret60  dd_from_high60
 breadth_above_ma20  breadth_above_ma60  breadth_above_ma120
 breadth_drop20_pp   breadth_valid_count  advancing_ratio
+breadth_base60      breadth_base120
 realized_vol20      realized_vol20_percentile
 ```
+
+`breadth_valid_count` 是 **MA20 的母體**，也是充足性閘門的依據；`breadth_base60` /
+`breadth_base120` 分別是另外兩個廣度指標各自的母體。
+
+> **母體不足時該 metric 會被「省略」，而不是寫成一個數字。**
+>
+> `breadth_above_ma60` / `breadth_above_ma120` 只有在**自己的母體**達到
+> `MinBreadthUniverse` 時才寫入；未達時該 key **不存在**，但 `breadth_base60` /
+> `breadth_base120` 一律寫入，所以省略是可解釋的。
+>
+> 理由：百分比脫離分母就無法事後稽核——「8 檔裡的 75%」與「1900 檔裡的 75%」在快照裡
+> 長得一模一樣。這是 M2 落地時在真實 `.cache` 發現稀疏日汙染母體後加上的保護（見 §16 M2
+> 與 §11.2 的 `MinCoverage`）。讀取端本來就必須走 §4 契約條款 4 的 `Metric(key)` ok
+> 分支，因此省略對消費者是安全的。
 
 ---
 
@@ -691,12 +715,18 @@ Price + Breadth = 35，讓「市場實際發生什麼」不被「外資做什麼
 | `CapitulationDayPct` | 4 | `orderlyCorrection` 的否決條件 |
 | `FailedHighWindowDays` / `FailedHighLookbackDays` / `FailedHighsMin` | 3 / 20 / 2 | R5 |
 | `VolPercentile` / `VolLookbackDays` | 80 / 252 | `HighVolatility` |
+| `MASlopeDays` | 5 | 「MA60 上揚」的斜率視窗——第一層三列與 `trendIntact` 皆分支於此（定義見 §3.2） |
 | `CrashRet20Pct` | −8 | `CrashEvent` |
 
-> ⚠️ **給 M2 實作者**：`config.go` 目前對 `NearHighDDPct` 的欄位註解只寫
-> `the divergence test`（即廣度背離），**比本表列的實際用途窄**。
-> 依本 spec，它同時支配 `STRONG_UPTREND` 與 R7。M2 動到這個欄位時請一併更新該註解，
-> 否則調參的人會低估影響範圍。
+> ✅ **已於 M2 履行**：`config.go` 的 `NearHighDDPct` 欄位註解已改寫，明列它共用的三處
+> 並指出若校準需要分離應新增獨立欄位（如 `StrongUptrendDDPct`），不要在一個值上折衷三個用途。
+
+**資料載入層的門檻**（`provider.CacheFeed`，不屬於 `StructureThresholds`）：
+
+| 欄位 | 預設 | 作用 |
+| --- | --- | --- |
+| `MinBars` | 120 | 歷史太短、無法貢獻均線的 symbol 直接不載入 |
+| `MinCoverage` | 0.5 | **覆蓋率不足的日期不進日期軸**。這不是調參旋鈕而是資料品質閘門：快取裡本來就有「不是全市場交易日」的日期（最舊幾週只屬於少數被抓了更長歷史的 symbol，偶爾也有只帶十來檔的中段日期）。留在軸上，該日對其餘每一檔都是 0，而含 gap 的均線視窗不可測——**一個稀疏日就會把整個 universe 逐出 MA60 母體 60 個交易日、MA120 母體 120 個交易日**。本 repo 的 `.cache` 實際有 40 個這種日期（39 個在軸開頭，`2025-08-01` 為 1993 檔中僅 11 檔）。被丟棄的日期會由 `UniverseData.DroppedDates` 回報，不會默默吞掉。 |
 
 ### 11.3 其他 config 預設
 
@@ -936,14 +966,56 @@ M1 只固定**詞彙與持久化形狀**，**不含任何分類邏輯**（分類
 | 階段 | 內容 | 狀態 | 相依 | 網路 |
 | --- | --- | --- | --- | --- |
 | **M1** | model 層：Evidence 契約 + 三層列舉 + `Snapshot` + storage + config | ✅ 程式碼已寫、`go test ./...` 全綠、**尚未 commit** | — | 無 |
-| **M2** | Price + Breadth analyzer（吃 `.cache`）+ §3.2/§3.3 分類器 | ⬜ 未開始 | M1 | 無 |
-| **M3** | §5.3 regime 決策表 + 三個不變量測試 | ⬜ 未開始 | M2 | 無 |
+| **M2** | Price + Breadth analyzer（吃 `.cache`）+ §3.2/§3.3 分類器 | ✅ 程式碼已寫、`go test ./...` 全綠、**尚未 commit** | M1 | 無 |
+| **M3** | §5.3 regime 決策表 + 三個不變量測試 + **兩個開放問題（見 §16.1）** | ⬜ 未開始 | M2 | 無 |
 | **M4** | TWSE provider（BFI82U / MI_MARGN / MI_INDEX / FMTQIK）+ testdata 測試 | ⬜ 未開始 | M1 | 有 |
 | **M5** | TAIFEX provider（OpenAPI JSON）+ `cmd/market-backfill`（Big5，x/text） | ⬜ 未開始 | M1 | 有 |
 | **M6** | Futures / Cash / Margin analyzer + `InstitutionalPosture` | ⬜ 未開始 | M4, M5 | 無 |
 | **M7** | Engine：score + confidence | ⬜ 未開始 | M3, M6 | 無 |
 | **M8** | `cmd/market-fetch` 每日流程 + `configs/config.yaml` 的 `market:` 區塊 | ⬜ 未開始 | M7 | 有 |
 | **M9** | （另議）報告呈現 | ⬜ 未開始 | M8 | — |
+
+### 16.1 M3 必須回答的開放問題
+
+兩題都是**規格層級的設計問題**，不是 M2 的實作錯誤——M2 的職責是交出可回測的地基，它做到了。
+以下數字來自 M2 對真實 `.cache` 的全段重放（0050 487 根、universe 1986 檔、日期軸 486 日、
+**367 個已分類日**），是稀疏日修正**之後**的版本：
+
+```
+structures: STRONG_UPTREND 166 / UPTREND 116 / DOWNTREND 39 / RANGE 32 / WEAKENING 14
+breadth:    NARROWING 131 / COOLING 97 / HEALTHY 80 / COLLAPSING 59 / UNKNOWN 0
+```
+
+**Q1 — `NARROWING` 有 63% 不是背離造成的，與 §3.3 自己的主張牴觸。**
+
+拆解 131 天：`divergence-only`（`b20 < 45%` 且 `nearHigh`）48、`drop-only`
+（`drop20 ≥ 20pp`）51、兩者皆中 32。也就是 **83/131（63%）由不含 `nearHigh` 的
+`drop20` 分支單獨或主導產生**。但 §3.3 明白主張「`NARROWING` 是價格與內部的比較，
+不是單一門檻」——實測近三分之二的 `NARROWING` 日並不滿足這個主張。這是 OR 分支的設計
+後果（OR 是規格寫的），不是實作違規。M3 需決定：`drop20` 分支是否也該要求 `nearHigh`，
+或是否該獨立成另一個 BreadthQuality 值。
+
+**Q2 — `DISTRIBUTION` 會是眾數 regime，`BULL_PULLBACK` 只佔 6%。**
+
+用 M2 的輸出預跑 §5.3 決策表（`posture` 恆 `UNKNOWN`，故 R4/R5 永不觸發——這正是 M3 落地
+初期的實際情況）：`R3 DISTRIBUTION 145（40%）`、`R8 18`、`R10 5`，`BULL_PULLBACK` 合計
+23（6%）。
+
+瓶頸**不是** `WEAKENING` 稀少：`WEAKENING` 只有 14 天是定義上的必然（全樣本
+`close < MA60` 僅 62 天，其中 39 天已破 MA120 被 `DOWNTREND` 先攔），而 R8 的入口本來就
+含 `UPTREND`。真正的瓶頸是**廣度**——`NARROWING`+`COLLAPSING` 佔 52%，而 R3 只需要
+「廣度惡化 + `priceResilient`」即命中，`priceResilient`（回檔 ≤5% 或站上 MA60）在多頭段
+幾乎恆真。
+
+建議順序：**先校準 `BreadthDropNarrowPP` 與 `NearHighDDPct`**（或依 §3.2 註的出口，替
+`STRONG_UPTREND` 拆出獨立的 `StrongUptrendDDPct`），再回頭驗 §7.2 的「R10 是否該排除
+`NARROWING`」。校準前不要對 R3/R8 的比例下結論——但也不要在門檻未校準的狀態下把 M3 當成
+已驗證。
+
+> 校準時請一併註明 `CacheFeed.Universe()` 的輕微 survivorship：它以**今日**的 bar 數
+> 過濾 symbol，因此歷史面板不含已下市的標的。對母體影響極小（那些標的在歷史上多半也
+> 不可測），但讀校準數字的人需要知道。
+
 
 **順序的關鍵取捨**：regime 決策表提前到 **M3**，在任何法人資料進來之前就完成。
 `PrimaryStructure`（M2）與決策表（M3）**完全不需要網路**，且有兩年歷史可立刻全段回測——
