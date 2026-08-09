@@ -1,11 +1,48 @@
 # SPEC R9-1 — Market Regime Strategy Layer (Design)
 
+> **⚠️ SUPERSEDED／已納入 — canonical spec 為 `docs/SPEC_MARKET_DASHBOARD.md`，請先讀那份。**
+>
+> R9 從未實作。**Market Dashboard** 接手「regime」這件事，成為 repo 內**唯一**的 regime 引擎；
+> R9 的價格／廣度想法沒有被丟掉，而是成為新設計三層架構裡的**第一、二層結構骨幹**。
+> 本檔**全文保留**（核准決策 5，2026-08-09），因為 §5（breadth 演算法）、§6（HighVolatility
+> 百分位法）、§7（決策表結構）、§9（regime × R6 setup 解讀表）的推導仍會被實作直接引用，
+> 作廢會讓後人找不到這些推導過程。
+>
+> **哪些 R9 內容被實際採納**（見新 spec §3、§5、§9）：
+>
+> - **結構式決策表的形式**（明示、有序、第一個命中者勝），而非分數門檻——這是 R9 想對的核心。
+> - **0050 作為 benchmark proxy**（新 spec 進一步用 `Benchmark` 型別把「這是 ETF、不是指數」外顯）。
+> - **breadth 由既有 universe 自算**（`breadthAboveMA20 / MA60`），不依賴任何新端點。
+> - **HighVolatility 用百分位（P80/252d）而非絕對門檻，且與 regime 正交**。
+> - **degrade 紀律**：資料不足 → UNKNOWN／降 Confidence，不得 panic；look-ahead 紀律；
+>   Reasons/Caveats 中文佐證；文案紅線（不得含買／賣／下單／進場價）；不自動交易。
+>
+> **哪些被改變**：
+>
+> - **`CRASH` / `RECOVERY` 由 primary regime 降級為正交旗標 `Flags{CrashEvent, RecoveryEvent}`**。
+>   理由：它們描述的是**事件**，不是**結構狀態**；佔用 regime 名額會與 `DISTRIBUTION` 互搶同一天。
+>   這正是 R9 自己對 `HighVolatility` 已做過的判斷，新 spec 只是把同一邏輯貫徹到底。
+> - **五態改為 `BULL` / `BULL_PULLBACK` / `SIDEWAYS` / `DISTRIBUTION` / `BEAR`（+ `UNKNOWN`）**。
+>   新增 R9 沒有的 `BULL_PULLBACK`（主趨勢未破的有秩序修正）與 `DISTRIBUTION`（指數還撐著、
+>   內部先壞）。兩者的主要規則（R8 vs R3）條件互斥；殘差規則 R10 則靠決策表順位不重疊
+>   （詳見新 spec §7，該處明列了哪些不變量可寫、哪些不可寫）。
+> - **`Confidence` 由分級改為可解釋的 0..1 數值**（completeness × agreement × conviction）。
+> - R9 只有 price／breadth 兩維；新 spec 另外引入法人維度（futures／cash／margin）作為
+>   **Evidence**，負責把 `BULL` 修正成 `DISTRIBUTION`。
+>
+> 歷史脈絡：`docs/SPEC_R10_MARKET_DASHBOARD.md`（更早一版的需求原文＋舊實作對照，仍保留供追溯）
+> **自稱**接手 R9——其開頭寫著「R9 開頭指向的就是這份文件」。但本檔從未指向過 R10。
+> canonical spec 現已改為不綁 R 編號的 `docs/SPEC_MARKET_DASHBOARD.md`。
+
 **Status:** Design only. No code in this commit.
 **Scope of this doc:** R9-1 detection + the full R9 roadmap (R9-1 → R9-4).
 **Owner intent:** 在市場轉弱時，不要讓 scanner 用同一套「超級多頭」邏輯解讀所有股票。
 R9 是一層 **regime 判斷與解讀層**，不是改分數、不是自動交易。
 
-> 這份文件是 R9 的 source of truth。實作前先讀這裡；改設計先改這裡。
+> ~~這份文件是 R9 的 source of truth。實作前先讀這裡；改設計先改這裡。~~
+> **（已失效，2026-08-09）** 這句是 R9 撰寫當時的敘述，與本檔頂端的 SUPERSEDED 狀態衝突。
+> 現在的 source of truth 是 `docs/SPEC_MARKET_DASHBOARD.md`：**實作前先讀那份，改設計先改那份。**
+> 本檔僅供推導追溯，不再更新。
 > 與既有 R6 / R7 / R8 SPEC 文件同慣例（`docs/SPEC_R6_*`, `docs/SPEC_R8_*`）。
 
 ---
