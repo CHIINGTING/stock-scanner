@@ -1,0 +1,169 @@
+{
+  "date": "2026-07-14",
+  "generated_at": "2026-07-15T07:10:29.726216+08:00",
+  "market_score": {
+    "total": 62.315,
+    "available_count": 7,
+    "modules": [
+      {
+        "name": "ForeignFutures",
+        "score": 40,
+        "weight": 20,
+        "state": "More Short",
+        "detail": "Net -83390・Extreme Short・Δ-2324",
+        "available": true
+      },
+      {
+        "name": "ForeignCash",
+        "score": 80,
+        "weight": 20,
+        "state": "Strong Buy",
+        "detail": "Net +230億 (Buy 480 / Sell 250)",
+        "available": true
+      },
+      {
+        "name": "Margin",
+        "score": 65,
+        "weight": 15,
+        "state": "Bullish",
+        "detail": "Price +0.80%・融資 -30億",
+        "available": true
+      },
+      {
+        "name": "Options",
+        "score": 65,
+        "weight": 15,
+        "state": "Low P/C",
+        "detail": "Put/Call 0.65",
+        "available": true
+      },
+      {
+        "name": "Currency",
+        "score": 65,
+        "weight": 10,
+        "state": "Risk On",
+        "detail": "USD/TWD 29.850 (-0.150)・DXY 103.20 (-0.30)",
+        "available": true
+      },
+      {
+        "name": "VIX",
+        "score": 65,
+        "weight": 10,
+        "state": "Normal",
+        "detail": "VIX 16.2",
+        "available": true
+      },
+      {
+        "name": "SectorCycle",
+        "score": 58.14999999999999,
+        "weight": 10,
+        "state": "avg 58",
+        "detail": "7 sectors",
+        "available": true
+      }
+    ]
+  },
+  "regime": {
+    "regime": "Bull Pullback",
+    "confidence": "MEDIUM",
+    "description": "長期仍偏多，短期修正。",
+    "strategy": "優先布局強勢族群，等回檔後的再攻擊。",
+    "risk": "避免追高；修正未完成前分批。",
+    "reasons": [
+      "Market Score 62/100（7 個模組）",
+      "外資期貨: More Short",
+      "外資現貨: Strong Buy",
+      "融資: Bullish",
+      "選擇權: Low P/C",
+      "匯率: Risk On",
+      "VIX: Normal",
+      "產業循環: avg 58"
+    ],
+    "caveats": [
+      "外資期貨淨空單偏極端，可能為避險，不宜單獨解讀為看空"
+    ]
+  },
+  "sectors": [
+    {
+      "name": "Memory",
+      "stars": 5,
+      "score": 83.35,
+      "reason": "Cycle 88・News +45"
+    },
+    {
+      "name": "Passive",
+      "stars": 4,
+      "score": 72.6,
+      "reason": "Cycle 78・News +20"
+    },
+    {
+      "name": "Power",
+      "stars": 4,
+      "score": 69.75,
+      "reason": "Cycle 75・News +15"
+    },
+    {
+      "name": "PCB",
+      "stars": 3,
+      "score": 59.15,
+      "reason": "Cycle 62・News +5"
+    },
+    {
+      "name": "ABF",
+      "stars": 3,
+      "score": 55.599999999999994,
+      "reason": "Cycle 58・News +0"
+    },
+    {
+      "name": "Steel",
+      "stars": 2,
+      "score": 35,
+      "reason": "Cycle 35・News -30"
+    },
+    {
+      "name": "Shipping",
+      "stars": 1,
+      "score": 31.599999999999998,
+      "reason": "Cycle 28・News -20"
+    }
+  ],
+  "top_opportunities": [
+    {
+      "sector": "Memory",
+      "reasons": [
+        "景氣循環偏強 (Cycle 88)",
+        "新聞偏多 (News +45)"
+      ]
+    },
+    {
+      "sector": "Passive",
+      "reasons": [
+        "景氣循環偏強 (Cycle 78)",
+        "新聞偏多 (News +20)"
+      ]
+    },
+    {
+      "sector": "Power",
+      "reasons": [
+        "景氣循環偏強 (Cycle 75)",
+        "新聞偏多 (News +15)"
+      ]
+    }
+  ],
+  "top_risks": [
+    {
+      "sector": "Shipping",
+      "reasons": [
+        "景氣循環轉弱 (Cycle 28)",
+        "新聞偏空 (News -20)"
+      ]
+    },
+    {
+      "sector": "Steel",
+      "reasons": [
+        "景氣循環轉弱 (Cycle 35)",
+        "新聞偏空 (News -30)"
+      ]
+    }
+  ]
+}
