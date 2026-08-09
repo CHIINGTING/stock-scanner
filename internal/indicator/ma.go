@@ -19,6 +19,29 @@ func SMA(src []float64, period int) []float64 {
 	return out
 }
 
+// MASlopePerDay returns the slope of a moving average itself, in PERCENT PER TRADING DAY:
+//
+//	((ma[t] / ma[t-lookback]) - 1) / lookback * 100
+//
+// Percent rather than absolute difference is the whole point: ma[t] - ma[t-5] is measured in
+// dollars, so a NT$500 stock and a NT$20 stock cannot be compared. Dividing by the lookback
+// normalises windows against each other, so an MA20 slope over 5 days and an MA60 slope over
+// 10 days are the same unit and can sit in one table.
+//
+// ok=false when there is not enough history or either endpoint is non-positive — a missing
+// slope must never arrive as a confident 0, which would read as "flat".
+func MASlopePerDay(ma []float64, lookback int) (float64, bool) {
+	n := len(ma)
+	if lookback <= 0 || n < lookback+1 {
+		return 0, false
+	}
+	cur, prev := ma[n-1], ma[n-1-lookback]
+	if cur <= 0 || prev <= 0 {
+		return 0, false
+	}
+	return (cur/prev - 1) / float64(lookback) * 100, true
+}
+
 // MA20ConsecutiveRising returns how many consecutive days MA20 has been rising (0 if flat/falling).
 func MA20ConsecutiveRising(ma20 []float64) int {
 	n := len(ma20)

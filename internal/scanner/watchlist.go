@@ -86,6 +86,13 @@ type WatchlistEntry struct {
 	// ranking. A non-nil value with Status != OK means the analysis was unavailable.
 	AI *ai.Analysis `json:"ai,omitempty"`
 
+	// TrendExt (R12): shadow-only Slope / BIAS / SectorHeat combined reading. nil unless
+	// enable_trend_extension is on. Deliberately a dedicated field, NOT inside
+	// ShadowSignals, so the C6b guardrail scoring — which reads ShadowSignals and nothing
+	// else — cannot reach it. Computed AFTER computeRocket. NEVER affects Score / Action /
+	// RocketScore / WatchAction / ExplosionProb / sort / stop / position sizing.
+	TrendExt *TrendExtensionView `json:"trend_ext,omitempty"`
+
 	// HorizonHint (R6-7): display-only 回測觀察週期 hint. nil unless show_horizon_hint
 	// is on. Distinct from R7-1 HoldingHorizon (stage+ATR shadow): R6-7 is setup-matched
 	// from existing shadow + daily indicators and surfaced in the report (⑧). Never affects
@@ -287,6 +294,13 @@ func (s *Scanner) EnrichWatchlist(
 		// non-nil (Status carries NO_PATTERN / INVALID_BAR).
 		if s.cfg.EnableCandlestick {
 			e.Candlestick = computeCandlestick(item.Candles, rk.Stage)
+		}
+
+		// TrendExtension (R12): POST-PASS after computeRocket. Reads the BIAS view above
+		// (when R10-1 ran) and the sector's Heat from the rotation results; writes only
+		// e.TrendExt. flag-off → field stays nil and output is byte-identical.
+		if s.cfg.EnableTrendExtension {
+			attachTrendExtension(&e, item.Candles, rot)
 		}
 
 		out = append(out, e)

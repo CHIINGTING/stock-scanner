@@ -256,6 +256,7 @@ func main() {
 		ShowBias:                    cfg.Scanner.ShowBias,
 		ShowCandlestick:             cfg.Scanner.ShowCandlestick,
 		ShowAI:                      cfg.Scanner.ShowAI,
+		ShowTrendExtension:          cfg.Scanner.ShowTrendExtension,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,

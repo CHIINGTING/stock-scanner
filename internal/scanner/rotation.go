@@ -57,6 +57,12 @@ type SectorStock struct {
 	AboveShortMA bool    // 站上 5 日且 10 日均線
 	NewHigh20    bool    // 創 20 日新高
 	AboveMA60    bool    // 站上 MA60
+
+	// R12 Sector Heat inputs. AboveMA20 has its own validity flag because a member whose
+	// MA20 cannot be computed must be excluded from the breadth denominator, not counted
+	// as "not above".
+	AboveMA20 bool
+	MA20Valid bool
 }
 
 // SectorRotation is the aggregated rotation result for one sector.
@@ -103,6 +109,11 @@ type SectorRotation struct {
 	TrendLabel     string  // 確認上升 | 尚未確認 | 轉弱
 	AboveMA60Ratio float64 // 站上 MA60 比例（%）
 
+	// Heat (R12) is a COMPONENT, not a second sector score: it measures how BROAD and
+	// PARTICIPATED the move is, which Score's mean-based components cannot see. nil unless
+	// enable_trend_extension is on. NEVER feeds Score / Stage / OppScore / ordering.
+	Heat *SectorHeatView
+
 	Raw    RotationScore
 	Stocks []SectorStock
 }
@@ -147,6 +158,9 @@ func (s *Scanner) ScanRotation(order []string, sectorData map[string][]fetcher.S
 
 	// Cross-sector relative-strength normalization (min-max of AvgReturn20 → 0–100).
 	normalizeRelStrength(results)
+	// R12: Heat's momentum leg is cross-sectional too, and is filled the same way — after
+	// every sector exists. It reads only Heat and writes only Heat.
+	NormalizeSectorHeat(results)
 
 	// Final Score, Stage, and opportunity-adjusted score.
 	for i := range results {
@@ -182,6 +196,7 @@ func (s *Scanner) ScanRotation(order []string, sectorData map[string][]fetcher.S
 // Returns nil if the sector has no usable members.
 func (s *Scanner) buildSector(name string, stocks []fetcher.StockData) *SectorRotation {
 	sr := &SectorRotation{Name: name}
+	heatMembers := make([]HeatMemberInput, 0, len(stocks))
 
 	var (
 		newHighN, breakoutN, volExpN    int
@@ -228,6 +243,11 @@ func (s *Scanner) buildSector(name string, stocks []fetcher.StockData) *SectorRo
 		if ms.NewHigh20 {
 			newHigh20N++
 		}
+		// R12: same loop, same snapshot — no second pass over price history.
+		heatMembers = append(heatMembers, HeatMemberInput{
+			AboveMA20: ms.AboveMA20, MA20Valid: ms.MA20Valid,
+			Return20: ms.Return20, VolumeRatio: ms.VolumeRatio,
+		})
 		if ms.MA60Valid {
 			ma60ValidN++
 			if ms.MA60Up {
@@ -272,6 +292,13 @@ func (s *Scanner) buildSector(name string, stocks []fetcher.StockData) *SectorRo
 	// ── 60 日趨勢 ────────────────────────────────────────────────────────────
 	sr.TrendStrength = 0.6*sr.MA60Slope + 0.4*sr.AboveMA60Ratio
 	sr.TrendLabel = trendLabel(sr.TrendStrength)
+
+	// R12 Sector Heat. len(stocks) is the CONFIGURED member count, so Coverage reports how
+	// many were dropped for thin history rather than hiding it.
+	if s.cfg.EnableTrendExtension {
+		h := ComputeSectorHeat(len(stocks), heatMembers)
+		sr.Heat = &h
+	}
 
 	sr.Raw = RotationScore{
 		SectorMomentum: sr.AvgReturn20,
@@ -330,6 +357,13 @@ func memberSnapshot(stock fetcher.StockData, ind indicator.Result) SectorStock {
 	// Volume ratio vs 20-day average.
 	if ind.VolumeMA[n-1] > 0 {
 		ms.VolumeRatio = float64(latest.Volume) / ind.VolumeMA[n-1]
+	}
+
+	// R12 breadth input: is the member above its OWN MA20. Reuses the MA20 the indicator
+	// pass already produced — no second moving average is computed here.
+	if len(ind.MA20) == n && ind.MA20[n-1] > 0 {
+		ms.MA20Valid = true
+		ms.AboveMA20 = latest.Close > ind.MA20[n-1]
 	}
 
 	// MA60 slope: rising over the last ~5 days; and whether price is above MA60.

@@ -211,6 +211,18 @@ scanner:
   enable_bias: false                               # 總開關，預設 false
   show_bias: false                                 # 顯示開關，預設 false
 
+  # ── 趨勢／乖離／族群熱度 (R12) — SHADOW ONLY ──────────────────────────────────
+  # enable_trend_extension=false（預設）時完全不計算，WatchlistEntry.TrendExt 與
+  # SectorRotation.Heat 皆為 nil。show_trend_extension=false（預設）時 report ⑮ 不顯示。
+  # 兩者皆不影響 Score / Action / RocketScore / WatchAction / ExplosionProb / 排序 /
+  # 停損 / 部位大小 —— 這一層只是把「趨勢方向（均線斜率）＋ 價格位置（乖離）＋
+  # 族群共振（熱度）」合併成一個判讀狀態給人看。
+  #
+  # 族群熱度沿用 configs/sectors.yaml 的既有分類，不另建第二套對應；有效成員數不足
+  # （< 4）的族群回報 INSUFFICIENT_DATA，不會硬算出一個看似精確的分數。
+  enable_trend_extension: false                    # 總開關，預設 false
+  show_trend_extension: false                      # 顯示開關，預設 false
+
   # ── AI 解讀 (R11) — SHADOW ONLY，OpenAI 官方 API ──────────────────────────────
   # enable_ai=false（預設）時完全不呼叫 OpenAI，WatchlistEntry.AI 為 nil。
   # show_ai=false（預設）時 report ⑭ 不顯示。兩者皆不影響 Score / Action / RocketScore /

@@ -204,6 +204,17 @@ type Config struct {
 	EnableCandlestick bool `yaml:"enable_candlestick"` // 預設 false
 	ShowCandlestick   bool `yaml:"show_candlestick"`   // 預設 false
 
+	// ── Trend / Extension / Sector Heat (R12) — SHADOW MODE, display only ────────
+	// EnableTrendExtension gates computing SectorRotation.Heat and WatchlistEntry.TrendExt
+	// (MA slope + BIAS location + sector heat, combined into one deterministic state).
+	// Default false → nothing is computed, both fields stay nil, output is byte-identical.
+	// ShowTrendExtension gates the report ⑮ section. Both display-only: NEVER affect
+	// Score / Action / RocketScore / WatchAction / ExplosionProb / sort / stop / ranking /
+	// position sizing / Stage / market regime. Data layer in internal/scanner/trendext.go
+	// and sectorheat.go; the moving averages and BIAS come from internal/indicator.
+	EnableTrendExtension bool `yaml:"enable_trend_extension"` // 預設 false
+	ShowTrendExtension   bool `yaml:"show_trend_extension"`   // 預設 false
+
 	// ── AI Analysis (R11) — SHADOW MODE, explanation layer only ──────────────────
 	// EnableAI gates running the OpenAI analyzer + attaching WatchlistEntry.AI as a
 	// POST-PASS after computeRocket. ShowAI gates the report ⑭ section. Both default

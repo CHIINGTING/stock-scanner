@@ -25,10 +25,25 @@ func main() {
 	minBars := flag.Int("min-bars", 130, "drop symbols with fewer bars")
 	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
 	recentBull := flag.Bool("recentbull", false, "R6-6: recent bull regime validation (20d primary, signal-date 2m/4m/6m windows)")
+	trendExt := flag.Bool("trendext", false, "R12: slope / BIAS / sector-heat condition comparison (baseline vs each leg vs combined states)")
+	sectors := flag.String("sectors", "configs/sectors.yaml", "R12: sector taxonomy for the heat panel (same file the scanner uses)")
+	heatStep := flag.Int("heatstep", 5, "R12: recompute the sector heat panel every N trading days (heat moves slowly; 1 = every day)")
 	flag.Parse()
 
 	t0 := time.Now()
-	u, err := r6backtest.LoadUniverse(*cacheDir, *minBars, nil, nil)
+	// R12 needs the sector taxonomy to build the heat panel. It is loaded from the SAME
+	// configs/sectors.yaml the scanner uses — there is no second sector mapping. Other modes
+	// pass nil exactly as before, so their universes are unchanged.
+	var sectorOf map[string]string
+	if *trendExt {
+		m, err := r6backtest.LoadSectorMap(*sectors)
+		if err != nil {
+			log.Fatalf("load sectors: %v", err)
+		}
+		sectorOf = m
+		fmt.Printf("sector map: %d symbols from %s\n", len(sectorOf), *sectors)
+	}
+	u, err := r6backtest.LoadUniverse(*cacheDir, *minBars, nil, sectorOf)
 	if err != nil {
 		log.Fatalf("load universe: %v", err)
 	}
@@ -50,6 +65,43 @@ func main() {
 	setups = append(setups, r6backtest.SetupCVariants()...)
 
 	stamp := time.Now().Format("20060102")
+
+	// ── R12 trend/extension condition comparison (separate output; baseline unchanged) ──
+	if *trendExt {
+		tH := time.Now()
+		panel := r6backtest.BuildHeatPanel(u, *heatStep)
+		fmt.Printf("sector heat panel: %d dates (step %d) in %v\n", len(u.Axis), *heatStep, time.Since(tH))
+
+		teSetups := r6backtest.TrendExtSetups(u, panel)
+		var teStats []r6backtest.SetupStat
+		var teTrades []r6backtest.Trade
+		for _, st := range teSetups {
+			tRun := time.Now()
+			trades := r6backtest.RunSetup(u, rs, st, p)
+			teTrades = append(teTrades, trades...)
+			teStats = append(teStats, r6backtest.ComputeStats(st.Name(), 0, trades, p.Horizons, p))
+			fmt.Printf("  %-28s %6d trades  (%v)\n", st.Name(), len(trades), time.Since(tRun))
+		}
+		csv := filepath.Join(*outDir, "backtest_trendext_"+stamp+".csv")
+		md := filepath.Join(*outDir, "backtest_trendext_summary_"+stamp+".md")
+		if err := r6backtest.WriteCSV(csv, teTrades); err != nil {
+			log.Fatalf("write trendext csv: %v", err)
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only) ; sectors: %d symbols mapped", len(u.Stocks), len(sectorOf)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+			fmt.Sprintf("warmup: %d ; horizons: %v ; entry: %s ; stops: %v", p.Warmup, p.Horizons, p.EntryMode, p.StopRules),
+			fmt.Sprintf("heat panel step: %d trading days", *heatStep),
+			"thresholds: read from scanner.DefaultTrendExtThresholds() — the SHIPPED values, not a tuned copy",
+			"READ AS DIFFERENCES FROM BASELINE_ALL_BARS: the universe is survivorship-biased (delisted names absent), so absolute returns are optimistic for every row alike",
+			"the falsifiable claim: STATE_PULLBACK_IN_UPTREND and STATE_EXTENDED must differ in forward return AND downside — if they do not, the state machine is not describing a real distinction",
+		}
+		if err := r6backtest.WriteMarkdown(md, "R12 Trend / BIAS / Sector-Heat Condition Comparison", meta, teStats, p.Horizons); err != nil {
+			log.Fatalf("write trendext md: %v", err)
+		}
+		fmt.Printf("trendext: %d conditions, %d trades\nwrote %s and %s\n", len(teStats), len(teTrades), csv, md)
+		return
+	}
 
 	// ── R6-6 recent bull regime validation (separate output; 20d primary) ──
 	// NOT cross-regime. Slices the same A/B/C entries into recent signal-date

@@ -494,6 +494,48 @@ func calcSummary(items []scanner.StockAnalysis) PortfolioSummary {
 	return s
 }
 
+// trendStateNames maps an R12 state to its display text. The action wording is part of the
+// STATE's meaning as the analyzer defined it, not a fresh judgement made at render time —
+// EXTENDED in particular must read as a do-not-chase warning, never as a stronger buy.
+var trendStateNames = map[scanner.TrendExtState]string{
+	scanner.TrendConfirmed:       "TREND_CONFIRMED — 趨勢確認，族群共振",
+	scanner.PullbackInUptrend:    "PULLBACK_IN_UPTREND — 上升趨勢中的技術性回檔（僅描述位置，非較佳進場）",
+	scanner.TrendExtended:        "EXTENDED — 乖離過大，不要追（Do not chase；進場風險升高，非賣出或看空訊號）",
+	scanner.SectorConfirmed:      "SECTOR_CONFIRMED — 族群共振領先，中期均線尚未翻揚",
+	scanner.SectorDivergence:     "SECTOR_DIVERGENCE — 個股獨強，族群未共振，信心下修",
+	scanner.TrendWeakening:       "WEAKENING — 趨勢向下且價在均線下，非拉回",
+	scanner.TrendExtNeutral:      "NEUTRAL — 無明確組合",
+	scanner.TrendExtInsufficient: "INSUFFICIENT_DATA — 資料不足",
+}
+
+func trendStateText(s scanner.TrendExtState) string {
+	if t, ok := trendStateNames[s]; ok {
+		return t
+	}
+	return string(s)
+}
+
+// trendStateCSS picks the colour band.
+//
+// Colour is a description, so it is bound by the same rule as the wording. Two consequences:
+//
+//   - EXTENDED shares the risk colour so it never reads as a green confirmation. It is an
+//     ENTRY-RISK warning, not a sell or a bearish call — the label carries that explicitly;
+//   - PULLBACK_IN_UPTREND sits in the NEUTRAL band, not the constructive one. It used to
+//     share green with TREND_CONFIRMED, which visually claimed the two were equally good
+//     while validation puts them 15 points apart on 20d win rate (29.9% vs 45.1%). Green
+//     there was a high-probability-setup claim the data does not support.
+func trendStateCSS(s scanner.TrendExtState) string {
+	switch s {
+	case scanner.TrendConfirmed, scanner.SectorConfirmed:
+		return "te-good"
+	case scanner.TrendExtended, scanner.TrendWeakening, scanner.SectorDivergence:
+		return "te-warn"
+	default:
+		return "te-flat"
+	}
+}
+
 // GuardrailViewOptions carries the minimal data report.go needs to DISPLAY the
 // C6a/C6b shadow signals & guardrails (plus a couple of unrelated display
 // toggles, e.g. ShowBacktestInsights). It is display-only: report never scores.
@@ -523,6 +565,11 @@ type GuardrailViewOptions struct {
 	// action / probability / sorting / stop / WatchAction.
 	ShowInstitution bool
 	ShowBias        bool
+
+	// ShowTrendExtension gates the report ⑮ "趨勢／乖離／族群熱度" section (R12).
+	// Display-only; the R12 layer NEVER touches score / action / probability / sorting /
+	// stop / WatchAction / ranking. When false the section is entirely absent.
+	ShowTrendExtension bool
 
 	// ShowAI gates the report ⑭ "AI 分析" section (R11). Default false → no such section
 	// and byte-identical output. Display-only; the AI layer NEVER touches score / action /
@@ -767,6 +814,32 @@ func (r *Report) Generate(
 	defer f.Close()
 
 	funcs := template.FuncMap{
+		// R12 formatters. They FORMAT and nothing else: every state, code and component
+		// value is decided in internal/scanner and rendered verbatim here. The renderer
+		// must never re-derive strategy.
+		"slopeLabel": func(v *float64) string {
+			if v == nil {
+				return "—"
+			}
+			return fmt.Sprintf("%+.3f%% / 日", *v)
+		},
+		"pctPtr": func(v *float64) string {
+			if v == nil {
+				return "—"
+			}
+			return fmt.Sprintf("%+.2f%%", *v)
+		},
+		"rankPtr": func(v *float64) string {
+			if v == nil {
+				return "—"
+			}
+			return fmt.Sprintf("%.0f 分位", *v)
+		},
+		"heatOK": func(h *scanner.SectorHeatView) bool {
+			return h != nil && h.Status == scanner.SectorHeatOK
+		},
+		"trendStateText": trendStateText,
+		"trendStateCSS":  trendStateCSS,
 		// R11 AI display helpers. aiOK is what keeps the ⑭ section from rendering an empty
 		// shell when the analysis was unavailable — the report simply omits it, matching how
 		// ⑨/⑩/⑬ handle their own unavailable states.
@@ -1590,6 +1663,19 @@ th.rotscore{min-width:120px}
 .wl-risk h4{color:#fca5a5}
 @media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
 
+{{ if .GV.ShowTrendExtension }}
+/* ⑮ 趨勢／乖離／族群熱度（R12）— 沿用 wl-sec，只加狀態色帶與指標網格 */
+.wl-te .te-state{display:inline-block;border-radius:6px;padding:3px 10px;font-size:.78rem;font-weight:700;margin-bottom:8px}
+.wl-te .te-state.te-good{background:#0b1f17;border:1px solid #14532d;color:#86efac}
+.wl-te .te-state.te-warn{background:#2a1414;border:1px solid #7f1d1d;color:#fca5a5}
+.wl-te .te-state.te-flat{background:#111827;border:1px solid #334155;color:#94a3b8}
+.wl-te .te-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 14px;font-size:.74rem;color:#cbd5e1}
+.wl-te .te-grid span{color:#64748b}
+.wl-te .te-codes{margin-top:6px;display:flex;flex-wrap:wrap;gap:5px}
+.wl-te .te-code{font-size:.66rem;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:1px 5px;letter-spacing:.04em}
+.wl-te .te-missing{color:#64748b;font-style:italic}
+{{ end }}
+
 {{ if .GV.ShowAI }}
 /* ⑭ AI 分析（R11）— 沿用 wl-sec 既有樣式，只加多空色帶 */
 .wl-ai .ai-summary{font-size:.78rem;color:#e2e8f0;line-height:1.85;margin-bottom:8px}
@@ -1934,6 +2020,37 @@ th.rotscore{min-width:120px}
             <div class="wl-note">本區塊由 AI 解讀掃描器已算出的證據產生，不改變任何分數、階段或 BUY／WATCH／SELL。</div>
           </div>
           {{- end }}{{- end }}{{- end }}
+          {{- if $.GV.ShowTrendExtension }}{{- with $e.TrendExt }}
+          <div class="wl-sec wl-te">
+            <h4>⑮ 趨勢／乖離／族群熱度（Shadow Only，不影響 BUY／WATCH／SELL）</h4>
+            <div class="te-state {{ trendStateCSS .State }}">{{ trendStateText .State }}</div>
+            <div class="te-grid">
+              <div><span>MA20 斜率</span> {{ slopeLabel .MA20Slope5D }}</div>
+              <div><span>MA60 斜率</span> {{ slopeLabel .MA60Slope10D }}</div>
+              <div><span>BIAS20</span> {{ pctPtr .Bias20 }}</div>
+              <div><span>BIAS60</span> {{ pctPtr .Bias60 }}</div>
+              <div><span>BIAS20 自身分位</span> {{ rankPtr .Bias20Percentile }}</div>
+            </div>
+            {{- with .Heat }}
+            {{- if heatOK . }}
+            <div class="te-grid" style="margin-top:6px">
+              <div><span>族群熱度</span> <b>{{ printf "%.0f" .Heat }} / 100</b></div>
+              <div><span>Breadth</span> {{ printf "%.0f" .Breadth }}</div>
+              <div><span>相對動能</span> {{ printf "%.0f" .RelativeMomentum }}</div>
+              <div><span>參與度</span> {{ printf "%.0f" .Participation }}</div>
+              <div><span>量能確認</span> {{ printf "%.0f" .VolumeConfirmation }}</div>
+              <div><span>成員</span> {{ .ValidMemberCount }} / {{ .MemberCount }}</div>
+            </div>
+            {{- else }}
+            <div class="te-missing">族群熱度 — INSUFFICIENT_DATA（有效成員 {{ .ValidMemberCount }} / {{ .MemberCount }}，不足以計算，未以 0 代替）</div>
+            {{- end }}
+            {{- end }}
+            {{- if .Codes }}
+            <div class="te-codes">{{- range .Codes }}<span class="te-code">{{ . }}</span>{{- end }}</div>
+            {{- end }}
+            <div class="wl-note">趨勢方向（斜率）＋ 價格位置（乖離）＋ 族群共振（熱度）的合併判讀，僅供閱讀，不改變任何分數、階段或買賣訊號。</div>
+          </div>
+          {{- end }}{{- end }}
         </div>
       </div>
     </td>
