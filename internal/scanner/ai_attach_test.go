@@ -32,8 +32,15 @@ func aiOKHandler(calls *int) http.HandlerFunc {
 			*calls++
 		}
 		b, _ := json.Marshal(map[string]any{
-			"choices": []any{map[string]any{"message": map[string]string{"content": aiReply}}},
-			"usage":   map[string]int{"total_tokens": 120},
+			"status": "completed",
+			"output": []any{
+				map[string]any{"type": "reasoning", "id": "rs_test"},
+				map[string]any{
+					"type": "message", "role": "assistant",
+					"content": []any{map[string]any{"type": "output_text", "text": aiReply}},
+				},
+			},
+			"usage": map[string]int{"total_tokens": 120},
 		})
 		w.Write(b)
 	}

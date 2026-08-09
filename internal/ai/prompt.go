@@ -33,21 +33,13 @@ Hard constraints:
 - "confidence" is how well the supplied evidence supports YOUR READING. It is not a
   probability that the trade works, and it is not a trading confidence.
 
-Reply with a single JSON object and nothing else:
-{
-  "summary": "two or three sentences in Traditional Chinese",
-  "bull_case": ["short bullet", "..."],
-  "bear_case": ["short bullet", "..."],
-  "risk_flags": ["short bullet", "..."],
-  "confidence": 0.0
-}
-
-Rules for the JSON:
-- Every bullet must trace back to a field in the supplied evidence.
-- Use Traditional Chinese for all human-readable text.
-- If the evidence is too thin to argue a side, return an empty array for that side rather
-  than inventing one.
-- confidence is a number between 0 and 1.`
+The reply shape is enforced by a strict JSON schema, so it does not need describing here.
+What the fields MEAN is up to you to respect:
+- summary: two or three sentences in Traditional Chinese.
+- bull_case / bear_case / risk_flags: short bullets, Traditional Chinese. Every bullet must
+  trace back to a field in the supplied evidence. If the evidence is too thin to argue a
+  side, return an empty array for that side rather than inventing one.
+- confidence: a number between 0 and 1.`
 
 // buildUserMessage serialises one stock's evidence.
 //
@@ -67,6 +59,11 @@ func buildUserMessage(e Evidence) (string, error) {
 }
 
 // parseOutput turns the model's reply into an Analysis.
+//
+// The Responses API enforces the schema server-side (text.format, strict:true), so a
+// well-formed run cannot get here with the wrong shape. This is still a real decode rather
+// than a formality: it is the last line of defence if the endpoint is ever pointed elsewhere,
+// and it is what turns a schema-valid but empty summary into "unavailable".
 //
 // Strict by design: a payload that is not a usable JSON object becomes BAD_OUTPUT. There is
 // no regex salvage path and no fallback that would let a malformed reply be reinterpreted as

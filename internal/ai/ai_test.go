@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,14 +19,23 @@ func withKey(t *testing.T, v string) {
 	t.Setenv(apiKeyEnv, v)
 }
 
-// chatOK returns a well-formed Chat Completions response carrying `content`.
-func chatOK(content string, tokens int) string {
+// respOK returns a well-formed Responses API reply carrying `content`.
+//
+// The output array deliberately leads with a reasoning item: a reasoning-capable model puts
+// one there, and any parser that reads output[0] would pick it up instead of the message.
+func respOK(content string, tokens int) string {
 	b, _ := json.Marshal(map[string]any{
-		"choices": []any{map[string]any{
-			"message":       map[string]string{"role": "assistant", "content": content},
-			"finish_reason": "stop",
-		}},
-		"usage": map[string]int{"total_tokens": tokens},
+		"id":     "resp_test",
+		"object": "response",
+		"status": "completed",
+		"output": []any{
+			map[string]any{"type": "reasoning", "id": "rs_test", "summary": []any{}},
+			map[string]any{
+				"type": "message", "role": "assistant", "status": "completed",
+				"content": []any{map[string]any{"type": "output_text", "text": content}},
+			},
+		},
+		"usage": map[string]int{"input_tokens": 100, "output_tokens": 50, "total_tokens": tokens},
 	})
 	return string(b)
 }
@@ -88,33 +98,43 @@ func TestClientSuccess(t *testing.T) {
 	var gotAuth, gotPath, gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth, gotPath = r.Header.Get("Authorization"), r.URL.Path
-		buf := make([]byte, 4096)
-		n, _ := r.Body.Read(buf)
-		gotBody = string(buf[:n])
-		w.Write([]byte(chatOK(goodOutput, 321)))
+		b, _ := io.ReadAll(r.Body)
+		gotBody = string(b)
+		w.Write([]byte(respOK(goodOutput, 321)))
 	}))
 	defer srv.Close()
 
 	c := NewClient(srv.URL, 5*time.Second)
-	comp, err := c.Complete(context.Background(), "gpt-4o-mini", "sys", "user", 0.2)
+	comp, err := c.Complete(context.Background(), "gpt-5.6-luna", "sys", "user", 0.2)
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
 	if comp.content != goodOutput || comp.tokens != 321 {
 		t.Errorf("content/tokens wrong: %q %d", comp.content, comp.tokens)
 	}
-	if gotPath != chatPath {
-		t.Errorf("path = %s, want %s", gotPath, chatPath)
+	if gotPath != responsesPath {
+		t.Errorf("path = %s, want %s", gotPath, responsesPath)
 	}
 	if gotAuth != "Bearer unit-test-key-not-a-secret" {
 		t.Errorf("auth header wrong: %q", gotAuth)
 	}
-	// JSON mode must be requested, otherwise the reply would have to be scraped from prose.
-	if !strings.Contains(gotBody, `"response_format"`) || !strings.Contains(gotBody, "json_object") {
-		t.Errorf("request did not ask for JSON mode: %s", gotBody)
+	// The schema must ride in text.format — the Responses API ignores response_format, so
+	// sending the old field would silently drop the guarantee and leave prose to scrape.
+	if strings.Contains(gotBody, "response_format") {
+		t.Errorf("request still carries the Chat Completions field: %s", gotBody)
 	}
-	if !strings.Contains(gotBody, `"system"`) || !strings.Contains(gotBody, `"user"`) {
-		t.Errorf("both roles must be sent: %s", gotBody)
+	for _, want := range []string{`"text"`, `"format"`, "json_schema", `"strict":true`,
+		"additionalProperties", "bull_case", "risk_flags"} {
+		if !strings.Contains(gotBody, want) {
+			t.Errorf("structured-output request is missing %q: %s", want, gotBody)
+		}
+	}
+	// System text goes in instructions; the evidence goes in input as a user message.
+	if !strings.Contains(gotBody, `"instructions":"sys"`) {
+		t.Errorf("system text not sent as instructions: %s", gotBody)
+	}
+	if !strings.Contains(gotBody, `"input"`) || !strings.Contains(gotBody, `"role":"user"`) {
+		t.Errorf("evidence not sent as a user input message: %s", gotBody)
 	}
 }
 
@@ -157,7 +177,7 @@ func TestClientTimeoutAndCancellation(t *testing.T) {
 	withKey(t, "unit-test-key-not-a-secret")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(300 * time.Millisecond)
-		w.Write([]byte(chatOK(goodOutput, 1)))
+		w.Write([]byte(respOK(goodOutput, 1)))
 	}))
 	defer srv.Close()
 
@@ -176,8 +196,9 @@ func TestClientMalformedAndEmptyResponses(t *testing.T) {
 	withKey(t, "unit-test-key-not-a-secret")
 	for _, body := range []string{
 		`{not json`,
-		`{"choices":[]}`,
-		`{"choices":[{"message":{"content":"   "}}]}`,
+		`{"status":"completed","output":[]}`,
+		`{"status":"completed","output":[{"type":"reasoning","id":"rs_1"}]}`,
+		`{"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"   "}]}]}`,
 	} {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(body))
@@ -187,6 +208,78 @@ func TestClientMalformedAndEmptyResponses(t *testing.T) {
 		if err == nil {
 			t.Errorf("body %q should have failed", body)
 		}
+	}
+}
+
+// The text lives in a typed output array, so it must be located by type. Indexing output[0]
+// would grab a reasoning item the moment a reasoning-capable model is configured.
+func TestOutputTextWalksTypedItems(t *testing.T) {
+	got, err := outputText([]outputItem{
+		{Type: "reasoning"},
+		{Type: "function_call"},
+		{Type: "message", Role: "assistant", Content: []outputContent{
+			{Type: "output_text", Text: `{"summary":`},
+			{Type: "output_text", Text: `"ok"}`},
+		}},
+	})
+	if err != nil || got != `{"summary":"ok"}` {
+		t.Errorf("got %q, %v — text parts should concatenate in order", got, err)
+	}
+
+	// A refusal is a different fact from an empty reply and must say so.
+	_, err = outputText([]outputItem{{Type: "message", Content: []outputContent{
+		{Type: "refusal", Refusal: "I cannot assist with that."},
+	}}})
+	if err == nil || !strings.Contains(err.Error(), "refused") {
+		t.Errorf("a refusal must surface as a refusal, got %v", err)
+	}
+
+	if _, err := outputText(nil); err == nil {
+		t.Error("no output at all must be an error")
+	}
+}
+
+// A truncated reply can still be valid JSON while missing half the reading, so an incomplete
+// status is a failure rather than something to salvage.
+func TestClientRejectsIncompleteResponse(t *testing.T) {
+	withKey(t, "unit-test-key-not-a-secret")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},
+			"output":[{"type":"message","role":"assistant",
+			"content":[{"type":"output_text","text":"{\"summary\":\"half\"}"}]}]}`))
+	}))
+	defer srv.Close()
+
+	_, err := NewClient(srv.URL, 5*time.Second).Complete(context.Background(), "m", "s", "u", 0)
+	if err == nil || !strings.Contains(err.Error(), "max_output_tokens") {
+		t.Errorf("incomplete response must fail with its reason, got %v", err)
+	}
+}
+
+// temperature: 0 is the escape hatch for models that reject the parameter — it must drop the
+// field entirely rather than sending an explicit zero.
+func TestClientOmitsZeroTemperature(t *testing.T) {
+	withKey(t, "unit-test-key-not-a-secret")
+	var body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		w.Write([]byte(respOK(goodOutput, 1)))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, 5*time.Second)
+
+	if _, err := c.Complete(context.Background(), "m", "s", "u", 0); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(body, "temperature") {
+		t.Errorf("temperature 0 should be omitted: %s", body)
+	}
+	if _, err := c.Complete(context.Background(), "m", "s", "u", 0.2); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(body, `"temperature":0.2`) {
+		t.Errorf("a set temperature must be sent: %s", body)
 	}
 }
 
@@ -273,7 +366,7 @@ func TestAnalyzerCostControl(t *testing.T) {
 	var calls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
-		w.Write([]byte(chatOK(goodOutput, 10)))
+		w.Write([]byte(respOK(goodOutput, 10)))
 	}))
 	defer srv.Close()
 
@@ -315,7 +408,7 @@ func TestAnalyzerNeverPropagatesFailure(t *testing.T) {
 		{"500", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) }, StatusError},
 		{"garbage", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("{{{")) }, StatusError},
 		{"prose", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(chatOK("just some words", 5)))
+			w.Write([]byte(respOK("just some words", 5)))
 		}, StatusBadOutput},
 	} {
 		srv := httptest.NewServer(tc.h)
@@ -342,16 +435,16 @@ func TestAnalyzerNeverPropagatesFailure(t *testing.T) {
 func TestAnalyzerSuccessShape(t *testing.T) {
 	withKey(t, "unit-test-key-not-a-secret")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(chatOK(goodOutput, 250)))
+		w.Write([]byte(respOK(goodOutput, 250)))
 	}))
 	defer srv.Close()
 
-	a := NewAnalyzer(Config{BaseURL: srv.URL, Model: "gpt-4o-mini"}, nil)
+	a := NewAnalyzer(Config{BaseURL: srv.URL, Model: "gpt-5.6-luna"}, nil)
 	res := a.Analyze(context.Background(), true, []Candidate{cand("2330", true, 90)})["2330"]
 	if !res.OK() {
 		t.Fatalf("expected OK: %+v", res)
 	}
-	if res.Model != "gpt-4o-mini" || res.Tokens != 250 {
+	if res.Model != "gpt-5.6-luna" || res.Tokens != 250 {
 		t.Errorf("metadata not recorded: %+v", res)
 	}
 }

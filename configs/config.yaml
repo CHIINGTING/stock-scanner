@@ -222,7 +222,7 @@ scanner:
   enable_ai: false                                 # 總開關，預設 false
   show_ai: false                                   # 顯示開關，預設 false
   ai:
-    model: "gpt-4o-mini"                           # OpenAI model id
+    model: "gpt-5.6-luna"                          # OpenAI model id
     timeout_sec: 30                                # 單一請求逾時（秒）
     max_stocks: 12                                 # 每次執行最多分析幾檔（成本上限）
     temperature: 0.2                               # 越低越貼近證據，不要調高

@@ -38,7 +38,7 @@ const (
 // token comes from the environment at request time and is never stored on a struct, so it
 // cannot be serialised into a report, a snapshot, or a log line by accident.
 type Config struct {
-	// Model is the OpenAI model id, e.g. "gpt-4o-mini".
+	// Model is the OpenAI model id, e.g. "gpt-5.6-luna".
 	Model string `yaml:"model"`
 	// TimeoutSec bounds one request. Zero → 30.
 	TimeoutSec int `yaml:"timeout_sec"`
@@ -55,7 +55,7 @@ type Config struct {
 // the market and institution configs.
 func (c Config) Defaulted() Config {
 	if c.Model == "" {
-		c.Model = "gpt-4o-mini"
+		c.Model = "gpt-5.6-luna"
 	}
 	if c.TimeoutSec <= 0 {
 		c.TimeoutSec = 30

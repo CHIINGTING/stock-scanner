@@ -591,6 +591,10 @@ scanner:
 它**不會**拿到原始價格序列，**不會**重算任何指標，**不會**產生買賣建議。報告 ⑭ 區塊
 就是它唯一的出口。
 
+走的是 OpenAI 官方 **Responses API**（`POST /v1/responses`），輸出格式由 Structured
+Outputs（`text.format` 的 `json_schema` + `strict`）在 API 端強制保證，不是靠 prompt
+拜託模型、更不是用 regex 從自然語言拆欄位。只用 Go 標準庫 `net/http`，沒有引入 SDK。
+
 ### 啟用方式
 
 **第一步：把 API token 放進環境變數。** token 只從 `OPENAI_API_KEY` 讀取，程式不會、
@@ -610,7 +614,7 @@ scanner:
   enable_ai: true      # 呼叫 OpenAI 做解讀
   show_ai: true        # 報告顯示 ⑭ AI 分析
   ai:
-    model: "gpt-4o-mini"
+    model: "gpt-5.6-luna"
     timeout_sec: 30
     max_stocks: 12     # 每次執行最多分析幾檔（成本上限）
     temperature: 0.2

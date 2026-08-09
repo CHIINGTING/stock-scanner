@@ -15,13 +15,18 @@ import (
 // OpenAI transport. Standard library only — no SDK, no new module dependency (go.mod still
 // carries just yaml.v3 and x/text).
 //
-// Endpoint: POST /v1/chat/completions, the official Chat Completions API. It is not
-// deprecated and supports response_format JSON mode, which is what keeps the output
-// machine-readable instead of prose that would have to be regex-scraped.
-
+// Endpoint: POST /v1/responses, the Responses API — the interface OpenAI recommends for new
+// projects. Two things differ from the older Chat Completions shape and both matter here:
+//
+//   - the output schema lives in text.format (type "json_schema"), NOT in response_format;
+//     with strict:true the API itself guarantees the reply matches the schema, so the output
+//     is machine-readable by construction rather than by asking nicely in the prompt;
+//   - the reply is a TYPED output array, not a single choice. Reasoning, tool calls and
+//     messages are separate item types, so the text has to be located by walking the items
+//     rather than reading a fixed index. Nothing here is regex-scraped.
 const (
 	defaultBaseURL = "https://api.openai.com"
-	chatPath       = "/v1/chat/completions"
+	responsesPath  = "/v1/responses"
 	// maxResponseBytes caps what is read from the wire. A runaway or hostile response must
 	// not be able to exhaust memory on a CI runner.
 	maxResponseBytes = 1 << 20 // 1 MiB
@@ -29,11 +34,11 @@ const (
 	apiKeyEnv = "OPENAI_API_KEY"
 )
 
-// Client talks to the Chat Completions endpoint.
+// Client talks to the Responses endpoint.
 //
-// It holds no API key: the key is read from the environment inside Do and used only to build
-// one Authorization header. Nothing that could carry the secret is stored on the struct or
-// returned to a caller.
+// It holds no API key: the key is read from the environment inside Complete and used only to
+// build one Authorization header. Nothing that could carry the secret is stored on the struct
+// or returned to a caller.
 type Client struct {
 	HTTP    *http.Client
 	BaseURL string
@@ -54,35 +59,88 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 // AI stage cleanly rather than issuing requests guaranteed to 401.
 func HasAPIKey() bool { return strings.TrimSpace(os.Getenv(apiKeyEnv)) != "" }
 
-type chatMessage struct {
+// ── request ──────────────────────────────────────────────────────────────────────────
+
+type inputMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-type chatRequest struct {
-	Model          string        `json:"model"`
-	Messages       []chatMessage `json:"messages"`
-	Temperature    float64       `json:"temperature"`
-	ResponseFormat struct {
-		Type string `json:"type"`
-	} `json:"response_format"`
+type textFormat struct {
+	Type   string         `json:"type"`
+	Name   string         `json:"name"`
+	Schema map[string]any `json:"schema"`
+	Strict bool           `json:"strict"`
 }
 
-type chatResponse struct {
-	Choices []struct {
-		Message      chatMessage `json:"message"`
-		FinishReason string      `json:"finish_reason"`
-	} `json:"choices"`
+type textConfig struct {
+	Format textFormat `json:"format"`
+}
+
+type responsesRequest struct {
+	Model        string         `json:"model"`
+	Instructions string         `json:"instructions,omitempty"`
+	Input        []inputMessage `json:"input"`
+	// Temperature is a pointer so a configured 0 can be omitted entirely. Some models reject
+	// the parameter outright; setting temperature: 0 in config is the escape hatch that drops
+	// it from the request rather than forcing a 400 on every call.
+	Temperature *float64   `json:"temperature,omitempty"`
+	Text        textConfig `json:"text"`
+}
+
+// analysisSchema is the strict JSON Schema the API enforces on the reply.
+//
+// strict:true requires every property to be listed in required and additionalProperties to be
+// false — the model cannot omit a field or invent one. An empty array is how it says "no case
+// to argue on this side", which is why nothing here is optional.
+func analysisSchema() map[string]any {
+	strArray := map[string]any{"type": "array", "items": map[string]any{"type": "string"}}
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"summary":    map[string]any{"type": "string"},
+			"bull_case":  strArray,
+			"bear_case":  strArray,
+			"risk_flags": strArray,
+			"confidence": map[string]any{"type": "number"},
+		},
+		"required":             []string{"summary", "bull_case", "bear_case", "risk_flags", "confidence"},
+		"additionalProperties": false,
+	}
+}
+
+// ── response ─────────────────────────────────────────────────────────────────────────
+
+type apiError struct {
+	Message string `json:"message"`
+	Type    string `json:"type"`
+	Code    string `json:"code"`
+}
+
+type outputContent struct {
+	Type    string `json:"type"`
+	Text    string `json:"text"`
+	Refusal string `json:"refusal"`
+}
+
+type outputItem struct {
+	Type    string          `json:"type"`
+	Role    string          `json:"role"`
+	Content []outputContent `json:"content"`
+}
+
+type responsesResponse struct {
+	Status            string       `json:"status"`
+	Output            []outputItem `json:"output"`
+	IncompleteDetails *struct {
+		Reason string `json:"reason"`
+	} `json:"incomplete_details"`
 	Usage struct {
-		PromptTokens     int `json:"prompt_tokens"`
-		CompletionTokens int `json:"completion_tokens"`
-		TotalTokens      int `json:"total_tokens"`
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+		TotalTokens  int `json:"total_tokens"`
 	} `json:"usage"`
-	Error *struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
-		Code    string `json:"code"`
-	} `json:"error"`
+	Error *apiError `json:"error"`
 }
 
 // completion is one raw model reply plus its token usage.
@@ -91,11 +149,12 @@ type completion struct {
 	tokens  int
 }
 
-// Complete sends one chat completion request and returns the assistant's content.
+// Complete sends one request and returns the assistant's structured text.
 //
 // Every failure mode is an error here and becomes a non-OK Analysis upstream: missing key,
-// context cancellation, timeout, non-2xx (401/429/5xx alike), an oversized or truncated
-// body, undecodable JSON, or a well-formed response carrying no content.
+// context cancellation, timeout, non-2xx (401/429/5xx alike), an oversized or truncated body,
+// undecodable JSON, an incomplete response, a refusal, or a well-formed response carrying no
+// output text.
 //
 // Error strings deliberately never include the request body or the key.
 func (c *Client) Complete(ctx context.Context, model, system, user string, temperature float64) (completion, error) {
@@ -104,24 +163,27 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 		return completion{}, fmt.Errorf("ai: %s is not set", apiKeyEnv)
 	}
 
-	reqBody := chatRequest{
-		Model:       model,
-		Temperature: temperature,
-		Messages: []chatMessage{
-			{Role: "system", Content: system},
-			{Role: "user", Content: user},
-		},
+	reqBody := responsesRequest{
+		Model:        model,
+		Instructions: system,
+		Input:        []inputMessage{{Role: "user", Content: user}},
+		Text: textConfig{Format: textFormat{
+			Type:   "json_schema",
+			Name:   "stock_evidence_reading",
+			Schema: analysisSchema(),
+			Strict: true,
+		}},
 	}
-	// JSON mode: the model must return a single JSON object, so the reply can be decoded
-	// instead of parsed out of prose.
-	reqBody.ResponseFormat.Type = "json_object"
+	if temperature > 0 {
+		reqBody.Temperature = &temperature
+	}
 
 	buf, err := json.Marshal(reqBody)
 	if err != nil {
 		return completion{}, fmt.Errorf("ai: encode request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base()+chatPath, bytes.NewReader(buf))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base()+responsesPath, bytes.NewReader(buf))
 	if err != nil {
 		return completion{}, fmt.Errorf("ai: build request: %w", err)
 	}
@@ -144,7 +206,7 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// Surface the API's own message when it sent one — it names the real problem
 		// (rate limit, bad key, model not found) far better than the status alone.
-		var errEnv chatResponse
+		var errEnv responsesResponse
 		if json.Unmarshal(body, &errEnv) == nil && errEnv.Error != nil {
 			return completion{}, fmt.Errorf("ai: HTTP %d: %s (%s)",
 				resp.StatusCode, errEnv.Error.Message, errEnv.Error.Type)
@@ -152,21 +214,56 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 		return completion{}, fmt.Errorf("ai: HTTP %d", resp.StatusCode)
 	}
 
-	var out chatResponse
+	var out responsesResponse
 	if err := json.Unmarshal(body, &out); err != nil {
 		return completion{}, fmt.Errorf("ai: decode response: %w", err)
 	}
 	if out.Error != nil {
 		return completion{}, fmt.Errorf("ai: %s (%s)", out.Error.Message, out.Error.Type)
 	}
-	if len(out.Choices) == 0 {
-		return completion{}, fmt.Errorf("ai: response carried no choices")
+	// A truncated reply can be valid JSON that is missing half the reading, so an incomplete
+	// status is a failure rather than something to salvage.
+	if out.Status == "incomplete" {
+		reason := "unknown"
+		if out.IncompleteDetails != nil && out.IncompleteDetails.Reason != "" {
+			reason = out.IncompleteDetails.Reason
+		}
+		return completion{}, fmt.Errorf("ai: response incomplete (%s)", reason)
 	}
-	content := strings.TrimSpace(out.Choices[0].Message.Content)
-	if content == "" {
-		return completion{}, fmt.Errorf("ai: response carried empty content")
+
+	content, err := outputText(out.Output)
+	if err != nil {
+		return completion{}, err
 	}
 	return completion{content: content, tokens: out.Usage.TotalTokens}, nil
+}
+
+// outputText walks the typed output array and returns the assistant's text.
+//
+// The array can carry reasoning items, tool calls and messages in any order, so the text is
+// located by TYPE rather than by position — indexing output[0] would break the moment a
+// reasoning model is configured. A refusal is reported as such instead of being treated as an
+// empty reply, because "the model declined" and "the model said nothing" are different facts.
+func outputText(items []outputItem) (string, error) {
+	var sb strings.Builder
+	for _, it := range items {
+		if it.Type != "message" {
+			continue // reasoning / function_call / anything else this layer does not use
+		}
+		for _, part := range it.Content {
+			switch part.Type {
+			case "output_text":
+				sb.WriteString(part.Text)
+			case "refusal":
+				return "", fmt.Errorf("ai: model refused: %s", strings.TrimSpace(part.Refusal))
+			}
+		}
+	}
+	text := strings.TrimSpace(sb.String())
+	if text == "" {
+		return "", fmt.Errorf("ai: response carried no output text")
+	}
+	return text, nil
 }
 
 func (c *Client) base() string {
