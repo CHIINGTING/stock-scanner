@@ -1,0 +1,150 @@
+name: market-dashboard-daily
+
+# Builds one Market Dashboard snapshot per Taiwan trading day and commits it, so that real
+# institutional history (foreign cash, margin, foreign futures) accumulates from today
+# forward. Historical replay cannot supply those — the TAIFEX daily feed has no date
+# parameter — so the only way to get an InstitutionalPosture series is to collect it live.
+#
+# SHADOW-ONLY: this workflow does not touch stock scoring, BUY/WATCH/SELL, stage analysis,
+# candlestick, or any ranking. It writes data/market/ and nothing else.
+
+on:
+  schedule:
+    # GitHub cron is UTC; Taiwan is UTC+8 year-round (no DST), so 13:00 UTC is always
+    # 21:00 Taipei. Mon–Fri only; the job itself refuses non-trading days (see below).
+    #
+    # Why 21:00 Taipei rather than straight after the 13:30 close:
+    #   * TWSE BFI82U (foreign cash) is converted using the exchange rate TWSE announces at
+    #     15:30 — its own notes field says so — so it cannot be final before then.
+    #   * TWSE MI_MARGN (margin) depends on broker reporting and publishes later still.
+    #   * TAIFEX institutional futures cover the day session that ends 13:45.
+    #   * The job first refreshes the price cache, which takes ~30 minutes.
+    # Neither exchange documents an exact publication time on its data pages, so the schedule
+    # is deliberately conservative rather than tuned: several hours of margin past the latest
+    # known constraint, while staying on the same calendar day so the snapshot's date label is
+    # unambiguous. A too-early run degrades safely — it does not fabricate (see below).
+    - cron: "0 13 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Trading date to build (YYYY-MM-DD). Empty = today (Taipei)."
+        required: false
+      skip_guard:
+        description: "Build even if the benchmark did not trade that day (debug only)."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# One run at a time: two jobs writing the same day's snapshot and racing to commit would
+# either conflict or silently drop one of them.
+concurrency:
+  group: market-dashboard-daily
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Resolve Taipei trading date
+        id: d
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            DATE="${{ github.event.inputs.date }}"
+          else
+            DATE="$(TZ=Asia/Taipei date +%F)"
+          fi
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "Building Market Dashboard for $DATE (Taipei now: $(TZ=Asia/Taipei date '+%F %T'))"
+
+      # The market pipeline needs the benchmark series and the full breadth universe, both of
+      # which live in .cache — which is gitignored and therefore absent on a fresh runner.
+      # The scanner is what populates it. Its own report output is ignored here; this step
+      # exists purely to warm the cache, and it is also what makes the trading-day guard
+      # meaningful (the guard asks whether 0050 actually printed a close).
+      - name: Refresh price cache
+        run: go run ./cmd/scanner -config configs/config.yaml --all
+
+      - name: Build market snapshot
+        id: snap
+        run: |
+          GUARD="-require-trading-day"
+          if [ "${{ github.event.inputs.skip_guard }}" = "true" ]; then GUARD=""; fi
+
+          set -o pipefail
+          go run ./cmd/market-fetch -date "${{ steps.d.outputs.date }}" $GUARD | tee snapshot.log
+
+          if grep -q "No snapshot written" snapshot.log; then
+            echo "written=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "written=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Every scheduled weekday run that is not a trading day ends here, having written
+      # nothing. That is a normal outcome, not a failure — Taiwan has ~15 market holidays a
+      # year plus typhoon closures, and none of them should produce a snapshot or a red run.
+      - name: Not a trading day
+        if: steps.snap.outputs.written == 'false'
+        run: |
+          echo "::notice::${{ steps.d.outputs.date }} is not a Taiwan trading day (or the price cache lagged). No snapshot written."
+
+      # Surface a partial day in the run summary. The pipeline's contract is that a dead
+      # exchange leaves its evidence explicitly missing with reduced confidence — never
+      # neutral, and never yesterday's value reused as today's — so a partial snapshot is a
+      # legitimate record. It is worth seeing at a glance, not worth failing over.
+      - name: Flag missing sources
+        if: steps.snap.outputs.written == 'true'
+        run: |
+          if grep -q "missing_evidence=none" snapshot.log; then
+            echo "::notice::All sources present."
+          else
+            echo "::warning::Partial snapshot — $(grep -o 'missing_evidence=.*' snapshot.log)"
+          fi
+          if grep -q "SOURCE_DATE_MISMATCH" snapshot.log; then
+            echo "::warning::A source returned a different trading date than requested; that source was recorded as unavailable rather than accepted."
+          fi
+          {
+            echo "### Market Dashboard — ${{ steps.d.outputs.date }}"
+            echo '```'
+            grep -E "^(requested_date|source=|missing_evidence)" snapshot.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Persistence: commit the snapshot into the repo, the same mechanism the hourly scanner
+      # workflow uses for its reports. data/market/ is NOT gitignored, so no force-add is
+      # needed. A snapshot is ~4 KB, so a year of daily history is about 1 MB — small enough
+      # that the simplicity is worth more than an artifact store the analysis code would then
+      # have to learn to read.
+      - name: Commit snapshot
+        if: steps.snap.outputs.written == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/market/market_${{ steps.d.outputs.date }}.json
+          if git diff --cached --quiet; then
+            echo "Snapshot unchanged — nothing to commit (re-running a date is idempotent)."
+            exit 0
+          fi
+          git commit -m "chore(market): snapshot ${{ steps.d.outputs.date }}"
+
+          # The hourly scanner workflow may have pushed while this job was running.
+          for i in 1 2 3; do
+            git pull --rebase --autostash && git push && exit 0
+            echo "push attempt $i failed; retrying"
+            sleep 5
+          done
+          exit 1
+
+      - name: Run tests
+        run: go test ./...
