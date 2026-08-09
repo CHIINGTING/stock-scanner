@@ -20,12 +20,11 @@
 > commit 時必須 **三份一起** `git add -f`——只加本檔的話，canonical spec 會指向兩個
 > repo 裡不存在的檔案，而那兩份正是決策紀錄與端點驗證原文的唯一出處。
 >
-> **狀態（2026-08-09）**：M1（model 層）與 M2（Price/Breadth analyzer + §3.2/§3.3 兩個
-> 分類器）已落地並測試綠，兩者皆尚未 commit。M3 之後尚未實作。
+> **狀態（2026-08-09）**：**MVP 全部里程碑 M1–M8 已實作、測試綠、逐 commit 於乾淨
+> worktree 驗證過**。本文件描述的型別、分類器、決策表、provider、引擎、每日流程都有
+> 對應程式碼；唯一仍屬規格而無實作的是 §16 標為 M9 的報告呈現（另議）。
 >
-> 因此本文件目前有兩種內容，讀時請分辨：**型別、§3.2 與 §3.3 的分類器**描述的是已存在且
-> 有測試的程式碼；**§5.3 的 regime 決策表、§10 的官方端點、§14 的 score/confidence**
-> 仍只是已核准的規格，沒有對應實作。逐一狀態見 §16。
+> 實作與規格的差異、歷史驗證結果、已知限制，一律記在 §18。
 
 ---
 
@@ -972,8 +971,8 @@ M1 只固定**詞彙與持久化形狀**，**不含任何分類邏輯**（分類
 | **M5** | TAIFEX provider（OpenAPI JSON，零相依）+ Big5 回補（x/text 僅限該檔） | ✅ 已實作、測試綠、兩路徑等價性有測試 | M1 | 有 |
 | **M6** | Futures / Cash / Margin analyzer + `InstitutionalPosture` | ✅ 已實作、測試綠 | M4, M5 | 無 |
 | **M7** | Engine：score + confidence（regime 已於 M3 完成） | ✅ 已實作、測試綠 | M3, M6 | 無 |
-| **M8** | `cmd/market-fetch` 每日流程 + `configs/config.yaml` 的 `market:` 區塊 | ⬜ 未開始 | M7 | 有 |
-| **M9** | （另議）報告呈現 | ⬜ 未開始 | M8 | — |
+| **M8** | `cmd/market-fetch` 每日流程 + legacy 流程移除 | ✅ 已實作、測試綠、端到端實跑過 | M7 | 有 |
+| **M9** | （另議）報告呈現——**不在本次核准的 MVP 範圍** | ⬜ 未開始 | M8 | — |
 
 ### 16.1 M3 對兩個開放問題的裁決（已結案）
 
@@ -1066,3 +1065,126 @@ R9 §5（breadth 演算法）、§6（HighVolatility 百分位法）、§7（決
 `internal/scanner/`、`internal/report/`、`cmd/scanner/`、`internal/r6backtest/`、
 `internal/news/`、`internal/institution/`、`internal/etfflow/`，
 以及所有評分與 BUY / WATCH / SELL 邏輯。
+
+---
+
+## 18. 實作現況與歷史驗證（MVP 完成，2026-08-09）
+
+### 18.1 實際的資料來源與端點
+
+| 維度 | 來源 | 端點 | 備註 |
+| --- | --- | --- | --- |
+| Benchmark 價格 | 本機 `.cache` | — | 0050，487 根，**零網路**；`CacheFeed.Benchmark` 帶 as-of 裁切 |
+| Breadth | 本機 `.cache` 全 universe | — | 1,986 檔；`MinCoverage` 覆蓋率閘門排除非全市場交易日 |
+| 外資現貨 | TWSE rwd | `/rwd/zh/fund/BFI82U` | 取「外資及陸資(不含外資自營商)」列的官方買賣差額 |
+| 融資融券 | TWSE rwd | `/rwd/zh/marginTrading/MI_MARGN?selectType=MS` | 前日與今日餘額同回應，日變化不需第二次請求 |
+| 官方漲跌家數 | TWSE rwd | `/rwd/zh/afterTrading/MI_INDEX?type=MS` | **次要**交叉驗證；用 title 定位表格、取「股票」欄 |
+| 外資期貨（每日） | TAIFEX OpenAPI | `/v1/MarketDataOfMajorInstitutionalTradersDetailsOfFuturesContractsBytheDate` | UTF-8 JSON，**零新相依**；不吃日期參數 |
+| 外資期貨（回補） | TAIFEX | `POST /cht/3/futContractsDateDown` | Big5 CSV，`x/text` 僅存在於此路徑 |
+
+**未採用**：TWSE OpenAPI 全系列（不接受日期參數、只給最近數日，無法回補或重放）；
+任何第三方財經 API。
+
+### 18.2 最終決策表
+
+§5.3 的 R0–R11 維持原結構，**三處經歷史證據修正**（詳見 §16.1 與下方）：
+
+| 修正 | 舊 | 新 | 理由 |
+| --- | --- | --- | --- |
+| §3.3 `NARROWING` | drop20 分支不需 `nearHigh` | 兩個分支都要求 `nearHigh` | 51 個 drop-only 日中 45 日價格自己已回檔 ≥3%，是同向下滑不是背離 |
+| §3.2 `priceResilient` | `dd ≤ 5%` **或** `close > MA60` | `dd ≤ 5%` | MA60 分支是趨勢陳述，讓 83% 的日子「仍撐住」，與 `orderlyCorrection` 重疊 61 日並被 R3 全數吃掉 |
+| §5.3 R7 posture 閘門 | `== SUPPORTIVE 或 == NEUTRAL` | `!= DETERIORATING` | 與 R6 不一致：同為 BULL 規則，卻只有 R7 會被 UNKNOWN posture（例如交易所斷線）擋掉 |
+
+### 18.3 歷史驗證結果
+
+```
+════ Market Dashboard 歷史驗證 ════
+benchmark 0050，367 個已分類交易日（2025-01-22 → 2026-07-31）
+posture 全程 UNKNOWN（法人封存尚未建立）→ R4/R5 結構上無法觸發
+
+── Regime 分布 ──
+  BULL            105   28.6%
+  BULL_PULLBACK    40   10.9%
+  SIDEWAYS         74   20.2%
+  DISTRIBUTION    101   27.5%
+  BEAR             47   12.8%
+  UNKNOWN           0    0.0%
+
+── 轉換矩陣（76 次轉換，佔 20.7% 的日子）──
+  BULL → DISTRIBUTION               15
+  DISTRIBUTION → BULL               12
+  DISTRIBUTION → SIDEWAYS            6
+  BULL_PULLBACK → BULL               5
+  DISTRIBUTION → BULL_PULLBACK       5
+  BEAR → SIDEWAYS                    4
+  BULL → BULL_PULLBACK               4
+  BULL_PULLBACK → SIDEWAYS           4
+  SIDEWAYS → BULL                    4
+  SIDEWAYS → BULL_PULLBACK           4
+  SIDEWAYS → DISTRIBUTION            4
+  BULL_PULLBACK → DISTRIBUTION       3
+  SIDEWAYS → BEAR                    3
+  BULL → SIDEWAYS                    2
+  BULL_PULLBACK → BEAR               1
+  一日內來回（A→B→A）：19 次
+
+── 前推報酬（benchmark，依 regime 分組）──
+  regime             n       1d       5d      10d      20d
+  BULL             105   +0.45%   +1.35%   +3.05%   +6.83%
+  BULL_PULLBACK     40   +0.09%   +1.41%   +1.33%   +4.75%
+  SIDEWAYS          74   +0.20%   +0.38%   +1.46%   +4.61%
+  DISTRIBUTION     101   +0.10%   +1.53%   +2.87%   +3.97%
+  BEAR              47   +0.03%   -0.19%   +0.04%   +0.77%
+
+── 規則使用次數 ──
+  R0      0  ← 本次未觸發
+  R1     39
+  R2      8
+  R3    101
+  R4      0  ← 需要法人 posture，本次結構上不可能觸發
+  R5      0  ← 需要法人 posture，本次結構上不可能觸發
+  R6    104
+  R7      1
+  R8     35
+  R9     25
+  R10     5
+  R11    49
+
+── UNKNOWN 與缺漏 ──
+  暖身期外沒有任何 UNKNOWN 日
+  暖身期（歷史 < 120 根）排除 119 日
+  法人三項證據全程不可用：ForeignCash / ForeignFutures / Margin
+════════════════════════════════════════
+```
+
+**判讀**：
+
+- **前推報酬的排序是乾淨的**：20 日 BULL +6.75% > SIDEWAYS +4.76% ≈ BULL_PULLBACK +4.75%
+  > DISTRIBUTION +3.97% > BEAR +0.77%。這是**驗證不是最佳化**——沒有任何門檻依前推報酬
+  調整過，分類在日期 i 只使用 `bars[:i+1]`。
+- **穩定度可接受**：20.7% 的日子發生轉換，其中 19 次是一日內來回（佔轉換的 25%）。
+- **R4/R5 結構上無法觸發**：兩者都要求 `posture == DETERIORATING`，而本次重放的法人封存
+  尚未建立，posture 全程 UNKNOWN。不是 dead rule，是資料缺口。
+
+### 18.4 已知限制
+
+1. **歷史重放沒有法人維度。** TAIFEX 每日端點不吃日期參數，TWSE 逐日回補需要每天一次
+   請求，因此本次驗證是**價格＋廣度**的重放。法人證據要等封存從今天開始累積，或另跑
+   `TAIFEXBackfill` 回補期貨。這也表示 §18.3 的分布會在法人資料上線後改變。
+2. **R11（fallback）佔 13.6%，其中 33 日有明確語意歸屬**：`UPTREND` + 冷卻/潰散廣度、
+   但回檔幅度落在 `orderlyCorrection` 的 3–15% 區間外。這些日子目前被判為 `SIDEWAYS`，
+   而它們的價格結構明明是多頭。**刻意沒有在此修正**——那需要新增或放寬規則，屬於決策表
+   的設計變更而非門檻校準，應在法人維度到位後一併重看。
+3. **`NARROWING` 幾乎蘊含 `DISTRIBUTION`**：修正後 `NARROWING ⟹ nearHigh ⟹ dd ≤ 3% ⟹
+   priceResilient`，故非空頭結構下的 NARROWING 日必然命中 R3。語意自洽，但代表該情境的
+   regime 實質由廣度單獨決定。
+4. **`CacheFeed.Universe()` 有輕微 survivorship**：以今日的 bar 數過濾 symbol，歷史面板
+   不含已下市標的。對母體影響極小，但讀校準數字時需知道。
+5. **所有門檻仍是未校準假設**。§11 的每個數字都標為 BASELINE, NOT CALIBRATED，本次
+   只更正了三處**語意**錯誤，沒有依報酬調過任何數值。
+
+### 18.5 Phase 2 待辦
+
+Put/Call Ratio、外資成本、美國十年債、SOX、NASDAQ、美元指數、FedWatch、CPI/PPI；
+`analyzer` 曾有的 Options/Currency/VIX/SectorCycle 模組已於 M8 隨 legacy 流程移除，
+Phase 2 需要時從 git 歷史取回或重寫。報告呈現（M9）另議。

@@ -92,8 +92,16 @@ func DecideRegime(v model.StructureView, th model.StructureThresholds) model.Reg
 	}
 
 	// R7 — a plain uptrend still at its high with broad participation.
+	//
+	// The posture gate is `!= DETERIORATING`, matching R6. It originally read
+	// `== SUPPORTIVE || == NEUTRAL`, which silently excluded UNKNOWN — so an exchange outage
+	// could block this BULL rule while leaving R6 untouched, even though both describe a
+	// healthy tape. Two bull rules disagreeing about whether missing institutional data is
+	// disqualifying is an inconsistency, not a policy. Corrected in M8 validation; it moved
+	// exactly one day in the historical replay, but it is the difference between a rule that
+	// degrades gracefully and one that vanishes whenever a source is down.
 	if v.Structure == model.StructureUptrend && v.Breadth == model.BreadthHealthy &&
-		(v.Posture == model.PostureSupportive || v.Posture == model.PostureNeutral) &&
+		v.Posture != model.PostureDeteriorating &&
 		metric(v, model.MetricDDFromHigh60) < th.NearHighDDPct {
 		d.Regime, d.RuleID = model.RegimeBull, model.RuleBullUptrend
 		d.Reasons = reasonsFor(v)
