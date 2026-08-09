@@ -23,8 +23,10 @@ Stock Radar 不是技術指標展示工具。
 10. [市場別：TW vs TWO](#市場別tw-vs-two)
 11. [執行參數](#執行參數)
 12. [消息面（News Shadow Module）](#消息面news-shadow-module)
-13. [設定檔與所有開關（config.yaml）](#設定檔與所有開關configyaml)
-14. [常見問題](#常見問題)
+13. [AI 解讀（AI Shadow Layer）](#ai-解讀ai-shadow-layer)
+14. [區間策略回測面板（backtest.html）](#區間策略回測面板backtesthtml)
+15. [設定檔與所有開關（config.yaml）](#設定檔與所有開關configyaml)
+16. [常見問題](#常見問題)
 
 ---
 
@@ -577,6 +579,145 @@ scanner:
 
 ---
 
+## AI 解讀（AI Shadow Layer）
+
+> **AI 分析是選用的，而且是 shadow-only：它不影響任何確定性計算的分數，也不影響
+> BUY／WATCH／SELL 訊號。**
+
+掃描器本身完全不含 AI——分數、階段、訊號、排序都由固定規則算出，同樣的輸入永遠得到
+同樣的輸出。這一層做的是**另一件事**：把掃描器**已經算完**的證據（階段、飆股分數、
+量價、整理天數、族群流向、法人籌碼、風險標籤）交給 OpenAI，換回一段人話的多空解讀。
+
+它**不會**拿到原始價格序列，**不會**重算任何指標，**不會**產生買賣建議。報告 ⑭ 區塊
+就是它唯一的出口。
+
+走的是 OpenAI 官方 **Responses API**（`POST /v1/responses`），輸出格式由 Structured
+Outputs（`text.format` 的 `json_schema` + `strict`）在 API 端強制保證，不是靠 prompt
+拜託模型、更不是用 regex 從自然語言拆欄位。只用 Go 標準庫 `net/http`，沒有引入 SDK。
+
+### 啟用方式
+
+**第一步：把 API token 放進環境變數。** token 只從 `OPENAI_API_KEY` 讀取，程式不會、
+也不能從設定檔或任何 repo 內的檔案取得它：
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+> **絕對不要**把 token 寫進 `config.yaml`、原始碼、測試資料或報告——設定結構裡刻意
+> 沒有任何可以存放 token 的欄位，`internal/scanner` 也有測試會擋下 configs 內的憑證。
+
+**第二步：在 `configs/config.yaml` 開啟開關（預設全關），模型也寫在設定檔裡：**
+
+```yaml
+scanner:
+  enable_ai: true      # 呼叫 OpenAI 做解讀
+  show_ai: true        # 報告顯示 ⑭ AI 分析
+  ai:
+    model: "gpt-5.6-luna"
+    timeout_sec: 30
+    max_stocks: 12     # 每次執行最多分析幾檔（成本上限）
+    temperature: 0.2
+```
+
+| 組合 | 行為 |
+|------|------|
+| `enable_ai: false`（預設） | 完全不呼叫 OpenAI，`WatchlistEntry.AI` 為 nil，輸出與沒有這功能時一致 |
+| `enable_ai: true, show_ai: false` | 有呼叫、有記錄，但報告不顯示（觀察模式） |
+| `enable_ai: true, show_ai: true` | 呼叫 + 顯示 ⑭ |
+| `enable_ai: false, show_ai: true` | 不呼叫，報告也沒有東西可顯示 |
+
+### 成本
+
+一檔股票最多送出一次請求，而且只送「可操作候選」（PREPARE／BREAKOUT_BUY／
+PULLBACK_BUY／WATCH_CLOSELY），再依飆股分數由高到低截到 `max_stocks`。WAIT 與
+出場類 action 不會花錢。
+
+### 失敗時會怎樣
+
+**一律 fail-open。** 沒設 `OPENAI_API_KEY`、逾時、429、5xx、回應不是合法 JSON——
+掃描與報告都照常完成，只是該檔的 ⑭ 區塊不出現。AI 失敗不會讓排程失敗。
+
+模型的 `confidence` 是它對**自己那段解讀**的把握，不是交易信心，也不是勝率。
+
+---
+
+## 區間策略回測面板（backtest.html）
+
+盤後報告回答「今天能不能買」。這個面板回答另一個問題：**如果我當初在某天買進、某天賣出，
+不同的加碼／停利紀律，事後看分別會是什麼結果？**
+
+```bash
+make backtest          # 全部快取標的、完整歷史 → backtest.html（約 5 MB）
+make backtest-light    # 只嵌最近 250 個交易日 → 檔案約一半大
+```
+
+**它也掛在每日報告的「🔬 回測洞察」分頁裡**（`show_backtest_insights: true` 時）：
+該分頁的內容就是這個面板。按「在此展開面板」才會用 iframe 載入 `backtest.html`，
+沒展開就完全不下載，所以每日報告的體積與載入速度不受影響；也可以「在新分頁開啟」用整頁版。
+
+> 線上要用得到，`backtest.html` 必須跟報告一起 commit 進 repo（面板會依所在層級自動解析
+> `backtest.html` / `../backtest.html`，所以根目錄的 `index.html` 與 `reports/` 底下的歸檔都指得到）。
+
+產生的 `backtest.html` 是**單一自帶檔案**：價格資料直接嵌在頁面裡，不連網、不吃 CDN，
+用瀏覽器直接開（或放上 GitHub Pages `/backtest.html`）就能用。資料來源是 `.cache/`
+既有的價格快取，所以價格「跟上一次掃描一樣新」——想要最新價，先跑一次 `make run` 再產生面板。
+
+### 面板上能調什麼
+
+| 參數 | 說明 |
+| --- | --- |
+| 標的 / 買進日 / 賣出日 | 代號或中文名皆可；日期可用「近 1 月 / 3 月 / 6 月 / 1 年 / 全部」快速鍵 |
+| 初始本金 | 第一天單筆進場的錢 |
+| 定期定額加碼 | 每次金額 × 次數，每月幾號扣款（遇假日順延） |
+| 預留現金 | 等「自區間最高收盤回檔 X%」時一次全數投入 |
+| 對照標的 | 疊在走勢圖上，以第一天 = 100 正規化（預設 0050） |
+| 交易成本 | 手續費 0.1425%（可打折、最低 20 元、買賣各收）+ 賣出證交稅 0.3% |
+
+### 六種策略
+
+| 策略 | 打法 |
+| --- | --- |
+| 基準 | 第一天全押、抱到期末（所有比較的分母） |
+| 一 | 定期定額加碼，全程不賣 |
+| 二 | 單筆進場 + 預留現金等回檔狙擊（掃 3%～30% 門檻） |
+| 三 | 定期定額 + 回檔狙擊（雙資金流，預留現金不會被定期定額偷用） |
+| 四 | 停利 + 回檔接回（單筆資金，掃「停利 × 接回」12×6 組參數矩陣） |
+| 五 | 定期定額 + 停利接回（空手時新資金先進現金池） |
+| 六 | 停利落袋，出場後不再進場（**不參加排名**——期末是現金，跟全程在市場的策略比報酬率不對等） |
+
+### 讀這個面板要注意
+
+- 所有進出都以**當日收盤價**成交，沒有盤中價、沒有跳空與滑價。
+- **預留現金即使一路沒觸發，也算在總投入裡**——不然把錢閒置的規則會在報酬率上佔便宜。
+- 報酬率一律是「損益 ÷ 總投入」，**不是時間加權**。有定期定額時後面才投入的錢待得比較短，
+  所以策略一的報酬率天生比單筆保守，不能直接拿來當「策略優劣」。
+- 「冠軍」是**事後**從上百組參數挑出來的最佳解，實戰不可能每次選中。冠軍只小勝基準時，
+  選一個你執行得下去的規則，長期勝率反而更高。
+- 預設價格是**原始收盤價**（未還原除權息）。長區間、高股息標的的報酬會被低估，
+  想改用還原價加 `-adjusted`。
+
+### 常用參數
+
+```bash
+go run ./cmd/backtest-panel -h                     # 全部參數
+go run ./cmd/backtest-panel -days 250              # 只嵌最近 250 個交易日
+go run ./cmd/backtest-panel -only 2330,2317,0050   # 只嵌指定標的（檔案極小）
+go run ./cmd/backtest-panel -adjusted              # 用還原收盤價
+go run ./cmd/backtest-panel -archive reports       # 另存一份 reports/backtest_YYYYMMDD.html
+go run ./cmd/backtest-panel -capital 300000 -reserve 200000 -add 20000 -add-count 12
+```
+
+> `-days` 砍掉的是**嵌進頁面的歷史長度**，均線也跟著受影響：低於約 120 天時，
+> 走勢圖的 M60 會因為算不出完整 60 日均值而整條消失。想縮檔案又要保留均線，
+> 用 `-days 250` 比 `-days 60` 合理。
+
+> 策略引擎在 `internal/segbacktest/engine.js`（純函式、無 DOM），由
+> `internal/segbacktest/engine_script_test.go` 用系統內建的 `jsc` 實際跑過驗證，
+> 所以雖然計算在瀏覽器端，規則仍然有單元測試守著。
+
+---
+
 ## 設定檔與所有開關（config.yaml）
 
 所有行為集中在 `configs/config.yaml`。多數進階功能採**雙層開關**：
@@ -614,7 +755,7 @@ scanner:
 |------|------|------|
 | `enable_signal_guardrail_scoring` | **master** | 唯有 true，shadow 訊號才可影響分數 / 動作 / 機率；預設 false = shadow-only |
 | `show_guardrail_signals` | 顯示 | Watchlist 卡片顯示 Guardrail Signals 解釋（實驗性），不影響分數 |
-| `show_backtest_insights` | 顯示 | 多一個「🔬 回測洞察」分頁（靜態摘要），不影響分數 |
+| `show_backtest_insights` | 顯示 | 多一個「🔬 回測洞察」分頁，內容為[區間策略回測面板](#區間策略回測面板backtesthtml)（互動），不影響分數 |
 
 ### scanner — RS 相對強弱（C2）
 

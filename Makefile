@@ -1,7 +1,7 @@
 BIN  := bin/scanner
 CMD  := ./cmd/scanner
 
-.PHONY: build run run-fast run-rotation run-top100 run-top500 run-all merge-watchlist tidy lint clean test
+.PHONY: build run run-fast run-rotation run-top100 run-top500 run-all merge-watchlist backtest backtest-light tidy lint clean test
 
 build:
 	go build -o $(BIN) $(CMD)
@@ -32,8 +32,9 @@ run-all: build
 	./$(BIN) -config configs/config.yaml --all
 	$(MAKE) merge-watchlist
 
-# 把最新報告（reports/report_YYYYMMDD.html）市場掃描分頁的 BUY & WATCH
-# 併入 stocks.yaml 的 watchlist（去重、保留 positions 與註解、冪等）
+# 用最新報告（reports/report_YYYYMMDD.html）市場掃描分頁的 BUY & WATCH
+# 「重建」stocks.yaml 的 watchlist——整批取代，不再附加。
+# positions: 與 watchlist_pinned: 永不更動；候選為 0 時不動檔案；同報告重跑不產生 diff。
 merge-watchlist:
 	python3 .claude/skills/buy-watch-candidates/extract.py
 
@@ -44,6 +45,14 @@ run-date: build
 # 指定不同的持股清單
 run-stocks: build
 	./$(BIN) -config configs/config.yaml --no-market --stocks $(STOCKS)
+
+# 區間策略回測面板 → backtest.html（單一自帶檔案，資料取自 .cache，不連網）
+backtest:
+	go run ./cmd/backtest-panel
+
+# 同上，但只嵌最近 250 個交易日，檔案約一半大
+backtest-light:
+	go run ./cmd/backtest-panel -days 250
 
 tidy:
 	go mod tidy

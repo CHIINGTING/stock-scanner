@@ -36,9 +36,10 @@ scanner:
   # 預設 false → report/UI 完全不變。與 enable_signal_guardrail_scoring 獨立，不影響任何分數。
   show_guardrail_signals: true
 
-  # 純顯示開關：true 時 report 多一個「🔬 回測洞察」分頁，靜態摘要 R6 回測結論
-  # （含「多頭結論、崩盤不適用、不可當停損依據」紅字警告）。預設 false → report 無此分頁。
-  # 純展示：不讀 reports/r6_*、不改分數/排序/WatchAction/ExplosionProb/停損預設。
+  # 純顯示開關：true 時 report 多一個「🔬 回測洞察」分頁，內容為「區間策略回測面板」
+  # （互動；iframe 延遲載入 backtest.html，用 make backtest 產生，沒展開就不下載，
+  # 不影響報告體積）。預設 false → report 無此分頁。
+  # 純展示：不改分數/排序/WatchAction/ExplosionProb/停損預設。
   show_backtest_insights: true
 
   # ── RS Rank（C2）─────────────────────────────────────────────────────────
@@ -192,6 +193,39 @@ scanner:
       twetq:
         enabled: true                            # best-effort；失敗自動隔離、不影響掃描
         base_url: "https://twetq.com"
+
+  # ── Institutional Flow / 三大法人籌碼 (R10-1) — SHADOW MODE, display/record only ──
+  # enable_institution=false（預設）時完全不載 snapshot、不 attach，WatchlistEntry.Institution 為 nil。
+  # show_institution=false（預設）時 report ⑪ 不顯示。兩者皆不影響 Score / Action / RocketScore /
+  # WatchAction / sort / stop。snapshot 由獨立的 cmd/institution-fetch 事先抓取，scanner 只 load。
+  enable_institution: false                        # 總開關，預設 false
+  show_institution: false                          # 顯示開關，預設 false
+  institution:
+    snapshot_dir: "data/institution"               # cmd/institution-fetch 寫入處
+    history_days: 40                               # 回溯視窗（交易日）
+    continuous_days: 3                             # CONTINUOUS_BUYING/SELLING 門檻
+
+  # ── BIAS Risk / 乖離率風險 (R10-1) — SHADOW MODE, display only ─────────────────
+  # enable_bias=false（預設）時不計算 WatchlistEntry.Bias。show_bias=false（預設）時 report ⑫ 不顯示。
+  # BIAS 為追價／超跌 RISK，非買賣訊號；皆不影響 scoring / action / sort / stop。
+  enable_bias: false                               # 總開關，預設 false
+  show_bias: false                                 # 顯示開關，預設 false
+
+  # ── AI 解讀 (R11) — SHADOW ONLY，OpenAI 官方 API ──────────────────────────────
+  # enable_ai=false（預設）時完全不呼叫 OpenAI，WatchlistEntry.AI 為 nil。
+  # show_ai=false（預設）時 report ⑭ 不顯示。兩者皆不影響 Score / Action / RocketScore /
+  # Stage / BUY・WATCH・SELL / 排序 / 部位大小 —— AI 只解讀掃描器「已經算完」的證據。
+  #
+  # API token 只從環境變數 OPENAI_API_KEY 取得，絕不寫在此檔或任何 repo 檔案內。
+  # 沒有 key、逾時、429、5xx、回應非合法 JSON 時一律 fail-open：該檔標記為分析不可用，
+  # 掃描與報表照常完成。
+  enable_ai: true                                 # 總開關，預設 false
+  show_ai: true                                   # 顯示開關，預設 false
+  ai:
+    model: "gpt-5.6-luna"                          # OpenAI model id
+    timeout_sec: 30                                # 單一請求逾時（秒）
+    max_stocks: 12                                 # 每次執行最多分析幾檔（成本上限）
+    temperature: 0.2                               # 越低越貼近證據，不要調高
 
   kdj:
     k_period: 9

@@ -314,27 +314,63 @@ func containsStr(ss []string, want string) bool {
 // 回測洞察分頁：ShowBacktestInsights=false（預設）→ report 完全沒有此分頁。
 func TestBacktestInsightsHiddenByDefault(t *testing.T) {
 	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: false})
-	for _, marker := range []string{"回測洞察", "tab-backtest", "崩盤情境警告", "Setup D 倖存者"} {
+	for _, marker := range []string{"回測洞察", "tab-backtest", "崩盤情境警告", "Setup D 倖存者",
+		"btFrame", "區間策略回測面板"} {
 		if strings.Contains(html, marker) {
 			t.Errorf("ShowBacktestInsights=false must not render %q", marker)
 		}
 	}
 }
 
-// 回測洞察分頁：ShowBacktestInsights=true → 顯示分頁 + 紅字崩盤警告 + 純顯示框定。
+// 回測洞察分頁：ShowBacktestInsights=true → 分頁只有「區間策略回測面板」這一個互動工具。
+// R6 的靜態結論卡（崩盤警告、Setup D…）已移除，這裡把它們釘成「不得回來」的斷言：
+// 那些結論是一次性的多頭區間研究，留在每日報告裡只會被誤讀成常設建議。
 func TestBacktestInsightsShownWhenEnabled(t *testing.T) {
 	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: true})
 	for _, marker := range []string{
 		"回測洞察",         // 分頁標題
 		"tab-backtest", // 分頁容器
-		"崩盤情境警告",       // 紅字警告標題
-		"不可外推到空頭／崩盤",   // 多頭結論不適用崩盤
-		"勿", "不要停損",    // 不可當停損依據
-		"Setup D 倖存者", "LOW confidence", // 唯一崩盤相關項標低信心
-		"不改變任何停損、排名或下單", // 純顯示框定
+		"區間策略回測面板",     // 唯一內容
+		"純歷史重播，不是訊號、不會下單", // 純顯示框定
 	} {
 		if !strings.Contains(html, marker) {
 			t.Errorf("ShowBacktestInsights=true must render %q", marker)
 		}
+	}
+	for _, gone := range []string{
+		"崩盤情境警告", "Setup D 倖存者", "LOW confidence",
+		"bt-warn", "bt-card", "bt-grid", "bt-intro", "bt-sep",
+		"NO_STOP", "ATR_3", "C_VCP_MA20",
+	} {
+		if strings.Contains(html, gone) {
+			t.Errorf("R6 static insight %q should no longer ship in the report", gone)
+		}
+	}
+}
+
+// 回測洞察分頁裡的「區間策略回測面板」：延遲載入的外掛 iframe。
+// 它必須（1）出現在分頁裡、（2）預設沒有 src——否則每次開報告都會拖一份數 MB 的
+// backtest.html、（3）維持「歷史重播、不是訊號」的框定。
+func TestBacktestPanelEmbeddedButLazy(t *testing.T) {
+	html := genHTML(t, []scanner.WatchlistEntry{sampleEntry(true)}, GuardrailViewOptions{ShowBacktestInsights: true})
+	for _, marker := range []string{
+		"區間策略回測面板",         // 卡片標題
+		`id="btFrame"`,     // 內嵌容器
+		`id="btLoad"`,      // 展開按鈕
+		`id="btOpen"`,      // 另開分頁連結
+		"backtest.html",    // 目標檔案
+		"../backtest.html", // reports/ 底下的相對路徑
+		"純歷史重播，不是訊號、不會下單",
+	} {
+		if !strings.Contains(html, marker) {
+			t.Errorf("backtest panel card must render %q", marker)
+		}
+	}
+	// The iframe must start empty; the src is only attached on click.
+	if strings.Contains(html, `<iframe id="btFrame"`) && strings.Contains(html, `id="btFrame" src=`) {
+		t.Error("iframe must not carry a src at render time (lazy load)")
+	}
+	if !strings.Contains(html, `frame.setAttribute('src',path)`) {
+		t.Error("expected the click handler to be what attaches the src")
 	}
 }

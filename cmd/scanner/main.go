@@ -8,8 +8,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/analysishistory"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/news/socialworkerdaily"
 	"github.com/deep-huang/stock-scanner/internal/news/twetq"
@@ -54,6 +56,9 @@ func main() {
 	cfg, err := loadConfig(*configPath)
 	if err != nil {
 		log.Fatalf("load config: %v", err)
+	}
+	if err := cfg.Scanner.Validate(); err != nil {
+		log.Fatalf("%v", err)
 	}
 
 	if *stocksFilePath != "" {
@@ -126,9 +131,13 @@ func main() {
 			}
 		}
 
-		if len(sl.Watchlist) > 0 {
-			fmt.Printf("      抓取 Watchlist (%d 支)...\n", len(sl.Watchlist))
-			ws, err := f.FetchWatchlistStocks(sl.Watchlist)
+		// AllWatchlist merges watchlist_pinned (yours, never rebuilt) ahead of watchlist
+		// (machine, rebuilt every scan). Without this a pinned stock would be tracked in the
+		// file but never fetched, i.e. pinning would silently do nothing.
+		watch := sl.AllWatchlist()
+		if len(watch) > 0 {
+			fmt.Printf("      抓取 Watchlist (%d 支，其中釘選 %d)...\n", len(watch), len(sl.WatchlistPinned))
+			ws, err := f.FetchWatchlistStocks(watch)
 			if err != nil {
 				log.Printf("watchlist fetch error: %v", err)
 			} else {
@@ -203,6 +212,19 @@ func main() {
 		if cfg.Scanner.EnableETFFlow {
 			attachETFFlow(watchlistResults, cfg.Scanner, analysisDate)
 		}
+
+		// R10-1: Institutional Flow + confluence CONTEXT (display-only). Post-pass attach
+		// AFTER enrichment, so it never touches score/action/probability/order. Off by
+		// default; missing snapshots degrade quietly and never interrupt the scan.
+		if cfg.Scanner.EnableInstitution {
+			attachInstitution(watchlistResults, wStocks, cfg.Scanner.Institution, analysisDate)
+		}
+
+		// R11: AI explanation (shadow-only). LAST post-pass — by here every score, action
+		// and sort position is final, so the model is reading a finished verdict rather
+		// than participating in one. Off by default; a missing OPENAI_API_KEY, a timeout,
+		// a 429/5xx or malformed output all leave the scan and the report untouched.
+		attachAI(watchlistResults, cfg.Scanner)
 	}
 
 	// ── 3.6 News / 消息面 (Phase 1) — SHADOW MODE, display/context only ──────────
@@ -230,6 +252,10 @@ func main() {
 		ShowBacktestInsights:        cfg.Scanner.ShowBacktestInsights,
 		ShowETFFlow:                 cfg.Scanner.ShowETFFlow,
 		ShowNews:                    cfg.Scanner.ShowNews,
+		ShowInstitution:             cfg.Scanner.ShowInstitution,
+		ShowBias:                    cfg.Scanner.ShowBias,
+		ShowCandlestick:             cfg.Scanner.ShowCandlestick,
+		ShowAI:                      cfg.Scanner.ShowAI,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
@@ -239,6 +265,17 @@ func main() {
 	}
 	if err := r.Generate(marketResults, portfolioResults, watchlistResults, rotationResults, marketLabel, analysisDate, gv, newsSummary, newsEpisodes); err != nil {
 		log.Fatalf("report: %v", err)
+	}
+
+	// R10-1: structured history sidecar (data/analysis_history/<date>.json) — the
+	// authoritative source for cohort validation, independent of the HTML template.
+	if cfg.Scanner.EnableInstitution || cfg.Scanner.EnableBias {
+		snap := buildAnalysisHistory(watchlistResults, analysisDate)
+		if path, err := analysishistory.Write("", snap); err != nil {
+			log.Printf("analysis-history: write failed: %v", err)
+		} else {
+			fmt.Printf("       已寫入結構化歷史 %s\n", path)
+		}
 	}
 
 	// Publish the latest report as index.html at the repo root so GitHub Pages
@@ -316,6 +353,85 @@ func attachETFFlow(entries []scanner.WatchlistEntry, sc scanner.Config, reportDa
 	scanner.AttachETFFlow(entries, flows, reportDate, sc.ETFFlow.Strength.Thresholds())
 }
 
+// attachInstitution (R10-1) loads recent institution snapshots, builds the trading-day
+// calendar from the watchlist candles, attaches the per-stock chip view + confluence, all
+// display-only (runs after enrichment, never affects score/action/probability/order).
+// Missing snapshots degrade quietly — a stock with no data is left nil.
+func attachInstitution(entries []scanner.WatchlistEntry, wStocks []fetcher.StockData, cfg scanner.InstitutionConfig, reportDate time.Time) {
+	cfg = cfg.Defaulted()
+	loaded, err := institution.LoadHistory(cfg.SnapshotDir, reportDate.Format("2006-01-02"), cfg.HistoryDays)
+	if err != nil {
+		log.Printf("institution: load history: %v (continuing without)", err)
+	}
+	candlesByCode := make(map[string][]fetcher.Candle, len(wStocks))
+	for _, s := range wStocks {
+		candlesByCode[s.Symbol] = s.Candles
+	}
+	scanner.AttachInstitution(entries, loaded, candlesByCode, reportDate, cfg)
+	scanner.AttachConfluence(entries)
+}
+
+// attachAI is the R11 shadow explanation post-pass. It runs LAST, after every score, action
+// and sort position is final, and it cannot fail the scan: AttachAI swallows every error
+// into a per-entry status, and a disabled feature or a missing OPENAI_API_KEY simply leaves
+// the AI field nil. The 60s ceiling bounds the whole stage so a hung endpoint cannot stall a
+// scheduled run — the deterministic report is already complete by this point.
+func attachAI(entries []scanner.WatchlistEntry, sc scanner.Config) {
+	if !sc.EnableAI {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(sc.AI.Defaulted().MaxStocks)*sc.AI.Timeout()+30*time.Second)
+	defer cancel()
+	scanner.AttachAI(ctx, entries, sc.AI, sc.EnableAI, scanner.AIMarketContext{}, log.Printf)
+}
+
+// buildAnalysisHistory converts the enriched watchlist into the canonical structured
+// history schema (analysishistory), the single source cohort validation reads.
+func buildAnalysisHistory(entries []scanner.WatchlistEntry, date time.Time) analysishistory.Snapshot {
+	snap := analysishistory.Snapshot{Date: date.Format("2006-01-02")}
+	for _, e := range entries {
+		sd := analysishistory.StockData{
+			Code:   e.A.Symbol,
+			Action: string(e.A.Action),
+			Score:  float64(e.RocketScore),
+		}
+		if e.Institution != nil {
+			dc := e.Institution.Completeness.DataComplete
+			sd.Institution = &analysishistory.InstitutionPayload{
+				Foreign:         legPayload(e.Institution.Foreign, dc),
+				InvestmentTrust: legPayload(e.Institution.Trust, dc),
+				Dealer:          legPayload(e.Institution.Dealer, dc),
+				Total:           legPayload(e.Institution.Total, dc),
+			}
+		}
+		if e.Bias != nil {
+			sd.Bias = &analysishistory.BiasPayload{
+				Bias5: e.Bias.Bias5, Bias10: e.Bias.Bias10, Bias20: e.Bias.Bias20, Bias60: e.Bias.Bias60,
+				Risk: e.Bias.Risk,
+			}
+		}
+		snap.Stocks = append(snap.Stocks, sd)
+	}
+	return snap
+}
+
+func legPayload(s institution.LegStats, dataComplete bool) analysishistory.LegPayload {
+	return analysishistory.LegPayload{
+		Today:               s.TodayNet,
+		Sum3d:               s.Sum3d,
+		Sum5d:               s.Sum5d,
+		Sum10d:              s.Sum10d,
+		Sum20d:              s.Sum20d,
+		ConsecutiveBuyDays:  s.ConsecutiveBuyDays,
+		ConsecutiveSellDays: s.ConsecutiveSellDays,
+		Transition:          s.Transition,
+		NetBuyRatio:         s.NetBuyRatio,
+		StreakComplete:      s.StreakComplete,
+		DataComplete:        dataComplete,
+	}
+}
+
 // collectNews runs the Phase-1 SHADOW-MODE news pass: build the resolver dictionary from
 // the sector + stock universe (+ aliases file), fetch enabled providers (isolated
 // failures), classify, attach per-stock views onto entries, and return the market summary
@@ -337,7 +453,7 @@ func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.Sector
 		for _, p := range stockList.AllPositions() {
 			idx.AddStock(p.Code, p.Name)
 		}
-		for _, w := range stockList.Watchlist {
+		for _, w := range stockList.AllWatchlist() {
 			idx.AddStock(w.Code, w.Name)
 		}
 	}

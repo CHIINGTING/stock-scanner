@@ -6,7 +6,7 @@ import (
 )
 
 func fp(v float64) *float64 { return &v }
-func ip(v int64) *int64      { return &v }
+func ip(v int64) *int64     { return &v }
 
 func TestBackfillLatestFromMeta(t *testing.T) {
 	// Existing candles end 2026-06-02 (Taiwan). meta carries the 2026-06-03 session

@@ -1,12 +1,36 @@
 ---
 name: buy-watch-candidates
-description: Merge today's BUY & WATCH stocks from the daily report's 市場掃描 (market-scan) tab into stocks.yaml's watchlist. Use when the user asks to extract / 建立 / 更新 today's report's BUY & WATCH stocks into stocks.yaml.
+description: Rebuild stocks.yaml's watchlist from today's BUY & WATCH stocks in the daily report's 市場掃描 (market-scan) tab. Replaces the machine watchlist wholesale; never touches positions: or watchlist_pinned:. Use when the user asks to extract / 建立 / 更新 / 重建 today's report's BUY & WATCH stocks into stocks.yaml.
 ---
 
 # BUY & WATCH → stocks.yaml watchlist
 
 從當天報告 `reports/report_YYYYMMDD.html` 的**市場掃描分頁** (`<div id="tab-market">`)
-抽出 **BUY 與 WATCH** 的個股，直接**併入 `stocks.yaml` 的 `watchlist:`**。
+抽出 **BUY 與 WATCH** 的個股，**重建**（不是附加）`stocks.yaml` 的 `watchlist:`。
+
+## 重建，不是附加
+
+`watchlist:` 每次都被今日的候選整批取代。原本的 append-only 讓它變成單向棘輪——
+累積到 **748 檔**，而單日訊號只有 **66 檔**，等於 92% 是早已不合格的歷史沉積。
+翻不完的候選清單等於沒有清單。
+
+## 三個區塊的所有權不對稱
+
+| 區塊 | 誰擁有 | 本 skill 的行為 |
+| --- | --- | --- |
+| `positions:` | **只有你** | 永不寫入；其代號也不會進 `watchlist:`（同一檔不會被列兩次） |
+| `watchlist_pinned:` | **只有你** | 永不寫入；每次重建都完整保留 |
+| `watchlist:` | 機器 | 整批取代為今日 BUY + WATCH |
+
+自己從股癌、研究或直覺想追蹤的標的，放 `watchlist_pinned:`——那是唯一不會被重建洗掉的地方。
+scanner 會把它與 `watchlist:` 合併後一起抓取分析，釘選的標的照樣出現在飆股候選分頁。
+
+## 安全規則
+
+- **候選為 0 時不動檔案**。掃描沒產出候選與掃描失敗在訊號上分不出來，在有歧義時清空
+  清單是破壞性的。
+- **同報告重跑不產生 diff**，內容相同就不寫入。
+- 檔頭註解與 key 順序保留。
 
 市場掃描分頁會列出每一檔掃描到的股票及其交易建議（STRONG BUY / BUY / WATCH /
 HOLD / REDUCE / SELL）。本 skill 只保留可操作的訊號：

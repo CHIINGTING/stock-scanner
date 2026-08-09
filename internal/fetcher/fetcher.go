@@ -11,11 +11,11 @@ import (
 type Config struct {
 	RequestDelayMs int    `yaml:"request_delay_ms"`
 	TimeoutSec     int    `yaml:"timeout_sec"`
-	Concurrency    int    `yaml:"concurrency"`    // default 3
-	CacheTTLMin    int    `yaml:"cache_ttl_min"`  // default 15
-	CacheDir       string `yaml:"cache_dir"`      // default ".cache"
+	Concurrency    int    `yaml:"concurrency"`      // default 3
+	CacheTTLMin    int    `yaml:"cache_ttl_min"`    // default 15
+	CacheDir       string `yaml:"cache_dir"`        // default ".cache"
 	EOFCooldownMin int    `yaml:"eof_cooldown_min"` // default 5
-	HistoryRange   string `yaml:"history_range"`  // default "2y" (Yahoo range, e.g. 6mo/1y/2y)
+	HistoryRange   string `yaml:"history_range"`    // default "2y" (Yahoo range, e.g. 6mo/1y/2y)
 }
 
 type Fetcher struct {

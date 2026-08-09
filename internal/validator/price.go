@@ -26,8 +26,8 @@ type PriceStore struct {
 
 // cacheFile mirrors the two-level shape the fetcher writes: {fetched_at, data:{...}}.
 type cacheFile struct {
-	FetchedAt time.Time          `json:"fetched_at"`
-	Data      fetcher.StockData  `json:"data"`
+	FetchedAt time.Time         `json:"fetched_at"`
+	Data      fetcher.StockData `json:"data"`
 }
 
 // PriceSeries is a stock's daily candles, oldest-first, with a date→index map.
