@@ -15,18 +15,25 @@ type WatchCandidate struct {
 	Name string
 }
 
-// UpdateWatchlistFile appends new watchlist candidates to stocks.yaml in place.
+// UpdateWatchlistFile REBUILDS the machine watchlist in stocks.yaml from one scan's
+// candidates, and returns the resulting entries.
 //
-// Guarantees:
-//   - The positions: (and legacy portfolio:) section is never modified.
-//   - A candidate already present in positions/portfolio is skipped.
-//   - A candidate already present in watchlist is skipped (no duplicates).
-//   - Comments are preserved by round-tripping through a yaml.Node tree rather
-//     than the typed struct, so only the watchlist sequence gains new entries.
+// Rebuild, not append. The previous append-only behaviour turned the watchlist into a
+// ratchet: it had reached 748 entries against a 66-entry daily signal, so 92% of the
+// "shortlist" was sediment from earlier scans that no longer qualified. A shortlist nobody
+// can read through is the same as no shortlist.
 //
-// It returns the candidates actually added. The file is rewritten (atomically)
-// only when at least one entry is added; if nothing is added the file is left
-// untouched and (nil, nil) is returned.
+// What this function will NOT touch, by design:
+//
+//	positions / portfolio  Real money. Human-owned. Never written, and their codes are
+//	                       excluded from the watchlist so one stock is never reported twice.
+//	watchlist_pinned       Your own ideas. Human-owned. Survives every rebuild; its codes
+//	                       are excluded from the machine list to avoid duplication.
+//	comments, key order    Preserved by editing the yaml.Node tree rather than re-encoding
+//	                       a typed struct.
+//
+// The file is rewritten only when the resulting watchlist differs from the existing one, so
+// a re-run with the same candidates is a no-op and leaves no diff.
 func UpdateWatchlistFile(path string, candidates []WatchCandidate) ([]WatchCandidate, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -61,24 +68,40 @@ func UpdateWatchlistFile(path string, candidates []WatchCandidate) ([]WatchCandi
 		key := &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "watchlist"}
 		root.Content = append(root.Content, key, watch)
 	}
-	existing := map[string]bool{}
-	collectCodes(watch, existing)
-
-	var added []WatchCandidate
-	for _, c := range candidates {
-		if c.Code == "" {
-			continue
-		}
-		if blocked[c.Code] || existing[c.Code] {
-			continue
-		}
-		watch.Content = append(watch.Content, newWatchEntryNode(c.Code, c.Name))
-		existing[c.Code] = true
-		added = append(added, c)
+	// An empty candidate set is NOT an instruction to empty the watchlist. A scan that
+	// produced nothing and a scan that failed to produce anything look identical from here
+	// (a partial fetch, a network problem, an exchange holiday), and wiping the shortlist on
+	// an ambiguous signal is destructive. An empty watchlist is never useful information to
+	// persist, so the file is left exactly as it was.
+	if len(candidates) == 0 {
+		return nil, nil
 	}
 
-	if len(added) == 0 {
-		return nil, nil
+	// Pinned entries are human-owned and stay out of the machine list, so a stock you pinned
+	// is never duplicated here and never silently deleted from there.
+	collectCodes(mapValue(root, "watchlist_pinned"), blocked)
+
+	// Snapshot what is there now, purely to decide whether a write is needed.
+	before := map[string]bool{}
+	collectCodes(watch, before)
+
+	kept := make([]*yaml.Node, 0, len(candidates))
+	seen := map[string]bool{}
+	var result []WatchCandidate
+	for _, c := range candidates {
+		if c.Code == "" || blocked[c.Code] || seen[c.Code] {
+			continue
+		}
+		seen[c.Code] = true
+		kept = append(kept, newWatchEntryNode(c.Code, c.Name))
+		result = append(result, c)
+	}
+	// REBUILD: the sequence becomes exactly today's candidates. Anything that no longer
+	// qualifies is dropped rather than accumulated.
+	watch.Content = kept
+
+	if sameCodes(before, seen) {
+		return result, nil // identical set — leave the file untouched
 	}
 
 	var buf bytes.Buffer
@@ -100,7 +123,7 @@ func UpdateWatchlistFile(path string, candidates []WatchCandidate) ([]WatchCandi
 		_ = os.Remove(tmp)
 		return nil, fmt.Errorf("replace %s: %w", path, err)
 	}
-	return added, nil
+	return result, nil
 }
 
 // mapValue returns the value node for key in a mapping node, or nil.
@@ -144,4 +167,18 @@ func newWatchEntryNode(code, name string) *yaml.Node {
 		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: name, Style: yaml.DoubleQuotedStyle},
 	)
 	return m
+}
+
+// sameCodes reports whether two code sets are identical, so an unchanged rebuild produces no
+// write and therefore no git diff.
+func sameCodes(a, b map[string]bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if !b[k] {
+			return false
+		}
+	}
+	return true
 }

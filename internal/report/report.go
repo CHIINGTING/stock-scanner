@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
+	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 )
@@ -103,6 +105,307 @@ func newsSectors(sig news.NewsSignal) string {
 
 // joinDot joins labels with a Chinese enumeration comma for the market banner.
 func joinDot(xs []string) string { return strings.Join(xs, "、") }
+
+// ── Institutional flow (⑪) + BIAS (⑫) display helpers (R10-1) ────────────────────
+// All display-only. Institutional nets are stored in 股 and shown in 張 (÷1000) for
+// readability, matching how 三大法人買賣超 is conventionally read.
+
+func fmtLots(shares int64) string {
+	lots := int64(0)
+	if shares >= 0 {
+		lots = (shares + 500) / 1000
+	} else {
+		lots = -((-shares + 500) / 1000)
+	}
+	s := fmtThousands(lots)
+	if lots > 0 {
+		return "+" + s
+	}
+	return s
+}
+
+// fmtThousands adds comma separators to an integer (keeps the sign).
+func fmtThousands(v int64) string {
+	neg := v < 0
+	if neg {
+		v = -v
+	}
+	digits := fmt.Sprintf("%d", v)
+	var b strings.Builder
+	for i, c := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteRune(c)
+	}
+	out := b.String()
+	if neg {
+		return "-" + out
+	}
+	return out
+}
+
+func instRatioLabel(p *float64) string {
+	if p == nil {
+		return "—"
+	}
+	return fmt.Sprintf("%+.2f%%", *p)
+}
+
+// instStreakLabel renders 連買/連賣 N 日, flagging incomplete streaks (§8/§10).
+func instStreakLabel(s institution.LegStats) string {
+	var base string
+	switch {
+	case s.ConsecutiveBuyDays > 0:
+		base = fmt.Sprintf("連買 %d 日", s.ConsecutiveBuyDays)
+	case s.ConsecutiveSellDays > 0:
+		base = fmt.Sprintf("連賣 %d 日", s.ConsecutiveSellDays)
+	default:
+		return "—"
+	}
+	if !s.StreakComplete {
+		base += "（⚠資料不完整）"
+	}
+	return base
+}
+
+func instTransitionLabel(t string) string {
+	switch t {
+	case institution.TransitionBuyToSell:
+		return "由買轉賣"
+	case institution.TransitionSellToBuy:
+		return "由賣轉買"
+	default:
+		return "—"
+	}
+}
+
+// instRow renders one institution category as a table row (⑪).
+func instRow(name string, s institution.LegStats) template.HTML {
+	td := func(v int64) string { return "<td class=\"c\">" + fmtLots(v) + "</td>" }
+	return template.HTML(fmt.Sprintf(
+		"<tr><td>%s</td>%s%s%s%s<td>%s</td><td>%s</td><td class=\"c\">%s</td></tr>",
+		template.HTMLEscapeString(name),
+		td(s.TodayNet), td(s.Sum5d), td(s.Sum10d), td(s.Sum20d),
+		instStreakLabel(s), instTransitionLabel(s.Transition), instRatioLabel(s.NetBuyRatio),
+	))
+}
+
+func biasValLabel(p *float64) string {
+	if p == nil {
+		return "—"
+	}
+	return fmt.Sprintf("%+.1f%%", *p)
+}
+
+func biasRiskLabel(risk string) string {
+	switch risk {
+	case scanner.BiasRiskExtreme:
+		return "EXTREME（追價風險極高）"
+	case scanner.BiasRiskHigh:
+		return "HIGH（追價風險偏高）"
+	case scanner.BiasRiskElevated:
+		return "ELEVATED（乖離偏高）"
+	case scanner.BiasRiskOversold:
+		return "OVERSOLD（超跌區）"
+	case scanner.BiasRiskDeeplyOversold:
+		return "DEEPLY_OVERSOLD（深度超跌）"
+	case scanner.BiasRiskNormal:
+		return "NORMAL"
+	default:
+		return "—"
+	}
+}
+
+// chipSummary builds the "important events only" summary chips for a watchlist entry
+// (§16). Empty when nothing noteworthy — raw data stays in ⑪/⑫, not the summary.
+func chipSummary(e scanner.WatchlistEntry) []string {
+	var chips []string
+	if e.Institution != nil {
+		sigs := institution.Classify(*e.Institution, institution.DefaultSignalThresholds())
+		for _, s := range sigs {
+			name := instCategoryName(s.Category)
+			switch s.Type {
+			case institution.SignalContinuousBuying:
+				chips = append(chips, "🟢 "+name+" "+continuousLabel(e.Institution, s.Category, true))
+			case institution.SignalContinuousSelling:
+				chips = append(chips, "🔴 "+name+" "+continuousLabel(e.Institution, s.Category, false))
+			case institution.SignalBuyToSell:
+				chips = append(chips, "🔄 "+name+"由買轉賣")
+			case institution.SignalSellToBuy:
+				chips = append(chips, "🔄 "+name+"由賣轉買")
+			}
+		}
+	}
+	if e.Bias != nil && (e.Bias.Risk == scanner.BiasRiskHigh || e.Bias.Risk == scanner.BiasRiskExtreme) {
+		chips = append(chips, "🔴 BIAS20 "+biasValLabel(e.Bias.Bias20)+"，追價風險偏高")
+	}
+	if e.Bias != nil && (e.Bias.Risk == scanner.BiasRiskOversold || e.Bias.Risk == scanner.BiasRiskDeeplyOversold) {
+		chips = append(chips, "🔵 BIAS20 "+biasValLabel(e.Bias.Bias20)+"，超跌區")
+	}
+	if e.Confluence != nil {
+		for _, s := range e.Confluence.Signals {
+			chips = append(chips, "🔎 "+s.Note)
+		}
+	}
+	return chips
+}
+
+func continuousLabel(v *institution.StockChipView, cat string, buy bool) string {
+	s := legFor(v, cat)
+	if buy {
+		return fmt.Sprintf("連買 %d 日", s.ConsecutiveBuyDays)
+	}
+	return fmt.Sprintf("連賣 %d 日", s.ConsecutiveSellDays)
+}
+
+func legFor(v *institution.StockChipView, cat string) institution.LegStats {
+	switch cat {
+	case institution.CategoryForeign:
+		return v.Foreign
+	case institution.CategoryTrust:
+		return v.Trust
+	case institution.CategoryDealer:
+		return v.Dealer
+	default:
+		return v.Total
+	}
+}
+
+func instCategoryName(cat string) string {
+	switch cat {
+	case institution.CategoryForeign:
+		return "外資"
+	case institution.CategoryTrust:
+		return "投信"
+	case institution.CategoryDealer:
+		return "自營商"
+	default:
+		return "三大法人"
+	}
+}
+
+// ── Candlestick (⑬) display helpers (R10-2) ──────────────────────────────────────
+// Display-only. The renderer never switches on PatternType for prose — all wording comes
+// from PatternSignal.Description; these helpers only format enums/numbers (§12).
+
+func candleDirBadge(d candlestick.Direction) string {
+	switch d {
+	case candlestick.DirectionBullish:
+		return "🟢 Bullish"
+	case candlestick.DirectionBearish:
+		return "🔴 Bearish"
+	default:
+		return "⚪ Neutral"
+	}
+}
+
+func candleConfPct(c float64) string { return fmt.Sprintf("%.0f%%", c*100) }
+
+// candleAdjLabel renders the signed adjustment. Returns template.HTML so the leading "+"
+// is not escaped to "&#43;" (the value is a bare signed integer — no HTML metacharacters).
+func candleAdjLabel(v int) template.HTML {
+	if v > 0 {
+		return template.HTML(fmt.Sprintf("+%d", v))
+	}
+	return template.HTML(fmt.Sprintf("%d", v))
+}
+
+func candleGeneric(t candlestick.PatternType) bool { return candlestick.IsGenericFallback(t) }
+
+// candleEvidenceItem is one cell of the ⑬ Evidence row (Phase 8.1). It is derived PURELY from
+// PatternSignal.ConfidenceReasons — the renderer maps reason CODES to a glyph and NEVER
+// recomputes Confidence / Context / Pattern (§9.2, §12). Glyph is display-only; Class carries
+// nothing but colour.
+type candleEvidenceItem struct {
+	Label string
+	Glyph string // "✓" | "✗" | "—"
+	Class string // ev-yes | ev-no | ev-none  (CSS colour only)
+}
+
+// candleEvidence builds the Evidence row for one signal from its ConfidenceReasons. It is a
+// pure `switch code` map — it does not re-analyse context. Capability-aware by design:
+//   - Trend / Near Extreme are ✓-or-—, NEVER ✗: a missing TREND_MATCH means "no trend
+//     evidence", not "trend is opposite" (§6). "Near Extreme" is direction-agnostic on purpose
+//     (Bullish→near low, Bearish→near high); the Description already states which side.
+//   - Volume is genuinely tri-state: ✓ VOLUME_CONFIRM / ✗ WEAK_VOLUME / — no volume evidence.
+//     "—" means volume was NOT used as evidence — it does NOT mean weak volume.
+//   - Stage is OMITTED until STAGE_SUPPORT can actually be credited (never in P0). The item is
+//     appended ONLY when the code is present, so P0 reserves no dead column and P1 needs no
+//     template/layout change — it lights up the moment the code starts appearing.
+func candleEvidence(sig candlestick.PatternSignal) []candleEvidenceItem {
+	has := func(code string) bool {
+		for _, r := range sig.ConfidenceReasons {
+			if r.Code == code {
+				return true
+			}
+		}
+		return false
+	}
+	yesOrNone := func(label string, ok bool) candleEvidenceItem {
+		if ok {
+			return candleEvidenceItem{Label: label, Glyph: "✓", Class: "ev-yes"}
+		}
+		return candleEvidenceItem{Label: label, Glyph: "—", Class: "ev-none"}
+	}
+
+	vol := candleEvidenceItem{Label: "Volume", Glyph: "—", Class: "ev-none"}
+	switch {
+	case has(candlestick.ReasonVolumeConfirm):
+		vol.Glyph, vol.Class = "✓", "ev-yes"
+	case has(candlestick.ReasonWeakVolume):
+		vol.Glyph, vol.Class = "✗", "ev-no"
+	}
+
+	items := []candleEvidenceItem{
+		yesOrNone("Trend", has(candlestick.ReasonTrendMatch)),
+		yesOrNone("Near Extreme", has(candlestick.ReasonNearExtreme)),
+		vol,
+	}
+	if has(candlestick.ReasonStageSupport) { // dormant in P0; auto-appears when P1 credits it
+		items = append(items, candleEvidenceItem{Label: "Stage", Glyph: "✓", Class: "ev-yes"})
+	}
+	return items
+}
+
+// candleContextLimited reports whether the confidence model recorded MISSING_CONTEXT (unknown
+// trend history). It drives a grey "Context Limited" badge so a "—" Trend/Near reads as "data
+// insufficient" rather than "evidence genuinely absent" (§6). Read-only over reason codes.
+func candleContextLimited(sig candlestick.PatternSignal) bool {
+	for _, r := range sig.ConfidenceReasons {
+		if r.Code == candlestick.ReasonMissingContext {
+			return true
+		}
+	}
+	return false
+}
+
+// candleStatusText returns the non-OK status message (empty for OK, where cards render).
+func candleStatusText(status string) string {
+	switch status {
+	case candlestick.StatusNoPattern:
+		return "No candlestick pattern detected."
+	case candlestick.StatusInvalidBar:
+		return "Latest candle invalid."
+	case candlestick.StatusNoData:
+		return "Insufficient candle data."
+	default:
+		return ""
+	}
+}
+
+// candleSummaryChip returns a chip only when the top (highest-confidence) signal is >= 0.80
+// (§10). Signals are already analyzer-sorted, so Signals[0] is the top; renderer never re-sorts.
+func candleSummaryChip(r *candlestick.Result) string {
+	if r == nil || len(r.Signals) == 0 {
+		return ""
+	}
+	top := r.Signals[0]
+	if top.Confidence < 0.80 {
+		return ""
+	}
+	return fmt.Sprintf("🕯️ %s %s %s", top.Type, candleDirBadge(top.Direction), candleConfPct(top.Confidence))
+}
 
 // actionLabel maps a market/position Action to its Chinese label. The words are chosen
 // to match the validator's Chinese action vocabulary (internal/validator/signal.go) so
@@ -213,6 +516,18 @@ type GuardrailViewOptions struct {
 	// SHADOW MODE, display-only; never touches score / action / probability / sorting /
 	// stop / WatchAction.
 	ShowNews bool
+
+	// ShowInstitution gates the report ⑪ "三大法人籌碼" section + summary chips (R10-1).
+	// ShowBias gates the report ⑫ "乖離率" section. Both display-only; NEVER touch score /
+	// action / probability / sorting / stop / WatchAction.
+	ShowInstitution bool
+	ShowBias        bool
+
+
+	// ShowCandlestick gates the report ⑬ "K 線型態" section (R10-2). Display-only; NEVER
+	// touches score / action / probability / sorting / stop / WatchAction. When false the
+	// section is entirely absent (byte-identical output).
+	ShowCandlestick bool
 
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
@@ -456,15 +771,28 @@ func (r *Report) Generate(
 			}
 			return fmt.Sprintf("%.0f", v)
 		},
-		"fmtVol":           fmtVolume,
-		"etfSignalLabel":   etfSignalLabel,
-		"newsSignalLabel":  newsSignalLabel,
-		"newsDot":          newsDot,
-		"newsEpisodeLabel": newsEpisodeLabel,
-		"newsAge":          newsAge,
-		"newsSectors":      newsSectors,
-		"joinDot":          joinDot,
-		"inc":              func(i int) int { return i + 1 },
+		"fmtVol":            fmtVolume,
+		"instRow":           instRow,
+		"instStreakLabel":   instStreakLabel,
+		"biasValLabel":      biasValLabel,
+		"biasRiskLabel":     biasRiskLabel,
+		"chipSummary":       chipSummary,
+		"candleDir":         candleDirBadge,
+		"candleConfPct":     candleConfPct,
+		"candleAdjLabel":    candleAdjLabel,
+		"candleGeneric":     candleGeneric,
+		"candleStatusText":  candleStatusText,
+		"candleSummaryChip": candleSummaryChip,
+		"candleEvidence":    candleEvidence,
+		"candleCtxLimited":  candleContextLimited,
+		"etfSignalLabel":    etfSignalLabel,
+		"newsSignalLabel":   newsSignalLabel,
+		"newsDot":           newsDot,
+		"newsEpisodeLabel":  newsEpisodeLabel,
+		"newsAge":           newsAge,
+		"newsSectors":       newsSectors,
+		"joinDot":           joinDot,
+		"inc":               func(i int) int { return i + 1 },
 		"intsSlash": func(xs []int) string {
 			parts := make([]string, len(xs))
 			for i, x := range xs {
@@ -1226,28 +1554,42 @@ th.rotscore{min-width:120px}
 .wl-gs-h{color:#7dd3fc;font-weight:700;margin-top:4px}
 .wl-gs-list{margin:0;padding-left:16px}
 .wl-gs-list li{margin:1px 0}
+.candle-chip{display:inline-block;background:#0b1f17;border:1px solid #14532d;color:#86efac;border-radius:6px;padding:2px 8px;font-size:.72rem;margin:2px 0}
+.candle-card{border:1px solid #1e293b;border-radius:8px;padding:6px 9px;margin:4px 0;background:#0b1422}
+.candle-head{font-size:.82rem;font-weight:600}
+.candle-name{color:#e2e8f0;letter-spacing:.3px}
+.candle-generic{color:#94a3b8;font-size:.68rem;font-weight:400;border:1px solid #334155;border-radius:4px;padding:0 4px}
+.candle-badge{font-size:.72rem}
+.candle-metrics{color:#cbd5e1;font-size:.74rem;margin-top:2px}
+.candle-desc{color:#94a3b8;font-size:.74rem;margin-top:2px}
+.candle-adj{color:#fbbf24;font-size:.68rem;margin-top:3px;font-style:italic}
+.candle-evidence{font-size:.72rem;margin-top:3px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.candle-ev-label{color:#64748b;font-weight:600;letter-spacing:.3px}
+.candle-ev{color:#94a3b8}
+.candle-ev.ev-yes{color:#4ade80}
+.candle-ev.ev-no{color:#f87171}
+.candle-ev.ev-none{color:#64748b}
+.candle-ctx-limited{color:#94a3b8;font-size:.68rem;border:1px solid #334155;border-radius:4px;padding:0 4px}
 .wl-risk{border-color:#3b1414;background:#1a0f12}
 .wl-risk h4{color:#fca5a5}
 @media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
 
-/* ── 回測洞察 R6（純顯示，不影響策略） ────────────────────────────────────── */
-.bt-warn{background:#3b0a0a;border:2px solid #dc2626;border-radius:8px;padding:12px 16px;margin-bottom:14px;color:#fecaca;font-size:.82rem;line-height:1.85}
-.bt-warn b{color:#fca5a5}
-.bt-warn-h{display:block;color:#fca5a5;font-weight:700;font-size:.95rem;margin-bottom:6px}
-.bt-intro{background:#0d1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.76rem;color:#94a3b8;line-height:1.7}
-.bt-intro b{color:#e2e8f0}
-.bt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
-.bt-card{background:#111827;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;font-size:.76rem;color:#cbd5e1;line-height:1.75}
-.bt-card h4{font-size:.8rem;color:#7dd3fc;margin-bottom:6px;font-weight:700}
-.bt-card b{color:#f1f5f9}
-.bt-card.bt-crash{border-color:#854d0e;background:#1c1402}
-.bt-card.bt-crash h4{color:#fbbf24}
-.bt-tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:.64rem;font-weight:700;margin-left:6px;vertical-align:middle;white-space:nowrap}
-.bt-tag-bull{background:#1c2433;color:#94a3b8;border:1px solid #475569}
-.bt-tag-low{background:#3b0a0a;color:#fca5a5;border:1px solid #dc262666}
-.bt-warn-inline{color:#fca5a5;font-weight:600}
-.bt-meta{font-size:.7rem;color:#64748b;margin-top:4px;font-style:italic}
-@media(max-width:900px){.bt-grid{grid-template-columns:1fr}}
+
+{{ if .GV.ShowBacktestInsights }}
+/* 區間策略回測面板（外掛 backtest.html，延遲載入，不影響本報告體積） */
+.bt-tool{background:#0d1a2e;border:1px solid #1e3a5f;border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.bt-tool h4{font-size:.9rem;color:#7dd3fc;margin-bottom:6px;font-weight:700}
+.bt-tool p{font-size:.76rem;color:#94a3b8;line-height:1.8;margin-bottom:8px}
+.bt-tool b{color:#e2e8f0}
+.bt-tool .acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bt-tool button{background:#0c2340;border:1px solid #0284c7;color:#7dd3fc;border-radius:6px;padding:6px 14px;font-size:.78rem;font-family:inherit;cursor:pointer}
+.bt-tool button:hover{background:#123457;color:#bae6fd}
+.bt-tool a.ext{font-size:.75rem;color:#38bdf8;text-decoration:none}
+.bt-tool a.ext:hover{text-decoration:underline}
+.bt-tool .note{font-size:.7rem;color:#64748b}
+#btFrameWrap{display:none;margin-top:12px}
+#btFrame{width:100%;height:1100px;border:1px solid #1e3a5f;border-radius:8px;background:#0c1220;resize:vertical;overflow:auto}
+{{ end }}
 </style>
 </head>
 <body>
@@ -1495,6 +1837,54 @@ th.rotscore{min-width:120px}
             <div class="wl-note">消息面為延遲外部觀點，僅作 context，非交易指令。</div>
           </div>
           {{- end }}{{- end }}{{- end }}
+          {{- if $.GV.ShowInstitution }}{{- with $e.Institution }}
+          <div class="wl-sec">
+            <h4>⑪ 三大法人籌碼（單位：張；延遲揭露，不影響 BUY／WATCH／SELL）</h4>
+            <div class="wl-note">資料日 {{ .AsOfDate }}{{ if not .Completeness.DataComplete }}（⚠ 今日法人資料缺漏）{{ end }}{{ if .Completeness.MissingDates }}｜區間缺 {{ len .Completeness.MissingDates }} 日{{ end }}</div>
+            <table class="news-table">
+              <thead><tr><th>法人</th><th class="c">今日</th><th class="c">5日</th><th class="c">10日</th><th class="c">20日</th><th>連續狀態</th><th>轉折</th><th class="c">占量</th></tr></thead>
+              <tbody>
+                {{ instRow "外資" .Foreign }}
+                {{ instRow "投信" .Trust }}
+                {{ instRow "自營商" .Dealer }}
+                {{ instRow "三大法人合計" .Total }}
+              </tbody>
+            </table>
+            {{- if .TotalMismatch }}<div class="wl-note">⚠ 官方合計與計算合計不一致（僅標示）</div>{{- end }}
+          </div>
+          {{- end }}{{- end }}
+          {{- if $.GV.ShowBias }}{{- with $e.Bias }}
+          <div class="wl-sec">
+            <h4>⑫ 乖離率（追價／超跌風險，非買賣訊號）</h4>
+            <div>BIAS5 {{ biasValLabel .Bias5 }}　BIAS10 {{ biasValLabel .Bias10 }}　BIAS20 {{ biasValLabel .Bias20 }}　BIAS60 {{ biasValLabel .Bias60 }}</div>
+            <div>Risk：<b>{{ biasRiskLabel .Risk }}</b></div>
+          </div>
+          {{- end }}{{- end }}
+          {{- if or $.GV.ShowInstitution $.GV.ShowBias }}{{- with chipSummary $e }}
+          <div class="wl-sec">
+            <h4>🔔 籌碼／乖離重點</h4>
+            <ul class="wl-gs-list">{{- range . }}<li>{{ . }}</li>{{- end }}</ul>
+          </div>
+          {{- end }}{{- end }}
+          {{- if $.GV.ShowCandlestick }}{{- with $e.Candlestick }}
+          <div class="wl-sec wl-candle">
+            <h4>⑬ K 線型態（Shadow Research Only，不影響 BUY／WATCH／SELL）</h4>
+            {{- if eq .Status "OK" }}
+            {{- with candleSummaryChip . }}<div class="candle-chip">{{ . }}</div>{{- end }}
+            {{- range .Signals }}
+            <div class="candle-card">
+              <div class="candle-head"><span class="candle-name">{{ .Type }}</span>{{ if candleGeneric .Type }} <span class="candle-generic">Generic Pattern</span>{{ end }}　<span class="candle-badge">{{ candleDir .Direction }}</span></div>
+              <div class="candle-metrics">Confidence {{ candleConfPct .Confidence }}　Strength {{ .Strength }}/5</div>
+              <div class="candle-desc">{{ .Description }}</div>
+              <div class="candle-evidence"><span class="candle-ev-label">Evidence</span>{{- range candleEvidence . }} <span class="candle-ev {{ .Class }}">{{ .Glyph }} {{ .Label }}</span>{{- end }}{{- if candleCtxLimited . }} <span class="candle-ctx-limited">Context Limited</span>{{- end }}</div>
+              <div class="candle-adj">Shadow Research Only — Suggested Adjustment {{ candleAdjLabel .SuggestedAdjustment }}（Not Applied）</div>
+            </div>
+            {{- end }}
+            {{- else }}
+            <div class="wl-note">{{ candleStatusText .Status }}</div>
+            {{- end }}
+          </div>
+          {{- end }}{{- end }}
         </div>
       </div>
     </td>
@@ -1651,46 +2041,22 @@ th.rotscore{min-width:120px}
 </div>
 {{ end }}
 
-<!-- ══ BACKTEST INSIGHT：R6 回測洞察（純顯示，完全不影響停損/排名/下單） ═════ -->
+<!-- ══ 回測面板：區間策略回測（互動，外掛 backtest.html；純顯示，不影響停損/排名/下單） ══ -->
 {{ if .GV.ShowBacktestInsights }}
 <div id="tab-backtest" class="tab-pane">
-  <div class="bt-warn">
-    <span class="bt-warn-h">⚠️ 崩盤情境警告 — 請先讀這段</span>
-    以下回測結論<b>全部來自 2024-06 → 2026-06 的多頭／復甦行情</b>。其中「停損過嚴、抱著比停損好、NO_STOP 帳面報酬最高」等結論，是被這段多頭結構撐出來的，<b>不可外推到空頭／崩盤</b>。
-    崩盤時請<b>勿</b>把這些當成「不要停損／放寬停損」的依據 —— 那是最危險的誤用。真正面對崩盤所需的跨環境（bear / crash）驗證<b>尚未完成</b>。
-    本面板僅供研究參考，<b>不改變任何停損、排名或下單</b>。
-  </div>
-  <div class="bt-intro">
-    🔬 <b>回測洞察 (R6)</b>：離線、唯讀的策略研究產出，與上方即時掃描 / 停損 / 排名<b>完全分離</b>。資料區間 2024-06→2026-06（約 485 根日線、~1970 檔）。所有數字僅為歷史觀察，<b>不是操作訊號</b>，候選 ≠ 採用，預設一律未改。
-  </div>
-  <div class="bt-grid">
-    <div class="bt-card">
-      <h4>進場型態 A — 淺回測位置較佳<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
-      靠近 20 日線的拉回（<b>A_MA20</b>）整體優於靠 60 日線的拉回（A_MA60）。
+  <div class="bt-tool">
+    <h4>🎛️ 區間策略回測面板（互動）</h4>
+    <p>
+      挑一檔股票、指定買進與賣出日期，比較「單筆全押 / 定期定額 / 預留現金逢跌狙擊 / 停利接回 /
+      落袋為安」六種紀律事後分別會是什麼結果。資料取自本機價格快取，
+      <b>純歷史重播，不是訊號、不會下單，也不影響上方任何掃描與停損</b>。
+    </p>
+    <div class="acts">
+      <button id="btLoad" type="button">在此展開面板</button>
+      <a class="ext" id="btOpen" href="#" target="_blank" rel="noopener">在新分頁開啟 ↗</a>
+      <span class="note">面板另外產生（<code>make backtest</code> → backtest.html），沒展開就不會下載，不影響本報告載入速度。</span>
     </div>
-    <div class="bt-card">
-      <h4>深回測 B（15–20%）<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
-      深拉回 15–20% 的「抱到底」報酬較強，<b>但前提是沒被洗掉</b>；近期超強多頭裡深回測訊號太少太慢（B_20 訊號數遠少於 B_5）。
-    </div>
-    <div class="bt-card">
-      <h4>VCP 回測 C<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
-      全期 <b>C_VCP_MA20</b> 樣本充足；但近期多頭重跑顯示它<b>並未贏過單純 A_MA20</b> —— 結論會隨環境改變，不是定論。
-    </div>
-    <div class="bt-card">
-      <h4>停損政策 benchmark<span class="bt-tag bt-tag-bull">多頭區間</span></h4>
-      在這段多頭裡現行 <b>BASELINE 停損偏嚴</b>（stop_hit 77–93%）；<b>ATR_3</b> 為目前最穩健候選、<b>PCT_15</b> 為簡化備案、NO_STOP 帳面最高但尾部回撤最深。
-      <div class="bt-meta"><span class="bt-warn-inline">⚠️ 純多頭結構造的，崩盤不適用；候選 ≠ 採用，預設未改。</span></div>
-    </div>
-    <div class="bt-card bt-crash">
-      <h4>崩盤相關（唯一一條）— Setup D 倖存者<span class="bt-tag bt-tag-low">LOW confidence／個案</span></h4>
-      唯一沾到崩盤的研究：崩盤 regime 中 <b>HIGH_RS（強相對強度）相對抗跌</b>，相對大盤 <b>+6.9pp</b>，LOW_RS 為 −0.4pp。
-      <div class="bt-meta"><span class="bt-warn-inline">但 event_count = 3，永遠標 LOW confidence，是個案研究，不可外推、不可當崩盤操作訊號。</span></div>
-    </div>
-    <div class="bt-card">
-      <h4>現況 — 為何不進策略</h4>
-      cross-regime（更多空頭／崩盤期）驗證<b>尚未完成</b>，是採用任何停損 profile 的前置。停損、排名、下單預設<b>一律未改</b>。
-      <div class="bt-meta">來源：reports/r6_* 回測存檔（R6-5 fresh-cache 可重現性穩定／R6-6 近期多頭 regime）。</div>
-    </div>
+    <div id="btFrameWrap"><iframe id="btFrame" title="區間策略回測面板" loading="lazy"></iframe></div>
   </div>
 </div>
 {{ end }}
@@ -1704,6 +2070,25 @@ function tab(e,n){
   e.currentTarget.classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
 }
+{{ if .GV.ShowBacktestInsights }}
+// 區間策略回測面板：同一份 HTML 會出現在網站根目錄 (index.html) 與 reports/ 底下，
+// 兩層的相對路徑不同，所以由 location 推算，file:// 與 GitHub Pages 都適用。
+(function(){
+  var load=document.getElementById('btLoad');
+  if(!load)return;
+  var path=/\/reports\/[^\/]*$/.test(location.pathname)?'../backtest.html':'backtest.html';
+  document.getElementById('btOpen').href=path;
+  var wrap=document.getElementById('btFrameWrap'),frame=document.getElementById('btFrame');
+  load.addEventListener('click',function(){
+    if(wrap.style.display==='block'){                // 收合，但保留已載入的內容
+      wrap.style.display='none';load.textContent='在此展開面板';return;
+    }
+    if(!frame.getAttribute('src'))frame.setAttribute('src',path);
+    wrap.style.display='block';load.textContent='收合面板';
+    wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+})();
+{{ end }}
 function toggleSector(i){
   var row=document.getElementById('detail-'+i);
   var caret=document.getElementById('caret-'+i);

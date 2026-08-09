@@ -37,9 +37,10 @@ type Config struct {
 	ShowGuardrailSignals bool `yaml:"show_guardrail_signals"`
 
 	// ShowBacktestInsights is a DISPLAY-ONLY flag: when true the report renders a
-	// "🔬 回測洞察" tab summarising R6 backtest findings (static text only). Default
-	// false → report has no such tab. NEVER reads reports/r6_*, never affects score
-	// / action / probability / sorting / stop / WatchAction — pure presentation.
+	// "🔬 回測洞察" tab holding the interactive 區間策略回測面板 (an iframe onto
+	// backtest.html, lazily loaded on click). Default false → report has no such tab.
+	// Never affects score / action / probability / sorting / stop / WatchAction —
+	// pure presentation.
 	ShowBacktestInsights bool `yaml:"show_backtest_insights"`
 
 	// ── RS Rank (C2) ─────────────────────────────────────────────────────────
@@ -176,6 +177,32 @@ type Config struct {
 	EnableNews bool            `yaml:"enable_news"` // 預設 false
 	ShowNews   bool            `yaml:"show_news"`   // 預設 false
 	News       news.NewsConfig `yaml:"news"`
+
+	// ── Institutional Flow / 三大法人籌碼 (R10-1) — SHADOW MODE, display/record only ──
+	// EnableInstitution gates loading snapshots + attaching WatchlistEntry.Institution
+	// (via the AttachInstitution post-pass). Default false → never loaded/attached, field
+	// stays nil. ShowInstitution gates the report ⑪ section. Both display-only: NEVER
+	// affect Score / Action / RocketScore / WatchAction / sort / stop. Data/parse layer in
+	// internal/institution; standalone prefetch is cmd/institution-fetch.
+	EnableInstitution bool              `yaml:"enable_institution"` // 預設 false
+	ShowInstitution   bool              `yaml:"show_institution"`   // 預設 false
+	Institution       InstitutionConfig `yaml:"institution"`
+
+	// ── BIAS Risk / 乖離率風險 (R10-1) — SHADOW MODE, display only ─────────────────
+	// EnableBias gates computing WatchlistEntry.Bias in EnrichWatchlist (needs only
+	// candles). Default false → field stays nil. ShowBias gates the report ⑫ section.
+	// BIAS is追價/超跌 RISK, never a trade signal; NEVER affects scoring/action/sort/stop.
+	EnableBias bool `yaml:"enable_bias"` // 預設 false
+	ShowBias   bool `yaml:"show_bias"`   // 預設 false
+
+	// ── Candlestick / K 線型態 (R10-2) — SHADOW MODE, display only ────────────────
+	// EnableCandlestick gates running the analyzer + attaching WatchlistEntry.Candlestick
+	// (POST-PASS after computeRocket). Default false → analyzer never runs, field stays nil.
+	// ShowCandlestick gates the report ⑬ section. Both display-only; NEVER affect Score /
+	// Action / RocketScore / WatchAction / sort / stop. Data layer in internal/candlestick.
+	EnableCandlestick bool `yaml:"enable_candlestick"` // 預設 false
+	ShowCandlestick   bool `yaml:"show_candlestick"`   // 預設 false
+
 
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`

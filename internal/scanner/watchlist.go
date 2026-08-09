@@ -3,8 +3,10 @@ package scanner
 import (
 	"sort"
 
+	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 )
 
@@ -75,6 +77,7 @@ type WatchlistEntry struct {
 	// is non-nil with Computed=false.
 	HoldingHorizon *HoldingHorizonResult `json:"holding_horizon,omitempty"`
 
+
 	// HorizonHint (R6-7): display-only 回測觀察週期 hint. nil unless show_horizon_hint
 	// is on. Distinct from R7-1 HoldingHorizon (stage+ATR shadow): R6-7 is setup-matched
 	// from existing shadow + daily indicators and surfaced in the report (⑧). Never affects
@@ -96,6 +99,30 @@ type WatchlistEntry struct {
 	// WatchAction / ExplosionProb / Action / sort / stop. Rendered in report ⑩ only when
 	// show_news is on. Deliberately a dedicated field, NOT inside ShadowSignals.
 	News *news.StockNewsView `json:"news,omitempty"`
+
+	// Institution (R10-1): display-only 三大法人籌碼 CONTEXT (delayed disclosure). nil
+	// unless enable_institution is on AND institution records exist for this stock.
+	// Attached by the AttachInstitution post-pass (NOT EnrichWatchlist), never read by
+	// computeRocket. Shadow: never affects Score/Action/RocketScore/WatchAction/sort/stop.
+	// Dedicated field, NOT inside ShadowSignals.
+	Institution *institution.StockChipView `json:"institution,omitempty"`
+
+	// Bias (R10-1): display-only 乖離率風險. nil unless enable_bias is on. Computed in
+	// EnrichWatchlist AFTER computeRocket and never fed into it. BIAS is risk/context, not
+	// a trade signal. Never affects Score/Action/RocketScore/WatchAction/sort/stop.
+	Bias *BiasView `json:"bias,omitempty"`
+
+	// Confluence (R10-1): display-only Trend × Institutional Flow × BIAS reads. nil unless
+	// both Institution and Bias are present and a combo fires. Attached by AttachConfluence
+	// post-pass. Never affects Score/Action/RocketScore/WatchAction/sort/stop.
+	Confluence *ConfluenceView `json:"confluence,omitempty"`
+
+	// Candlestick (R10-2): display/shadow-only K 線型態 analysis. nil unless
+	// enable_candlestick is on. Computed as a POST-PASS after computeRocket + the decision
+	// (RocketStage injected as the analyzer's Stage) and never fed back — never affects
+	// Score/Action/RocketScore/WatchAction/sort/stop. When enabled it is ALWAYS non-nil
+	// (Status distinguishes NO_PATTERN / INVALID_BAR from "disabled = nil"). SPEC R10-2 §11.
+	Candlestick *candlestick.Result `json:"candlestick,omitempty"`
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,
@@ -236,6 +263,22 @@ func (s *Scanner) EnrichWatchlist(
 		if s.cfg.EnableHorizonHint {
 			hint := computeHorizonHint(a, shadow, item.Candles)
 			e.HorizonHint = &hint
+		}
+
+		// BIAS (R10-1): display-only 乖離率風險, computed AFTER rocket and never fed into
+		// it. flag-off → field stays nil. Institutional flow is attached later as a
+		// post-pass (AttachInstitution), and confluence after that (AttachConfluence).
+		if s.cfg.EnableBias {
+			bv := computeBias(item.Candles, DefaultBiasThresholds())
+			e.Bias = &bv
+		}
+
+		// Candlestick (R10-2): POST-PASS after computeRocket + decision. Only runs when the
+		// flag is on (never run-and-discard). RocketStage is injected as the analyzer's Stage;
+		// the result never feeds back into any score/action/sort. When enabled it is always
+		// non-nil (Status carries NO_PATTERN / INVALID_BAR).
+		if s.cfg.EnableCandlestick {
+			e.Candlestick = computeCandlestick(item.Candles, rk.Stage)
 		}
 
 		out = append(out, e)

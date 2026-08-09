@@ -71,16 +71,18 @@ func TestUpdateWatchlist_AddsBuyAndWatch(t *testing.T) {
 func TestUpdateWatchlist_NoDuplicateExistingWatch(t *testing.T) {
 	path := writeTempStocks(t, sampleStocksYAML)
 
-	// 3290 already exists in watchlist; 2330 is new.
-	added, err := UpdateWatchlistFile(path, []WatchCandidate{
+	// The return value is now the RESULTING watchlist, not the newly-added subset: the
+	// function rebuilds rather than appends, so "what was added" is no longer the useful
+	// answer — "what the list is now" is.
+	got, err := UpdateWatchlistFile(path, []WatchCandidate{
 		{Code: "3290", Name: "東浦"},
 		{Code: "2330", Name: "台積電"},
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if len(added) != 1 || added[0].Code != "2330" {
-		t.Fatalf("added = %v, want only 2330", added)
+	if len(got) != 2 {
+		t.Fatalf("got %v, want both candidates in the rebuilt list", got)
 	}
 
 	// Count occurrences of code 3290 in the file: must remain exactly one.
@@ -162,5 +164,120 @@ func TestUpdateWatchlist_NoCandidatesLeavesFileUntouched(t *testing.T) {
 	after, _ := os.ReadFile(path)
 	if string(before) != string(after) {
 		t.Error("file changed even though nothing was added")
+	}
+}
+
+const pinnedStocksYAML = `# 檔頭註解必須保留
+positions:
+  - code: "2337"
+    name: "旺宏"
+    entry: 173.5
+    shares: 1000
+
+watchlist_pinned:
+  - code: "8299"
+    name: "群聯"
+
+watchlist:
+  - code: "1111"
+    name: "沉積一"
+  - code: "2222"
+    name: "沉積二"
+  - code: "3333"
+    name: "沉積三"
+`
+
+// The whole point of the change: entries that no longer qualify are DROPPED, not kept.
+// Append-only had grown the real file to 748 entries against a 66-entry daily signal.
+func TestRebuildDropsStaleEntries(t *testing.T) {
+	path := writeTempStocks(t, pinnedStocksYAML)
+
+	got, err := UpdateWatchlistFile(path, []WatchCandidate{{Code: "9999", Name: "今日候選"}})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if len(got) != 1 || got[0].Code != "9999" {
+		t.Fatalf("result = %v, want exactly today's candidate", got)
+	}
+	data, _ := os.ReadFile(path)
+	text := string(data)
+	for _, stale := range []string{"1111", "2222", "3333"} {
+		if strings.Contains(text, stale) {
+			t.Errorf("stale entry %s survived the rebuild", stale)
+		}
+	}
+	if !strings.Contains(text, "9999") {
+		t.Error("today's candidate is missing from the rebuilt list")
+	}
+}
+
+// positions and watchlist_pinned are human-owned. No rebuild may touch either.
+func TestRebuildNeverTouchesHumanOwnedSections(t *testing.T) {
+	path := writeTempStocks(t, pinnedStocksYAML)
+
+	// Today's scan surfaces a held stock and a pinned stock as well as a fresh one. Neither
+	// may be duplicated into the machine list, and neither may be removed from its own.
+	if _, err := UpdateWatchlistFile(path, []WatchCandidate{
+		{Code: "2337", Name: "旺宏"},   // held
+		{Code: "8299", Name: "群聯"},   // pinned
+		{Code: "9999", Name: "今日候選"}, // genuinely new
+	}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	data, _ := os.ReadFile(path)
+	text := string(data)
+
+	if !strings.Contains(text, "watchlist_pinned") || !strings.Contains(text, "8299") {
+		t.Error("the pinned section was damaged")
+	}
+	if !strings.Contains(text, `entry: 173.5`) || !strings.Contains(text, `shares: 1000`) {
+		t.Error("the positions section was damaged")
+	}
+	if !strings.Contains(text, "# 檔頭註解必須保留") {
+		t.Error("the header comment was lost")
+	}
+	// Each code appears exactly once in the whole file — no duplication across sections.
+	for _, code := range []string{"2337", "8299"} {
+		if n := strings.Count(text, `"`+code+`"`); n != 1 {
+			t.Errorf("code %s appears %d times, want 1", code, n)
+		}
+	}
+}
+
+// A scan that produced nothing and a scan that failed to produce anything are
+// indistinguishable here, so an empty candidate set must never empty the shortlist.
+func TestRebuildRefusesToEmptyOnZeroCandidates(t *testing.T) {
+	path := writeTempStocks(t, pinnedStocksYAML)
+	before, _ := os.ReadFile(path)
+
+	got, err := UpdateWatchlistFile(path, nil)
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if got != nil {
+		t.Errorf("no candidates should report nothing, got %v", got)
+	}
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Error("an empty scan wiped the watchlist")
+	}
+}
+
+// Re-running the same scan must leave no diff, so a scheduled job does not produce a commit
+// on every run.
+func TestRebuildIsIdempotent(t *testing.T) {
+	path := writeTempStocks(t, pinnedStocksYAML)
+	cands := []WatchCandidate{{Code: "9999", Name: "甲"}, {Code: "8888", Name: "乙"}}
+
+	if _, err := UpdateWatchlistFile(path, cands); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := os.ReadFile(path)
+	if _, err := UpdateWatchlistFile(path, cands); err != nil {
+		t.Fatal(err)
+	}
+	second, _ := os.ReadFile(path)
+	if string(first) != string(second) {
+		t.Error("re-running the same scan rewrote the file")
 	}
 }

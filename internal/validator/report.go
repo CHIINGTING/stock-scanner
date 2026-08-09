@@ -44,29 +44,29 @@ type cellRet struct {
 }
 
 type tableRow struct {
-	Date, Code, Name, Action, Stage   string
+	Date, Code, Name, Action, Stage    string
 	SignalPrice, EntryPrice, EntryDate string
-	Rets                              []cellRet
-	MaxDD                             cellRet
-	Result, ResultCls                 string
-	Reason, Source                    string
+	Rets                               []cellRet
+	MaxDD                              cellRet
+	Result, ResultCls                  string
+	Reason, Source                     string
 }
 
 type reasonRow struct {
-	Tag                  string
-	Count                int
-	BuyHit, ReduceHit    string
-	AvgT5, AvgT10        string
+	Tag               string
+	Count             int
+	BuyHit, ReduceHit string
+	AvgT5, AvgT10     string
 }
 
 type summaryView struct {
-	Period                                   string
-	Total, Buy, Reduce, Watch, EntryCaution  int
-	Validatable, Insufficient                int
-	OverallHit                               string
-	BuyT5, BuyT10, ReduceT5, ReduceT10       string
-	EntryCautionHit                          string
-	BenchmarkLine                            string
+	Period                                  string
+	Total, Buy, Reduce, Watch, EntryCaution int
+	Validatable, Insufficient               int
+	OverallHit                              string
+	BuyT5, BuyT10, ReduceT5, ReduceT10      string
+	EntryCautionHit                         string
+	BenchmarkLine                           string
 }
 
 type reportModel struct {
@@ -183,10 +183,10 @@ func buildModel(meta ReportMeta, results []ValidationResult, hs []int) reportMod
 // ─── group statistics ───────────────────────────────────────────────────────
 
 type groupStat struct {
-	count                        int
-	correct, wrong, neutral      int
-	pending, noData              int
-	dirHits, dirN                map[int]int // directional hit counts per horizon
+	count                   int
+	correct, wrong, neutral int
+	pending, noData         int
+	dirHits, dirN           map[int]int // directional hit counts per horizon
 }
 
 func newGroupStat(hs []int) *groupStat {
