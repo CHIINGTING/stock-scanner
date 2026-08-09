@@ -971,7 +971,7 @@ M1 只固定**詞彙與持久化形狀**，**不含任何分類邏輯**（分類
 | **M4** | TWSE provider（BFI82U / MI_MARGN / MI_INDEX）+ fixture 測試 | ✅ 已實作、測試綠、全部 fixture 驅動不連網 | M1 | 有 |
 | **M5** | TAIFEX provider（OpenAPI JSON，零相依）+ Big5 回補（x/text 僅限該檔） | ✅ 已實作、測試綠、兩路徑等價性有測試 | M1 | 有 |
 | **M6** | Futures / Cash / Margin analyzer + `InstitutionalPosture` | ✅ 已實作、測試綠 | M4, M5 | 無 |
-| **M7** | Engine：score + confidence | ⬜ 未開始 | M3, M6 | 無 |
+| **M7** | Engine：score + confidence（regime 已於 M3 完成） | ✅ 已實作、測試綠 | M3, M6 | 無 |
 | **M8** | `cmd/market-fetch` 每日流程 + `configs/config.yaml` 的 `market:` 區塊 | ⬜ 未開始 | M7 | 有 |
 | **M9** | （另議）報告呈現 | ⬜ 未開始 | M8 | — |
 
