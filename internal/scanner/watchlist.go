@@ -3,6 +3,7 @@ package scanner
 import (
 	"sort"
 
+	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
@@ -77,6 +78,13 @@ type WatchlistEntry struct {
 	// is non-nil with Computed=false.
 	HoldingHorizon *HoldingHorizonResult `json:"holding_horizon,omitempty"`
 
+	// AI (R11): shadow-only OpenAI explanation of the evidence this entry already carries.
+	// nil unless enable_ai is on. Deliberately a dedicated field, NOT inside ShadowSignals,
+	// so the C6b guardrail scoring — which reads ShadowSignals and nothing else — cannot
+	// reach it. Attached by a POST-PASS after computeRocket, so score/action/probability/
+	// sort are already final. NEVER affects score / action / probability / sort / stop /
+	// ranking. A non-nil value with Status != OK means the analysis was unavailable.
+	AI *ai.Analysis `json:"ai,omitempty"`
 
 	// HorizonHint (R6-7): display-only 回測觀察週期 hint. nil unless show_horizon_hint
 	// is on. Distinct from R7-1 HoldingHorizon (stage+ATR shadow): R6-7 is setup-matched

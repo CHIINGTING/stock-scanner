@@ -220,6 +220,11 @@ func main() {
 			attachInstitution(watchlistResults, wStocks, cfg.Scanner.Institution, analysisDate)
 		}
 
+		// R11: AI explanation (shadow-only). LAST post-pass — by here every score, action
+		// and sort position is final, so the model is reading a finished verdict rather
+		// than participating in one. Off by default; a missing OPENAI_API_KEY, a timeout,
+		// a 429/5xx or malformed output all leave the scan and the report untouched.
+		attachAI(watchlistResults, cfg.Scanner)
 	}
 
 	// ── 3.6 News / 消息面 (Phase 1) — SHADOW MODE, display/context only ──────────
@@ -250,6 +255,7 @@ func main() {
 		ShowInstitution:             cfg.Scanner.ShowInstitution,
 		ShowBias:                    cfg.Scanner.ShowBias,
 		ShowCandlestick:             cfg.Scanner.ShowCandlestick,
+		ShowAI:                      cfg.Scanner.ShowAI,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
@@ -363,6 +369,21 @@ func attachInstitution(entries []scanner.WatchlistEntry, wStocks []fetcher.Stock
 	}
 	scanner.AttachInstitution(entries, loaded, candlesByCode, reportDate, cfg)
 	scanner.AttachConfluence(entries)
+}
+
+// attachAI is the R11 shadow explanation post-pass. It runs LAST, after every score, action
+// and sort position is final, and it cannot fail the scan: AttachAI swallows every error
+// into a per-entry status, and a disabled feature or a missing OPENAI_API_KEY simply leaves
+// the AI field nil. The 60s ceiling bounds the whole stage so a hung endpoint cannot stall a
+// scheduled run — the deterministic report is already complete by this point.
+func attachAI(entries []scanner.WatchlistEntry, sc scanner.Config) {
+	if !sc.EnableAI {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Duration(sc.AI.Defaulted().MaxStocks)*sc.AI.Timeout()+30*time.Second)
+	defer cancel()
+	scanner.AttachAI(ctx, entries, sc.AI, sc.EnableAI, scanner.AIMarketContext{}, log.Printf)
 }
 
 // buildAnalysisHistory converts the enriched watchlist into the canonical structured

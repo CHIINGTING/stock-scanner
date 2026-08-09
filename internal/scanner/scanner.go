@@ -5,6 +5,7 @@ import (
 	"log"
 	"sort"
 
+	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/indicator"
 	"github.com/deep-huang/stock-scanner/internal/news"
@@ -203,6 +204,19 @@ type Config struct {
 	EnableCandlestick bool `yaml:"enable_candlestick"` // 預設 false
 	ShowCandlestick   bool `yaml:"show_candlestick"`   // 預設 false
 
+	// ── AI Analysis (R11) — SHADOW MODE, explanation layer only ──────────────────
+	// EnableAI gates running the OpenAI analyzer + attaching WatchlistEntry.AI as a
+	// POST-PASS after computeRocket. ShowAI gates the report ⑭ section. Both default
+	// false → the analyzer never runs, the field stays nil, output is byte-identical.
+	//
+	// NEVER affects Score / Action / RocketScore / WatchAction / sort / stop / ranking.
+	// The token comes from OPENAI_API_KEY only and is never stored in config. A missing
+	// key, a timeout, a 429/5xx, or malformed model output all leave the scan and the
+	// report completing normally. Data layer in internal/ai.
+	EnableAI bool `yaml:"enable_ai"` // 預設 false
+	ShowAI   bool `yaml:"show_ai"`   // 預設 false
+
+	AI ai.Config `yaml:"ai"`
 
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`

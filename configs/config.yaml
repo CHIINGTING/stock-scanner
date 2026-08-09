@@ -211,6 +211,22 @@ scanner:
   enable_bias: false                               # 總開關，預設 false
   show_bias: false                                 # 顯示開關，預設 false
 
+  # ── AI 解讀 (R11) — SHADOW ONLY，OpenAI 官方 API ──────────────────────────────
+  # enable_ai=false（預設）時完全不呼叫 OpenAI，WatchlistEntry.AI 為 nil。
+  # show_ai=false（預設）時 report ⑭ 不顯示。兩者皆不影響 Score / Action / RocketScore /
+  # Stage / BUY・WATCH・SELL / 排序 / 部位大小 —— AI 只解讀掃描器「已經算完」的證據。
+  #
+  # API token 只從環境變數 OPENAI_API_KEY 取得，絕不寫在此檔或任何 repo 檔案內。
+  # 沒有 key、逾時、429、5xx、回應非合法 JSON 時一律 fail-open：該檔標記為分析不可用，
+  # 掃描與報表照常完成。
+  enable_ai: false                                 # 總開關，預設 false
+  show_ai: false                                   # 顯示開關，預設 false
+  ai:
+    model: "gpt-4o-mini"                           # OpenAI model id
+    timeout_sec: 30                                # 單一請求逾時（秒）
+    max_stocks: 12                                 # 每次執行最多分析幾檔（成本上限）
+    temperature: 0.2                               # 越低越貼近證據，不要調高
+
   kdj:
     k_period: 9
     d_smooth: 3

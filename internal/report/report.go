@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/institution"
@@ -523,6 +524,11 @@ type GuardrailViewOptions struct {
 	ShowInstitution bool
 	ShowBias        bool
 
+	// ShowAI gates the report ⑭ "AI 分析" section (R11). Default false → no such section
+	// and byte-identical output. Display-only; the AI layer NEVER touches score / action /
+	// probability / sorting / stop / WatchAction / ranking. When AI is disabled or the
+	// analysis was unavailable, the section is simply not rendered.
+	ShowAI bool
 
 	// ShowCandlestick gates the report ⑬ "K 線型態" section (R10-2). Display-only; NEVER
 	// touches score / action / probability / sorting / stop / WatchAction. When false the
@@ -761,6 +767,16 @@ func (r *Report) Generate(
 	defer f.Close()
 
 	funcs := template.FuncMap{
+		// R11 AI display helpers. aiOK is what keeps the ⑭ section from rendering an empty
+		// shell when the analysis was unavailable — the report simply omits it, matching how
+		// ⑨/⑩/⑬ handle their own unavailable states.
+		"aiOK": func(a *ai.Analysis) bool { return a.OK() },
+		"aiConfPct": func(c float64) string {
+			if c <= 0 {
+				return "—"
+			}
+			return fmt.Sprintf("%.0f%%", c*100)
+		},
 		"f2":      func(v float64) string { return fmt.Sprintf("%.2f", v) },
 		"f1":      func(v float64) string { return fmt.Sprintf("%.1f", v) },
 		"pct":     func(v float64) string { return fmt.Sprintf("%.1f%%", v) },
@@ -1574,6 +1590,16 @@ th.rotscore{min-width:120px}
 .wl-risk h4{color:#fca5a5}
 @media(max-width:900px){.wl-grid{grid-template-columns:1fr}}
 
+{{ if .GV.ShowAI }}
+/* ⑭ AI 分析（R11）— 沿用 wl-sec 既有樣式，只加多空色帶 */
+.wl-ai .ai-summary{font-size:.78rem;color:#e2e8f0;line-height:1.85;margin-bottom:8px}
+.wl-ai .ai-side{margin-bottom:6px;padding-left:8px;border-left:2px solid #334155}
+.wl-ai .ai-side.ai-bull{border-left-color:#16a34a}
+.wl-ai .ai-side.ai-bear{border-left-color:#dc2626}
+.wl-ai .ai-side.ai-risk{border-left-color:#ca8a04}
+.wl-ai .ai-label{font-size:.68rem;color:#64748b;letter-spacing:.05em}
+.wl-ai .ai-side ul{margin:2px 0 0 16px;font-size:.74rem;color:#cbd5e1;line-height:1.75}
+{{ end }}
 
 {{ if .GV.ShowBacktestInsights }}
 /* 區間策略回測面板（外掛 backtest.html，延遲載入，不影響本報告體積） */
@@ -1885,6 +1911,29 @@ th.rotscore{min-width:120px}
             {{- end }}
           </div>
           {{- end }}{{- end }}
+          {{- if $.GV.ShowAI }}{{- with $e.AI }}{{- if aiOK . }}
+          <div class="wl-sec wl-ai">
+            <h4>⑭ AI 分析（Shadow Only，不影響掃描分數與買賣訊號）</h4>
+            <div class="ai-summary">{{ .Summary }}</div>
+            {{- if .BullCase }}
+            <div class="ai-side ai-bull"><span class="ai-label">看多依據</span>
+              <ul>{{- range .BullCase }}<li>{{ . }}</li>{{- end }}</ul>
+            </div>
+            {{- end }}
+            {{- if .BearCase }}
+            <div class="ai-side ai-bear"><span class="ai-label">看空依據</span>
+              <ul>{{- range .BearCase }}<li>{{ . }}</li>{{- end }}</ul>
+            </div>
+            {{- end }}
+            {{- if .RiskFlags }}
+            <div class="ai-side ai-risk"><span class="ai-label">風險提醒</span>
+              <ul>{{- range .RiskFlags }}<li>⚠ {{ . }}</li>{{- end }}</ul>
+            </div>
+            {{- end }}
+            <div class="wl-note">解讀信心 {{ aiConfPct .Confidence }}（模型對「自己這段解讀」的把握，<b>不是</b>交易信心）｜模型 {{ .Model }}</div>
+            <div class="wl-note">本區塊由 AI 解讀掃描器已算出的證據產生，不改變任何分數、階段或 BUY／WATCH／SELL。</div>
+          </div>
+          {{- end }}{{- end }}{{- end }}
         </div>
       </div>
     </td>

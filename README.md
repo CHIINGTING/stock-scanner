@@ -23,9 +23,10 @@ Stock Radar 不是技術指標展示工具。
 10. [市場別：TW vs TWO](#市場別tw-vs-two)
 11. [執行參數](#執行參數)
 12. [消息面（News Shadow Module）](#消息面news-shadow-module)
-13. [區間策略回測面板（backtest.html）](#區間策略回測面板backtesthtml)
-14. [設定檔與所有開關（config.yaml）](#設定檔與所有開關configyaml)
-15. [常見問題](#常見問題)
+13. [AI 解讀（AI Shadow Layer）](#ai-解讀ai-shadow-layer)
+14. [區間策略回測面板（backtest.html）](#區間策略回測面板backtesthtml)
+15. [設定檔與所有開關（config.yaml）](#設定檔與所有開關configyaml)
+16. [常見問題](#常見問題)
 
 ---
 
@@ -575,6 +576,67 @@ scanner:
 | `enable_news: false, show_news: true` | 不抓取，報告也沒有東西可顯示 |
 
 > 別名字典：`configs/news_aliases.yaml`（個股別名 → 代號、主題關鍵字 → 族群），可自行增補。
+
+---
+
+## AI 解讀（AI Shadow Layer）
+
+> **AI 分析是選用的，而且是 shadow-only：它不影響任何確定性計算的分數，也不影響
+> BUY／WATCH／SELL 訊號。**
+
+掃描器本身完全不含 AI——分數、階段、訊號、排序都由固定規則算出，同樣的輸入永遠得到
+同樣的輸出。這一層做的是**另一件事**：把掃描器**已經算完**的證據（階段、飆股分數、
+量價、整理天數、族群流向、法人籌碼、風險標籤）交給 OpenAI，換回一段人話的多空解讀。
+
+它**不會**拿到原始價格序列，**不會**重算任何指標，**不會**產生買賣建議。報告 ⑭ 區塊
+就是它唯一的出口。
+
+### 啟用方式
+
+**第一步：把 API token 放進環境變數。** token 只從 `OPENAI_API_KEY` 讀取，程式不會、
+也不能從設定檔或任何 repo 內的檔案取得它：
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+> **絕對不要**把 token 寫進 `config.yaml`、原始碼、測試資料或報告——設定結構裡刻意
+> 沒有任何可以存放 token 的欄位，`internal/scanner` 也有測試會擋下 configs 內的憑證。
+
+**第二步：在 `configs/config.yaml` 開啟開關（預設全關），模型也寫在設定檔裡：**
+
+```yaml
+scanner:
+  enable_ai: true      # 呼叫 OpenAI 做解讀
+  show_ai: true        # 報告顯示 ⑭ AI 分析
+  ai:
+    model: "gpt-4o-mini"
+    timeout_sec: 30
+    max_stocks: 12     # 每次執行最多分析幾檔（成本上限）
+    temperature: 0.2
+```
+
+| 組合 | 行為 |
+|------|------|
+| `enable_ai: false`（預設） | 完全不呼叫 OpenAI，`WatchlistEntry.AI` 為 nil，輸出與沒有這功能時一致 |
+| `enable_ai: true, show_ai: false` | 有呼叫、有記錄，但報告不顯示（觀察模式） |
+| `enable_ai: true, show_ai: true` | 呼叫 + 顯示 ⑭ |
+| `enable_ai: false, show_ai: true` | 不呼叫，報告也沒有東西可顯示 |
+
+### 成本
+
+一檔股票最多送出一次請求，而且只送「可操作候選」（PREPARE／BREAKOUT_BUY／
+PULLBACK_BUY／WATCH_CLOSELY），再依飆股分數由高到低截到 `max_stocks`。WAIT 與
+出場類 action 不會花錢。
+
+### 失敗時會怎樣
+
+**一律 fail-open。** 沒設 `OPENAI_API_KEY`、逾時、429、5xx、回應不是合法 JSON——
+掃描與報告都照常完成，只是該檔的 ⑭ 區塊不出現。AI 失敗不會讓排程失敗。
+
+模型的 `confidence` 是它對**自己那段解讀**的把握，不是交易信心，也不是勝率。
+
+---
 
 ## 區間策略回測面板（backtest.html）
 
