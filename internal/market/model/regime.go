@@ -29,35 +29,3 @@ func (r Regime) Valid() bool {
 	}
 	return false
 }
-
-// Confidence is the LEGACY coarse confidence of the pre-Evidence dashboard flow.
-//
-// Deprecated: the authoritative confidence is Snapshot.Confidence, a 0..1 value computed
-// from data completeness × analyzer agreement × conviction (M7). This enum survives only
-// because the old Dashboard/Classify path still compiles against it; it is removed together
-// with that path. Do not use it in new code, and do not invent a numeric mapping for it —
-// the numbers belong to the M7 engine, not to a translation table.
-type Confidence string
-
-const (
-	ConfidenceLow    Confidence = "LOW"
-	ConfidenceMedium Confidence = "MEDIUM"
-)
-
-// RegimeInfo is the LEGACY regime verdict of the pre-Evidence dashboard flow.
-//
-// Deprecated: superseded by RegimeDecision (structure.go), which additionally records which
-// decision-table rule fired and the structural view behind it. Retained until the M3 regime
-// engine replaces Classify().
-//
-// RED LINE (still applies to both): none of these strings may contain trade instructions
-// (買/賣/下單/進場價). The dashboard describes the environment; it never tells the user to trade.
-type RegimeInfo struct {
-	Regime      Regime     `json:"regime"`
-	Confidence  Confidence `json:"confidence"`
-	Description string     `json:"description"`
-	Strategy    string     `json:"strategy"`
-	Risk        string     `json:"risk"`
-	Reasons     []string   `json:"reasons"`
-	Caveats     []string   `json:"caveats"`
-}

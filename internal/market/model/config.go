@@ -22,14 +22,6 @@ type MarketConfig struct {
 	Futures   FuturesThresholds   `yaml:"futures"`
 	Structure StructureThresholds `yaml:"structure"`
 
-	// Deprecated: Regime holds the Market-Score cutoffs of the pre-Evidence classifier.
-	// The regime engine (M3) is structural and reads Structure instead; this field is
-	// removed with Classify().
-	Regime RegimeThresholds `yaml:"regime"`
-
-	// ConfidenceMinModules: at least this many available modules → MEDIUM confidence, else LOW.
-	ConfidenceMinModules int `yaml:"confidence_min_modules"`
-
 	// StorageDir is where market_YYYY-MM-DD.json is written. Empty → "data/market".
 	StorageDir string `yaml:"storage_dir"`
 }
@@ -50,18 +42,6 @@ type FuturesThresholds struct {
 	LightShortNet   float64 `yaml:"light_short_net"`   // <= this → Light Short; above → Neutral
 }
 
-// RegimeThresholds are the Market-Score cutoffs of the LEGACY score-driven classifier.
-//
-// Deprecated: mapping a score onto a regime is exactly what the approved design forbids —
-// score describes directional strength, regime describes structure, and the two can
-// legitimately disagree (score 67 while the structure is BULL_PULLBACK). Replaced by
-// StructureThresholds; removed when Classify() goes.
-type RegimeThresholds struct {
-	BullMin         float64 `yaml:"bull_min"`          // >= → Bull Market (or Distribution if deteriorating)
-	BullPullbackMin float64 `yaml:"bull_pullback_min"` // >= → Bull Pullback
-	BearMax         float64 `yaml:"bear_max"`          // < → Bear Market; between → Sideways
-}
-
 // Defaulted returns a copy with every zero-valued knob filled with spec baselines, so a
 // minimal (or empty) YAML block still produces a fully specified, runnable engine.
 func (c MarketConfig) Defaulted() MarketConfig {
@@ -79,10 +59,6 @@ func (c MarketConfig) Defaulted() MarketConfig {
 	}
 	out.Futures = out.Futures.withDefaults()
 	out.Structure = out.Structure.withDefaults()
-	out.Regime = out.Regime.withDefaults()
-	if out.ConfidenceMinModules <= 0 {
-		out.ConfidenceMinModules = 5
-	}
 	if out.StorageDir == "" {
 		out.StorageDir = "data/market"
 	}
@@ -146,19 +122,6 @@ func (f FuturesThresholds) withDefaults() FuturesThresholds {
 		f.LightShortNet = -10000
 	}
 	return f
-}
-
-func (r RegimeThresholds) withDefaults() RegimeThresholds {
-	if r.BullMin == 0 {
-		r.BullMin = 65
-	}
-	if r.BullPullbackMin == 0 {
-		r.BullPullbackMin = 55
-	}
-	if r.BearMax == 0 {
-		r.BearMax = 40
-	}
-	return r
 }
 
 // StructureThresholds are the cutoffs of the three-layer structural regime engine.

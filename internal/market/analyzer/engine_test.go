@@ -242,3 +242,31 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+// "The evidence contradicts itself" and "there is no evidence" are different states and must
+// not report the same confidence. Two directly opposed sources drive agreement to ~0 and the
+// product truncates to 0.00, which is exactly what the empty case returns.
+func TestConflictingEvidenceIsDistinguishableFromNoEvidence(t *testing.T) {
+	opposed := Confidence([]model.Evidence{
+		e(model.EvidencePrice, model.DirBullish, model.StrengthStrong, 1),
+		e(model.EvidenceBreadth, model.DirBearish, model.StrengthExtreme, 1),
+	}, wts)
+	none := Confidence([]model.Evidence{
+		model.MissingEvidence(model.EvidencePrice, "x"),
+		model.MissingEvidence(model.EvidenceBreadth, "x"),
+	}, wts)
+
+	if none.Confidence != 0 {
+		t.Errorf("no usable evidence must be exactly 0, got %v", none.Confidence)
+	}
+	if opposed.Confidence <= 0 {
+		t.Errorf("contradictory-but-present evidence must not report 0, got %v", opposed.Confidence)
+	}
+	if opposed.Confidence == none.Confidence {
+		t.Error("the two states are indistinguishable")
+	}
+	// It should still be a very low number — this is a floor, not a rescue.
+	if opposed.Confidence > 0.1 {
+		t.Errorf("contradictory evidence should still be near the floor, got %v", opposed.Confidence)
+	}
+}

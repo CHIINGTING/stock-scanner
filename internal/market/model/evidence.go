@@ -64,6 +64,18 @@ func (s Strength) Valid() bool {
 	return false
 }
 
+// Module identifiers used as SCORE WEIGHT keys. They are the same strings as the evidence
+// sources below — one vocabulary, so a weight can never silently fail to match an evidence.
+const (
+	// The five MVP modules. Every one is sourced from official TWSE or TAIFEX data, or from
+	// the scanner's own price cache.
+	ModulePrice          = "Price"
+	ModuleBreadth        = "Breadth"
+	ModuleForeignFutures = "ForeignFutures"
+	ModuleForeignCash    = "ForeignCash"
+	ModuleMargin         = "Margin"
+)
+
 // Evidence source identifiers. Stable strings — they are persisted in every snapshot and
 // used to answer "which analyzer was historically useful", so renaming one silently breaks
 // historical comparison.

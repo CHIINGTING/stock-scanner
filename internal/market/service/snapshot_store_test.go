@@ -172,11 +172,12 @@ func TestSaveSnapshotLeavesNoTempFiles(t *testing.T) {
 	}
 }
 
-// The new snapshot files must not collide with the legacy Dashboard files during the
-// transition; both live in the same directory until M7 retires the old flow.
-func TestSnapshotPathDoesNotCollideWithLegacyDashboard(t *testing.T) {
-	dir := t.TempDir()
-	if SnapshotPath(dir, "2026-08-07") == StoragePath(dir, "2026-08-07") {
-		t.Fatal("snapshot and legacy dashboard would overwrite each other")
+// market_<date>.json is the ONLY snapshot format. The legacy Dashboard writer that once
+// shared this directory was removed in M8, so the filename no longer has to avoid a
+// collision — but the prefix stays, matching internal/institution's {source}_{date}.json
+// convention and keeping the directory self-describing.
+func TestSnapshotPathShape(t *testing.T) {
+	if got := SnapshotPath("/x", "2026-08-07"); got != "/x/market_2026-08-07.json" {
+		t.Errorf("SnapshotPath = %s", got)
 	}
 }

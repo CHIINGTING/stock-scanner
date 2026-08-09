@@ -199,6 +199,15 @@ func Confidence(evidence []model.Evidence, weights map[string]float64) Confidenc
 	// Truncate rather than round: this is a quality measure built on uncalibrated
 	// thresholds, and 0.84 should not become 0.8400000001 or imply three-digit accuracy.
 	out.Confidence = math.Floor(out.Confidence*100) / 100
+
+	// A floor, so that "the evidence contradicts itself" never reports the same number as
+	// "there is no evidence". Two directly opposed sources drive agreement to ~0.01, and the
+	// product then truncates to 0.00 — indistinguishable from the empty case above, which
+	// returns exactly 0. Those are different states and the archive has to keep them apart,
+	// the same way MISSING is kept apart from NEUTRAL everywhere else in this package.
+	if out.Confidence <= 0 {
+		out.Confidence = 0.01
+	}
 	out.Completeness = round2(out.Completeness)
 	out.Agreement = round2(out.Agreement)
 	out.Conviction = round2(out.Conviction)
