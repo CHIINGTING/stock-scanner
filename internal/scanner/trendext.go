@@ -254,8 +254,8 @@ func computeTrendExtension(in trendExtInput) TrendExtensionView {
 	case up20 && extended:
 		v.State = TrendExtended
 
-	// 3. The setup this layer is for: trend up, MA60 not fighting it, price back at the MA,
-	//    sector not falling apart.
+	// 3. Classifies a constructive pullback within an established uptrend: trend up, MA60 not
+	//    fighting it, price back at the MA, sector not falling apart.
 	case up20 && notDown60 && nearMA && !heatWeak:
 		v.State = PullbackInUptrend
 
