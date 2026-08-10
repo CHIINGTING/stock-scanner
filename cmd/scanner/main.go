@@ -40,7 +40,7 @@ func main() {
 	scanAll := flag.Bool("all", false, "show all scanned stocks, no top-N limit")
 	sectorsPath := flag.String("sectors", "", "sector rotation YAML (overrides sectors_file in config)")
 	skipRotation := flag.Bool("no-rotation", false, "skip sector rotation analysis")
-	updateWatchlist := flag.Bool("update-watchlist", false, "掃描後將 BUY/WATCH 結果寫回 stocks.yaml 的 watchlist（positions 不變）")
+	updateWatchlist := flag.Bool("update-watchlist", false, "掃描後將 BUY/WATCH/HOLD 結果寫回 stocks.yaml 的 watchlist（positions 不變）")
 
 	// Accept an optional leading "run-all" subcommand token so that
 	//   go run ./cmd/scanner run-all --update-watchlist ...
@@ -306,9 +306,9 @@ func main() {
 	}
 }
 
-// collectWatchCandidates extracts the BUY/WATCH stocks from scan results as
-// watchlist candidates (de-duplicated by code). SELL/HOLD/REDUCE/empty actions
-// are ignored. Positions/duplicate filtering happens in UpdateWatchlistFile.
+// collectWatchCandidates extracts the BUY/WATCH/HOLD stocks from scan results as
+// watchlist candidates (de-duplicated by code). SELL/REDUCE/empty actions are
+// ignored. Positions/duplicate filtering happens in UpdateWatchlistFile.
 func collectWatchCandidates(results []scanner.StockAnalysis) []fetcher.WatchCandidate {
 	var out []fetcher.WatchCandidate
 	seen := map[string]bool{}
@@ -490,9 +490,14 @@ func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.Sector
 
 // qualifiesForWatchlist reports whether an action should land a stock on the
 // watchlist. STRONG BUY is treated as a stronger BUY and included.
+//
+// HOLD is the weakest tier kept: it is neither a buy nor a sell, so it belongs on a
+// watchlist rather than in the discard pile. It is also by far the most common of the
+// three, so including it roughly doubles the list. REDUCE and SELL stay out — they are
+// exit advice, and a stock being exited is not a candidate to enter.
 func qualifiesForWatchlist(a scanner.Action) bool {
 	switch a {
-	case scanner.ActionStrongBuy, scanner.ActionBuy, scanner.ActionWatch:
+	case scanner.ActionStrongBuy, scanner.ActionBuy, scanner.ActionWatch, scanner.ActionHold:
 		return true
 	default:
 		return false

@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Merge a daily report's 市場掃描 (market-scan) BUY & WATCH stocks into stocks.yaml.
+"""Merge a daily report's 市場掃描 (market-scan) BUY / WATCH / HOLD stocks into stocks.yaml.
 
 The report HTML (reports/report_YYYYMMDD.html) renders every scanned stock in the
 `<div id="tab-market">` section with an action badge — STRONG BUY / BUY / WATCH /
-HOLD / REDUCE / SELL. This script keeps only the actionable signals (STRONG BUY +
-BUY + WATCH) and merges them into the `watchlist:` block of stocks.yaml.
+HOLD / REDUCE / SELL. This script keeps the signals worth tracking (STRONG BUY +
+BUY + WATCH + HOLD) and merges them into the `watchlist:` block of stocks.yaml.
+
+HOLD is the weakest tier kept: it is neither a buy nor a sell, so it belongs on a
+watchlist rather than in the discard pile — but it roughly doubles the list size,
+and it is listed last so the actionable names stay at the top.
 
 The `watchlist:` block is REBUILT from each report, not appended to. Append-only had
 turned it into a ratchet: it reached 748 entries against a 66-entry daily signal, so 92%
@@ -101,15 +105,16 @@ def market_segment(html_text: str) -> str:
 
 
 def extract(report_path: str):
-    """Return the actionable candidates (STRONG BUY / BUY / WATCH) as [{code,name}].
+    """Return the tracked candidates (STRONG BUY / BUY / WATCH / HOLD) as [{code,name}].
 
-    BUY-tier signals are listed before WATCH so the more actionable names land
-    first in the watchlist, but both tiers go into the same watchlist block.
+    Returned as three tiers in descending conviction. They all go into the same
+    `watchlist:` block, written in tier order, so the more actionable names land
+    first and HOLD sits at the bottom.
     """
     text = open(report_path, encoding="utf-8").read()
     seg = market_segment(text)
     name_map = load_name_map()
-    buy, watch = [], []
+    buy, watch, hold = [], [], []
     for m in ROW_RE.finditer(seg):
         # Key off the language-independent CSS class (action-buy / action-watch …),
         # not the visible badge text — the report now renders Chinese action labels.
@@ -123,7 +128,9 @@ def extract(report_path: str):
             buy.append(item)
         elif css == "watch":
             watch.append(item)
-    return buy, watch
+        elif css == "hold":
+            hold.append(item)
+    return buy, watch, hold
 
 
 # --- stocks.yaml merge -------------------------------------------------------
@@ -198,8 +205,8 @@ def watchlist_block_bounds(lines: list[str]) -> tuple[int, int] | None:
     return start, end
 
 
-def merge_into_stocks(buy, watch):
-    """Rebuild stocks.yaml's watchlist from today's BUY+WATCH. Returns (kept, excluded)."""
+def merge_into_stocks(buy, watch, hold):
+    """Rebuild stocks.yaml's watchlist from today's BUY+WATCH+HOLD. Returns (kept, excluded)."""
     with open(STOCKS_PATH, encoding="utf-8") as f:
         lines = f.read().splitlines()
 
@@ -211,7 +218,7 @@ def merge_into_stocks(buy, watch):
         | set(codes.get("watchlist_pinned", set()))
 
     kept, excluded, seen = [], [], set()
-    for item in buy + watch:
+    for item in buy + watch + hold:
         code = item["code"]
         if code in blocked or code in seen:
             excluded.append(item)
@@ -251,11 +258,11 @@ def merge_into_stocks(buy, watch):
 def main():
     arg = sys.argv[1] if len(sys.argv) > 1 else None
     report = resolve_report(arg)
-    buy, watch = extract(report)
-    kept, excluded = merge_into_stocks(buy, watch)
+    buy, watch, hold = extract(report)
+    kept, excluded = merge_into_stocks(buy, watch, hold)
 
     print(f"來源報告：{report}")
-    print(f"掃描訊號：BUY {len(buy)} 檔｜WATCH {len(watch)} 檔")
+    print(f"掃描訊號：BUY {len(buy)} 檔｜WATCH {len(watch)} 檔｜HOLD {len(hold)} 檔")
     print(f"重建 watchlist：{len(kept)} 檔｜排除 {len(excluded)} 檔（持股或已釘選）")
     if kept:
         preview = "、".join(f'{it["code"]} {it["name"]}' for it in kept[:20])

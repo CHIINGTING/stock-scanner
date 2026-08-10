@@ -211,6 +211,17 @@ scanner:
   enable_bias: false                               # 總開關，預設 false
   show_bias: false                                 # 顯示開關，預設 false
 
+  # ── K 線型態 (R10-2) — SHADOW MODE, display only ──────────────────────────────
+  # enable_candlestick=false（預設）時完全不跑分析器，WatchlistEntry.Candlestick 為 nil。
+  # show_candlestick=false（預設）時 report ⑬ 不顯示。兩者皆不影響 Score / Action /
+  # RocketScore / WatchAction / sort / stop —— 分析在 computeRocket 與決策「之後」才跑，
+  # 結果不回饋。RocketStage 是餵給分析器的輸入，不是它的產出。
+  #
+  # show_candlestick=true 而 enable_candlestick=false 會在啟動時直接報錯（SPEC R10-2 §9），
+  # 不會安靜地顯示空白區塊。要開就兩個一起開。
+  enable_candlestick: false                        # 總開關，預設 false
+  show_candlestick: false                          # 顯示開關，預設 false
+
   # ── 趨勢／乖離／族群熱度 (R12) — SHADOW ONLY ──────────────────────────────────
   # enable_trend_extension=false（預設）時完全不計算，WatchlistEntry.TrendExt 與
   # SectorRotation.Heat 皆為 nil。show_trend_extension=false（預設）時 report ⑮ 不顯示。
