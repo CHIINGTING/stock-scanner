@@ -208,8 +208,8 @@ scanner:
   # ── BIAS Risk / 乖離率風險 (R10-1) — SHADOW MODE, display only ─────────────────
   # enable_bias=false（預設）時不計算 WatchlistEntry.Bias。show_bias=false（預設）時 report ⑫ 不顯示。
   # BIAS 為追價／超跌 RISK，非買賣訊號；皆不影響 scoring / action / sort / stop。
-  enable_bias: false                               # 總開關，預設 false
-  show_bias: false                                 # 顯示開關，預設 false
+  enable_bias: true                                # 總開關，預設 false
+  show_bias: true                                  # 顯示開關，預設 false
 
   # ── K 線型態 (R10-2) — SHADOW MODE, display only ──────────────────────────────
   # enable_candlestick=false（預設）時完全不跑分析器，WatchlistEntry.Candlestick 為 nil。
@@ -219,8 +219,8 @@ scanner:
   #
   # show_candlestick=true 而 enable_candlestick=false 會在啟動時直接報錯（SPEC R10-2 §9），
   # 不會安靜地顯示空白區塊。要開就兩個一起開。
-  enable_candlestick: false                        # 總開關，預設 false
-  show_candlestick: false                          # 顯示開關，預設 false
+  enable_candlestick: true                         # 總開關，預設 false
+  show_candlestick: true                           # 顯示開關，預設 false
 
   # ── 趨勢／乖離／族群熱度 (R12) — SHADOW ONLY ──────────────────────────────────
   # enable_trend_extension=false（預設）時完全不計算，WatchlistEntry.TrendExt 與
@@ -231,8 +231,8 @@ scanner:
   #
   # 族群熱度沿用 configs/sectors.yaml 的既有分類，不另建第二套對應；有效成員數不足
   # （< 4）的族群回報 INSUFFICIENT_DATA，不會硬算出一個看似精確的分數。
-  enable_trend_extension: false                    # 總開關，預設 false
-  show_trend_extension: false                      # 顯示開關，預設 false
+  enable_trend_extension: true                     # 總開關，預設 false
+  show_trend_extension: true                       # 顯示開關，預設 false
 
   # ── AI 解讀 (R11) — SHADOW ONLY，OpenAI 官方 API ──────────────────────────────
   # enable_ai=false（預設）時完全不呼叫 OpenAI，WatchlistEntry.AI 為 nil。
