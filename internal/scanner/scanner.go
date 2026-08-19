@@ -9,6 +9,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/indicator"
 	"github.com/deep-huang/stock-scanner/internal/news"
+	"github.com/deep-huang/stock-scanner/internal/technical"
 )
 
 // Config holds scanner parameters.
@@ -214,6 +215,27 @@ type Config struct {
 	// and sectorheat.go; the moving averages and BIAS come from internal/indicator.
 	EnableTrendExtension bool `yaml:"enable_trend_extension"` // 預設 false
 	ShowTrendExtension   bool `yaml:"show_trend_extension"`   // 預設 false
+
+	// ── Technical Indicator Expansion (R14) — SHADOW MODE ────────────────────────
+	// EnableTechnicalIndicators gates computing and attaching WatchlistEntry.Technical
+	// (ADX/DI, RSI, MACD, Keltner, classic pivots, and the aggregated technical context)
+	// as a POST-PASS after computeRocket. Default false → nothing is computed, the field
+	// stays nil, and output is byte-identical.
+	//
+	// ShowTechnicalIndicators gates the report section ONLY. The two flags are independent
+	// on purpose: enable=true with show=false still computes, still persists R13 evidence
+	// and still reaches the agents, while the HTML stays unchanged.
+	//
+	// NEVER affects Score / Action / RocketScore / WatchAction / ExplosionProb / sort /
+	// stop / Stage / market regime / sector rotation. R14's own premise is that a textbook
+	// indicator has to earn its way into scoring by proving itself against recorded
+	// outcomes first; until then these are evidence and nothing else. Data layer in
+	// internal/technical, which reuses internal/indicator's Wilder RSI and ATR rather than
+	// growing a second set.
+	EnableTechnicalIndicators bool `yaml:"enable_technical_indicators"` // 預設 false
+	ShowTechnicalIndicators   bool `yaml:"show_technical_indicators"`   // 預設 false
+
+	Technical technical.Config `yaml:"technical"`
 
 	// ── AI Analysis (R11) — SHADOW MODE, explanation layer only ──────────────────
 	// EnableAI gates running the OpenAI analyzer + attaching WatchlistEntry.AI as a

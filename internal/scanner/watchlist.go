@@ -9,6 +9,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
+	"github.com/deep-huang/stock-scanner/internal/technical"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -131,6 +132,16 @@ type WatchlistEntry struct {
 	// both Institution and Bias are present and a combo fires. Attached by AttachConfluence
 	// post-pass. Never affects Score/Action/RocketScore/WatchAction/sort/stop.
 	Confluence *ConfluenceView `json:"confluence,omitempty"`
+
+	// Technical (R14): shadow-only ADX/DI + RSI + MACD + Keltner + pivots, plus the
+	// aggregated technical context. nil unless enable_technical_indicators is on.
+	// Deliberately a dedicated field, NOT inside ShadowSignals, so the C6b guardrail
+	// scoring — which reads ShadowSignals and nothing else — cannot reach it. Computed as a
+	// POST-PASS after computeRocket, so score/action/probability/sort are already final.
+	// NEVER affects Score / Action / RocketScore / WatchAction / ExplosionProb / sort /
+	// stop / Stage. When enabled it is ALWAYS non-nil; each indicator's own Status
+	// distinguishes INSUFFICIENT_DATA from "disabled = nil".
+	Technical *technical.Result `json:"technical,omitempty"`
 
 	// Candlestick (R10-2): display/shadow-only K 線型態 analysis. nil unless
 	// enable_candlestick is on. Computed as a POST-PASS after computeRocket + the decision
@@ -294,6 +305,13 @@ func (s *Scanner) EnrichWatchlist(
 		// non-nil (Status carries NO_PATTERN / INVALID_BAR).
 		if s.cfg.EnableCandlestick {
 			e.Candlestick = computeCandlestick(item.Candles, rk.Stage)
+		}
+
+		// Technical (R14): POST-PASS after computeRocket, reading only the candles. Its
+		// result is written to e.Technical and read back by nothing in this function, so
+		// the scan's decisions are already final and cannot be revisited by it.
+		if s.cfg.EnableTechnicalIndicators {
+			e.Technical = computeTechnical(item.Candles, s.cfg.Technical)
 		}
 
 		// TrendExtension (R12): POST-PASS after computeRocket. Reads the BIAS view above

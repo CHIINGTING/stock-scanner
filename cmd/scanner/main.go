@@ -261,6 +261,7 @@ func main() {
 		ShowInstitution:             cfg.Scanner.ShowInstitution,
 		ShowBias:                    cfg.Scanner.ShowBias,
 		ShowCandlestick:             cfg.Scanner.ShowCandlestick,
+		ShowTechnicalIndicators:     cfg.Scanner.ShowTechnicalIndicators,
 		ShowAI:                      cfg.Scanner.ShowAI,
 		ShowTrendExtension:          cfg.Scanner.ShowTrendExtension,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,

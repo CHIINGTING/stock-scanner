@@ -15,6 +15,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
+	"github.com/deep-huang/stock-scanner/internal/technical"
 )
 
 // etfSignalLabel maps an ETF flow signal to a Chinese display label for report ⑨.
@@ -408,6 +409,56 @@ func candleSummaryChip(r *candlestick.Result) string {
 	return fmt.Sprintf("🕯️ %s %s %s", top.Type, candleDirBadge(top.Direction), candleConfPct(top.Confidence))
 }
 
+// ── R14 technical (⑯) display helpers ────────────────────────────────────────────
+//
+// These colour a READING, never a recommendation. A bearish chip is red because the price is
+// falling, not because anyone is being told to sell — the section header says so and the
+// vocabulary contains no verbs.
+
+func techDirCSS(d string) string {
+	switch d {
+	case technical.DirBullish:
+		return "t-bull"
+	case technical.DirBearish:
+		return "t-bear"
+	default:
+		return ""
+	}
+}
+
+// techStrengthCSS deliberately does NOT colour by direction: a VERY_STRONG trend can be a
+// downtrend, so strength is amber (noteworthy) rather than green (good).
+func techStrengthCSS(s string) string {
+	switch s {
+	case technical.StrengthStrong, technical.StrengthVeryStrong:
+		return "t-warn"
+	default:
+		return ""
+	}
+}
+
+func techMomentumCSS(m string) string {
+	switch m {
+	case technical.MomentumAccelerating, technical.MomentumPositive:
+		return "t-bull"
+	case technical.MomentumDecelerating, technical.MomentumNegative:
+		return "t-bear"
+	default:
+		return ""
+	}
+}
+
+func techVolCSS(v string) string {
+	switch v {
+	case technical.VolBreakout:
+		return "t-warn"
+	case technical.VolBreakdown:
+		return "t-bear"
+	default:
+		return ""
+	}
+}
+
 // actionLabel maps a market/position Action to its Chinese label. The words are chosen
 // to match the validator's Chinese action vocabulary (internal/validator/signal.go) so
 // historical validation keeps classifying them; the language-independent CSS class
@@ -581,6 +632,12 @@ type GuardrailViewOptions struct {
 	// touches score / action / probability / sorting / stop / WatchAction. When false the
 	// section is entirely absent (byte-identical output).
 	ShowCandlestick bool
+
+	// ShowTechnicalIndicators gates the report ⑯ "技術指標" section (R14). Display-only, and
+	// independent of whether the indicators were COMPUTED: the scanner can have R14 on,
+	// persisting evidence for the agents, while this stays false and the HTML is unchanged.
+	// Default false → the section and its styles are entirely absent.
+	ShowTechnicalIndicators bool
 
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
@@ -840,6 +897,14 @@ func (r *Report) Generate(
 		},
 		"trendStateText": trendStateText,
 		"trendStateCSS":  trendStateCSS,
+		// R14 technical display helpers. techOK is what keeps a non-OK indicator from
+		// rendering as a row of zeros: the section prints its Status instead, so "not
+		// enough history" never looks like "ADX is 0".
+		"techOK":          func(s technical.Status) bool { return s.OK() },
+		"techDirCSS":      techDirCSS,
+		"techStrengthCSS": techStrengthCSS,
+		"techMomentumCSS": techMomentumCSS,
+		"techVolCSS":      techVolCSS,
 		// R11 AI display helpers. aiOK is what keeps the ⑭ section from rendering an empty
 		// shell when the analysis was unavailable — the report simply omits it, matching how
 		// ⑨/⑩/⑬ handle their own unavailable states.
@@ -1676,6 +1741,21 @@ th.rotscore{min-width:120px}
 .wl-te .te-missing{color:#64748b;font-style:italic}
 {{ end }}
 
+{{ if .GV.ShowTechnicalIndicators }}
+/* ⑯ 技術指標擴充（R14）— 摘要色帶在前，raw 數值次要 */
+.wl-tech .tech-ctx{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.wl-tech .tech-chip{border-radius:6px;padding:3px 9px;font-size:.74rem;font-weight:700;border:1px solid #334155;background:#111827;color:#94a3b8}
+.wl-tech .tech-chip.t-bull{background:#0b1f17;border-color:#14532d;color:#86efac}
+.wl-tech .tech-chip.t-bear{background:#2a1414;border-color:#7f1d1d;color:#fca5a5}
+.wl-tech .tech-chip.t-warn{background:#241a06;border-color:#78350f;color:#fcd34d}
+.wl-tech .tech-chip b{color:inherit}
+.wl-tech .tech-sigs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.wl-tech .tech-sig{font-size:.66rem;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:1px 5px;letter-spacing:.04em}
+.wl-tech .tech-raw{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:3px 14px;font-size:.72rem;color:#94a3b8}
+.wl-tech .tech-raw span{color:#64748b}
+.wl-tech .tech-missing{color:#64748b;font-style:italic;font-size:.72rem}
+{{ end }}
+
 {{ if .GV.ShowAI }}
 /* ⑭ AI 分析（R11）— 沿用 wl-sec 既有樣式，只加多空色帶 */
 .wl-ai .ai-summary{font-size:.78rem;color:#e2e8f0;line-height:1.85;margin-bottom:8px}
@@ -2020,6 +2100,47 @@ th.rotscore{min-width:120px}
             <div class="wl-note">本區塊由 AI 解讀掃描器已算出的證據產生，不改變任何分數、階段或 BUY／WATCH／SELL。</div>
           </div>
           {{- end }}{{- end }}{{- end }}
+          {{- if $.GV.ShowTechnicalIndicators }}{{- with $e.Technical }}
+          <div class="wl-sec wl-tech">
+            <h4>⑯ 技術指標（Shadow Only，不影響 BUY／WATCH／SELL）</h4>
+            {{- with .Context }}
+            <div class="tech-ctx">
+              <span class="tech-chip {{ techDirCSS .Direction }}">方向 <b>{{ .Direction }}</b></span>
+              <span class="tech-chip {{ techStrengthCSS .TrendStrength }}">趨勢強度 <b>{{ .TrendStrength }}</b></span>
+              <span class="tech-chip {{ techMomentumCSS .Momentum }}">動能 <b>{{ .Momentum }}</b></span>
+              <span class="tech-chip {{ techVolCSS .Volatility }}">波動 <b>{{ .Volatility }}</b></span>
+              <span class="tech-chip">位置 <b>{{ .PriceLocation }}</b></span>
+            </div>
+            {{- if .Signals }}
+            <div class="tech-sigs">{{- range .Signals }}<span class="tech-sig">{{ . }}</span>{{- end }}</div>
+            {{- end }}
+            {{- end }}
+            <div class="tech-raw">
+              {{- with .ADX }}{{ if techOK .Status }}
+              <div><span>ADX({{ .Period }})</span> {{ printf "%.1f" .ADX }}</div>
+              <div><span>+DI / -DI</span> {{ printf "%.1f / %.1f" .PlusDI .MinusDI }}</div>
+              {{ else }}<div class="tech-missing">ADX — {{ .Status }}</div>{{ end }}{{- end }}
+              {{- with .RSI }}{{ if techOK .Status }}
+              <div><span>RSI({{ .Period }})</span> {{ printf "%.1f" .Value }}（{{ .Zone }}）</div>
+              {{ else }}<div class="tech-missing">RSI — {{ .Status }}</div>{{ end }}{{- end }}
+              {{- with .MACD }}{{ if techOK .Status }}
+              <div><span>MACD / Signal</span> {{ printf "%.2f / %.2f" .MACD .SignalVal }}</div>
+              <div><span>Histogram</span> {{ printf "%.2f" .Histogram }}{{ if ne .Cross "NONE" }}（{{ .Cross }}）{{ end }}</div>
+              {{ else }}<div class="tech-missing">MACD — {{ .Status }}</div>{{ end }}{{- end }}
+              {{- with .Keltner }}{{ if techOK .Status }}
+              <div><span>Keltner 上／中／下</span> {{ printf "%.2f / %.2f / %.2f" .Upper .Middle .Lower }}</div>
+              <div><span>通道寬度</span> {{ printf "%.1f%%" .WidthPct }}（{{ .Position }}）</div>
+              {{ else }}<div class="tech-missing">Keltner — {{ .Status }}</div>{{ end }}{{- end }}
+              {{- with .Pivot }}{{ if techOK .Status }}
+              <div><span>Pivot（{{ .BasisDate }} 收）</span> {{ printf "%.2f" .Pivot }}</div>
+              <div><span>R1 / R2 / R3</span> {{ printf "%.2f / %.2f / %.2f" .R1 .R2 .R3 }}</div>
+              <div><span>S1 / S2 / S3</span> {{ printf "%.2f / %.2f / %.2f" .S1 .S2 .S3 }}</div>
+              <div><span>最近價位</span> {{ .NearestLevel }} {{ pctSign .DistancePct }}</div>
+              {{ else }}<div class="tech-missing">Pivot — {{ .Status }}</div>{{ end }}{{- end }}
+            </div>
+            <div class="wl-note">指標是證據，不是決策。方向／強度／動能／波動／位置僅描述價格行為；是否可用於進出場，須先由 R14 的 outcome 驗證證明其預測力。Pivot 一律以「前一個完整交易日」OHLC 計算。</div>
+          </div>
+          {{- end }}{{- end }}
           {{- if $.GV.ShowTrendExtension }}{{- with $e.TrendExt }}
           <div class="wl-sec wl-te">
             <h4>⑮ 趨勢／乖離／族群熱度（Shadow Only，不影響 BUY／WATCH／SELL）</h4>

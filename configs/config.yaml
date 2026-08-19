@@ -234,6 +234,34 @@ scanner:
   enable_trend_extension: true                     # 總開關，預設 false
   show_trend_extension: true                       # 顯示開關，預設 false
 
+  # ── 技術指標擴充 (R14) — SHADOW ONLY ──────────────────────────────────────────
+  # ADX/+DI/-DI、RSI、MACD、Keltner Channel、Classic Pivot Points，以及把它們合併成
+  # 方向／趨勢強度／動能／波動／價格位置的 Technical Context。
+  #
+  # enable_technical_indicators=false（預設）時完全不計算，WatchlistEntry.Technical 為
+  # nil，不寫 evidence，輸出逐位元相同。show_technical_indicators 只控制報表顯示 ——
+  # 兩者刻意獨立：enable=true 且 show=false 時仍會計算、仍寫入 R13 evidence、仍供
+  # agent 使用，但 HTML 不變。
+  #
+  # 皆不影響 Score / Action / RocketScore / WatchAction / ExplosionProb / 排序 / 停損 /
+  # Stage / Market Regime / Sector Rotation。R14 的前提就是：教科書指標必須先用本專案
+  # 自己的歷史資料證明有預測力，才有資格談進入計分。
+  #
+  # RSI 與 ATR 直接沿用 internal/indicator 既有的 Wilder 實作，不另建第二套。
+  enable_technical_indicators: false               # 總開關，預設 false
+  show_technical_indicators: false                 # 顯示開關，預設 false
+  technical:
+    adx_period: 14                                 # Wilder ADX
+    rsi_period: 14                                 # 沿用 indicator.RSI
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+    keltner_ema_period: 20
+    keltner_atr_period: 20                         # 沿用 indicator.ATR
+    keltner_multiplier: 2.0
+    pivot_near_pct: 1.0                            # 距離 pivot 多近算「接近」（容差，非訊號門檻）
+    di_neutral_pct: 5.0                            # +DI/-DI 差距小於此比例視為 NEUTRAL
+
   # ── AI 解讀 (R11) — SHADOW ONLY，OpenAI 官方 API ──────────────────────────────
   # enable_ai=false（預設）時完全不呼叫 OpenAI，WatchlistEntry.AI 為 nil。
   # show_ai=false（預設）時 report ⑭ 不顯示。兩者皆不影響 Score / Action / RocketScore /
