@@ -12,20 +12,26 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/institution"
+	marketservice "github.com/deep-huang/stock-scanner/internal/market/service"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/news/socialworkerdaily"
 	"github.com/deep-huang/stock-scanner/internal/news/twetq"
 	"github.com/deep-huang/stock-scanner/internal/report"
+	"github.com/deep-huang/stock-scanner/internal/research"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 	"gopkg.in/yaml.v3"
 )
 
 type config struct {
-	Fetcher     fetcher.Config `yaml:"fetcher"`
-	Scanner     scanner.Config `yaml:"scanner"`
-	Report      report.Config  `yaml:"report"`
-	StocksFile  string         `yaml:"stocks_file"`
-	SectorsFile string         `yaml:"sectors_file"`
+	Fetcher fetcher.Config `yaml:"fetcher"`
+	Scanner scanner.Config `yaml:"scanner"`
+	Report  report.Config  `yaml:"report"`
+	// Research (R13) is a separate top-level block, deliberately not nested under scanner:
+	// internal/scanner must keep no dependency on the store, and a sibling block makes that
+	// visible in the config file as well as in the import graph.
+	Research    research.Config `yaml:"research"`
+	StocksFile  string          `yaml:"stocks_file"`
+	SectorsFile string          `yaml:"sectors_file"`
 }
 
 func main() {
@@ -279,6 +285,13 @@ func main() {
 		}
 	}
 
+	// R13-M2: the same canonical in-memory results, recorded into the research store.
+	// Deliberately fed from the SAME variables the report and the sidecar above were built
+	// from — never by re-reading either of them, which would make the store a second
+	// translation of a second source.
+	recordResearch(cfg, marketResults, portfolioResults, watchlistResults, rotationResults,
+		len(marketStocks), analysisDate)
+
 	// Publish the latest report as index.html at the repo root so GitHub Pages
 	// serves the newest report at "/".
 	if html, err := os.ReadFile(r.OutputPath(analysisDate)); err != nil {
@@ -486,6 +499,80 @@ func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.Sector
 	res := svc.Collect(context.Background(), observedAt)
 	scanner.AttachNews(entries, res.Views)
 	return res.Summary, news.BuildEpisodes(res.Signals)
+}
+
+// recordResearch (R13-M2) persists one scan into the SQLite research store.
+//
+// SHADOW-ONLY and default OFF: with research.enabled false nothing is opened and nothing is
+// written. It runs AFTER the report and the sidecar, takes the results by value, and returns
+// nothing — so no score, action, ranking or output can depend on it. Every failure is logged
+// and stepped over; a research store that cannot be written must never cost the user a scan.
+func recordResearch(cfg config, market, portfolio []scanner.StockAnalysis,
+	watchlist []scanner.WatchlistEntry, rotation []scanner.SectorRotation,
+	universeSize int, analysisDate time.Time) {
+
+	if !cfg.Research.Enabled {
+		return
+	}
+	// This runs after the report and the sidecar are already on disk, and the scan is
+	// otherwise complete. A shadow layer that took the whole run down with it would be worse
+	// than one that records nothing, so even a panic from the storage layer is contained.
+	defer func() {
+		if p := recover(); p != nil {
+			log.Printf("research: recording panicked, scan unaffected: %v", p)
+		}
+	}()
+
+	rc := cfg.Research.Defaulted()
+	rec, closeStore, err := research.Open(rc)
+	if err != nil {
+		log.Printf("research: store unavailable, scan unaffected: %v", err)
+		return
+	}
+	defer func() {
+		if err := closeStore(); err != nil {
+			log.Printf("research: close: %v", err)
+		}
+	}()
+	rec = rec.WithLogger(log.Printf)
+
+	date := analysisDate.Format("2006-01-02")
+	res, err := rec.RecordScan(context.Background(), research.RunMeta{
+		TradingDate: date,
+		StartedAt:   time.Now().UTC(),
+	}, research.Input{
+		Watchlist:    watchlist,
+		Market:       market,
+		Portfolio:    portfolio,
+		Rotation:     rotation,
+		MarketCtx:    loadMarketContext(rc.MarketSnapshotDir, date),
+		UniverseSize: universeSize,
+	})
+	if err != nil {
+		log.Printf("research: scan not recorded: %v", err)
+		return
+	}
+	fmt.Printf("       已寫入研究庫 %s（run %s，%d 檔快照 / %d 筆 evidence）\n",
+		rc.Store.Defaulted().Path, res.RunUID, res.Snapshots, res.Evidence)
+}
+
+// loadMarketContext reads the regime the market dashboard already computed for this date.
+//
+// It only LOADS: cmd/market-fetch is what produces the snapshot, and a scan that runs before
+// it (or on a date it never covered) simply records no market evidence rather than deriving a
+// regime of its own.
+func loadMarketContext(dir, date string) research.MarketContext {
+	snap, err := marketservice.LoadSnapshot(dir, date)
+	if err != nil || snap == nil {
+		return research.MarketContext{}
+	}
+	score, confidence := snap.Score, snap.Confidence
+	return research.MarketContext{
+		Regime:     string(snap.Regime),
+		Score:      &score,
+		Confidence: &confidence,
+		AsOfDate:   snap.Date,
+	}
 }
 
 // qualifiesForWatchlist reports whether an action should land a stock on the

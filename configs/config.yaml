@@ -262,5 +262,23 @@ scanner:
 report:
   output_dir: ./reports
 
+# ── Research / Multi-Agent 研究庫 (R13) — SHADOW ONLY ──────────────────────────
+# 與 scanner: 平行的頂層區塊，刻意不放在 scanner: 底下 —— internal/scanner 不依賴
+# SQLite store，這個結構讓該事實在設定檔與 import graph 上都看得見。
+#
+# enabled=false（預設）時完全不開啟資料庫、不寫入任何列，掃描結果與沒有這個 package
+# 的建置逐位元相同。開啟後只是把「掃描器已經算完」的結果落地成 scan run / stock
+# snapshot / evidence，不重算任何指標，也不影響 Score / Action / RocketScore /
+# WatchAction / 排序 / 停損 / 報表。
+#
+# 寫入時機在報表與 analysis_history sidecar 之後，且來源是同一份 in-memory 結果 ——
+# 不是重新解析 sidecar JSON。sidecar 仍是 internal/validator 的權威來源，R13 不取代它。
+research:
+  enabled: false                                   # 總開關，預設 false
+  market_snapshot_dir: "data/market"               # cmd/market-fetch 既有輸出；只讀不算
+  store:
+    path: "data/research/r13.db"                   # SQLite 檔（已在 .gitignore）
+    busy_timeout_ms: 5000                          # 等鎖上限（毫秒）
+
 stocks_file: stocks.yaml           # portfolio / watchlist 清單
 sectors_file: configs/sectors.yaml # 族群輪動清單（Rotation）
