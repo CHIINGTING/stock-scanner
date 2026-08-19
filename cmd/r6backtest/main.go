@@ -26,6 +26,7 @@ func main() {
 	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
 	recentBull := flag.Bool("recentbull", false, "R6-6: recent bull regime validation (20d primary, signal-date 2m/4m/6m windows)")
 	trendExt := flag.Bool("trendext", false, "R12: slope / BIAS / sector-heat condition comparison (baseline vs each leg vs combined states)")
+	technical := flag.Bool("technical", false, "R14: ADX / RSI / MACD / Keltner / pivot condition comparison (baseline vs each indicator vs confirmed combinations)")
 	sectors := flag.String("sectors", "configs/sectors.yaml", "R12: sector taxonomy for the heat panel (same file the scanner uses)")
 	heatStep := flag.Int("heatstep", 5, "R12: recompute the sector heat panel every N trading days (heat moves slowly; 1 = every day)")
 	flag.Parse()
@@ -100,6 +101,46 @@ func main() {
 			log.Fatalf("write trendext md: %v", err)
 		}
 		fmt.Printf("trendext: %d conditions, %d trades\nwrote %s and %s\n", len(teStats), len(teTrades), csv, md)
+		return
+	}
+
+	// ── R14 technical indicator validation (separate output; baseline unchanged) ──
+	//
+	// The premise is that every one of these is a HYPOTHESIS until this repo's own history
+	// says otherwise. The baseline and the single-indicator legs are in the comparison so a
+	// combination cannot claim credit that belongs to one of its parts.
+	if *technical {
+		tP := time.Now()
+		panel := r6backtest.BuildTechnicalPanel(u)
+		fmt.Printf("technical panel: %d stocks x %d dates in %v\n", len(u.Stocks), len(u.Axis), time.Since(tP))
+
+		var tStats []r6backtest.SetupStat
+		var tTrades []r6backtest.Trade
+		for _, st := range r6backtest.TechnicalSetups(panel) {
+			tRun := time.Now()
+			trades := r6backtest.RunSetup(u, rs, st, p)
+			tTrades = append(tTrades, trades...)
+			tStats = append(tStats, r6backtest.ComputeStats(st.Name(), 0, trades, p.Horizons, p))
+			fmt.Printf("  %-34s %6d trades  (%v)\n", st.Name(), len(trades), time.Since(tRun))
+		}
+		csv := filepath.Join(*outDir, "backtest_technical_"+stamp+".csv")
+		md := filepath.Join(*outDir, "backtest_technical_summary_"+stamp+".md")
+		if err := r6backtest.WriteCSV(csv, tTrades); err != nil {
+			log.Fatalf("write technical csv: %v", err)
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+			fmt.Sprintf("warmup: %d ; horizons: %v ; entry: %s ; stops: %v", p.Warmup, p.Horizons, p.EntryMode, p.StopRules),
+			"parameters: read from technical.DefaultConfig() — the SHIPPED values, not a tuned copy",
+			"READ AS DIFFERENCES FROM BASELINE_ALL_BARS: the universe is survivorship-biased (delisted names absent), so absolute returns are optimistic for every row alike",
+			"the falsifiable claims: ADX_STRONG_BULLISH must beat ADX_WEAK; MACD_ABOVE_SIGNAL_ACCELERATING must beat MACD_ABOVE_SIGNAL; KELTNER_BREAKOUT_ADX_CONFIRMED must beat KELTNER_BREAKOUT_UNCONFIRMED; RSI_OVERBOUGHT decides continuation vs mean reversion on its own numbers",
+			"nothing here may be used to tune a threshold: the parameters are fixed before the run, and a result that falsifies a hypothesis is the point of the exercise",
+		}
+		if err := r6backtest.WriteMarkdown(md, "R14 Technical Indicator Condition Comparison", meta, tStats, p.Horizons); err != nil {
+			log.Fatalf("write technical md: %v", err)
+		}
+		fmt.Printf("technical: %d conditions, %d trades\nwrote %s and %s\n", len(tStats), len(tTrades), csv, md)
 		return
 	}
 
