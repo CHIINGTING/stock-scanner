@@ -13,5 +13,11 @@ data/etf_holdings/raw/*.csv
 
 # 00981A official daily holdings download products (XLSX/XLS/CSV/debug png).
 data/official/
+
+# R13 SQLite research store (evidence / agent analysis / outcomes) + its WAL sidecars.
+# Derived data, rebuilt from scans; the schema lives in internal/store, not in the file.
+data/research/*.db
+data/research/*.db-wal
+data/research/*.db-shm
 index.html
 stocks.yaml
