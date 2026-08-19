@@ -19,11 +19,13 @@ package research
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 	"github.com/deep-huang/stock-scanner/internal/store"
+	"github.com/deep-huang/stock-scanner/internal/technical"
 )
 
 // Source labels name the layer a value came from, so a surprising number in the store can be
@@ -41,6 +43,7 @@ const (
 	srcCandle      = "candlestick.Result"
 	srcNews        = "news.StockNewsView"
 	srcMarket      = "market.Snapshot"
+	srcTechnical   = "technical.Result"
 )
 
 // MarketContext is the top-level market read at scan time.
@@ -179,6 +182,7 @@ func buildWatchlistEvidence(c *collector, e scanner.WatchlistEntry, rot *scanner
 	buildShadowEvidence(c, e)
 	buildBiasEvidence(c, e)
 	buildTrendExtEvidence(c, e)
+	buildTechnicalEvidence(c, e.Technical)
 	buildCandleEvidence(c, e)
 	buildInstitutionEvidence(c, e.Institution)
 	buildSectorEvidence(c, e, rot)
@@ -290,6 +294,112 @@ func buildHeatEvidence(c *collector, h *scanner.SectorHeatView) {
 	c.num(store.CategorySector, "heat_volume_confirmation", h.VolumeConfirmation, "%", srcHeat)
 	c.num(store.CategorySector, "heat_coverage", h.Coverage, "%", srcHeat)
 	c.num(store.CategorySector, "heat_median_return_20", h.MedianReturn20, "%", srcHeat)
+}
+
+// buildTechnicalEvidence projects R14 into the EXISTING R13 evidence table. There is no
+// second persistence system: the same scan_runs → stock_snapshots → evidence chain carries
+// it, so a technical reading is traceable to its run, stock, timestamp and parameters like
+// every other fact.
+//
+// Two disciplines are enforced here rather than left to the reader:
+//
+//   - the PARAMETERS are stored alongside the values. A row saying "ADX 31.8" is worthless
+//     in two years if nobody can tell whether it was a 14- or a 20-period ADX, and R14's
+//     whole purpose is to make historical rows answerable later.
+//   - a non-OK indicator contributes its STATUS and nothing else. Writing 0 for an ADX that
+//     could not be computed would put a fabricated "no trend" into the very dataset meant to
+//     decide whether ADX is worth anything.
+//
+// Values are machine-readable numbers and labels, never formatted display strings.
+func buildTechnicalEvidence(c *collector, r *technical.Result) {
+	if r == nil {
+		return
+	}
+
+	if v := r.ADX; v != nil {
+		c.text(store.CategoryTechnical, "tech_adx_status", string(v.Status), srcTechnical)
+		if v.Status.OK() {
+			c.num(store.CategoryTechnical, "tech_adx_period", float64(v.Period), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_adx", v.ADX, "", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_plus_di", v.PlusDI, "", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_minus_di", v.MinusDI, "", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_adx_direction", v.Direction, srcTechnical)
+			c.text(store.CategoryTechnical, "tech_adx_strength", v.Strength, srcTechnical)
+		}
+	}
+
+	if v := r.RSI; v != nil {
+		c.text(store.CategoryTechnical, "tech_rsi_status", string(v.Status), srcTechnical)
+		if v.Status.OK() {
+			c.num(store.CategoryTechnical, "tech_rsi_period", float64(v.Period), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_rsi", v.Value, "", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_rsi_zone", v.Zone, srcTechnical)
+			c.flag(store.CategoryTechnical, "tech_rsi_rising", v.Rising, srcTechnical)
+			c.flag(store.CategoryTechnical, "tech_rsi_falling", v.Falling, srcTechnical)
+		}
+	}
+
+	if v := r.MACD; v != nil {
+		c.text(store.CategoryTechnical, "tech_macd_status", string(v.Status), srcTechnical)
+		if v.Status.OK() {
+			c.num(store.CategoryTechnical, "tech_macd_fast", float64(v.Fast), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_macd_slow", float64(v.Slow), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_macd_signal_period", float64(v.Signal), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_macd", v.MACD, "", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_macd_signal", v.SignalVal, "", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_macd_histogram", v.Histogram, "", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_macd_cross", v.Cross, srcTechnical)
+			c.text(store.CategoryTechnical, "tech_macd_momentum", v.Momentum, srcTechnical)
+		}
+	}
+
+	if v := r.Keltner; v != nil {
+		c.text(store.CategoryTechnical, "tech_keltner_status", string(v.Status), srcTechnical)
+		if v.Status.OK() {
+			c.num(store.CategoryTechnical, "tech_keltner_ema_period", float64(v.EMAPeriod), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_keltner_atr_period", float64(v.ATRPeriod), "bars", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_keltner_multiplier", v.Multiplier, "x", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_keltner_middle", v.Middle, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_keltner_upper", v.Upper, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_keltner_lower", v.Lower, "TWD", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_keltner_atr", v.ATR, "TWD", srcTechnical)
+			c.num(store.CategoryTechnical, "tech_keltner_width_pct", v.WidthPct, "%", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_keltner_position", v.Position, srcTechnical)
+			c.text(store.CategoryTechnical, "tech_keltner_channel", v.Channel, srcTechnical)
+		}
+	}
+
+	if v := r.Pivot; v != nil {
+		c.text(store.CategoryTechnical, "tech_pivot_status", string(v.Status), srcTechnical)
+		if v.Status.OK() {
+			// The basis date is what proves no look-ahead: the levels came from the session
+			// BEFORE the one being evaluated, and the row says which.
+			c.text(store.CategoryTechnical, "tech_pivot_basis_date", v.BasisDate, srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot", v.Pivot, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_r1", v.R1, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_r2", v.R2, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_r3", v.R3, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_s1", v.S1, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_s2", v.S2, "TWD", srcTechnical)
+			c.level(store.CategoryTechnical, "tech_pivot_s3", v.S3, "TWD", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_pivot_nearest", v.NearestLevel, srcTechnical)
+			c.num(store.CategoryTechnical, "tech_pivot_distance_pct", v.DistancePct, "%", srcTechnical)
+			c.text(store.CategoryTechnical, "tech_pivot_location", v.Location, srcTechnical)
+		}
+	}
+
+	// The aggregated context — the part an agent reads first. Signals are stored as one
+	// delimited label list rather than one row per signal: they are a set describing a
+	// single reading, and splitting them would make "which signals fired together" a
+	// reassembly job for every consumer.
+	if v := r.Context; v != nil {
+		c.text(store.CategoryTechnical, "tech_context_direction", v.Direction, srcTechnical)
+		c.text(store.CategoryTechnical, "tech_context_trend_strength", v.TrendStrength, srcTechnical)
+		c.text(store.CategoryTechnical, "tech_context_momentum", v.Momentum, srcTechnical)
+		c.text(store.CategoryTechnical, "tech_context_volatility", v.Volatility, srcTechnical)
+		c.text(store.CategoryTechnical, "tech_context_price_location", v.PriceLocation, srcTechnical)
+		c.text(store.CategoryTechnical, "tech_context_signals", strings.Join(v.Signals, "|"), srcTechnical)
+	}
 }
 
 // buildCandleEvidence projects R10-2. Only the TOP signal is recorded: the analyzer already
