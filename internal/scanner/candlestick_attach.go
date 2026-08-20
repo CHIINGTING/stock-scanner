@@ -36,12 +36,26 @@ func computeCandlestick(candles []fetcher.Candle, stage RocketStage) *candlestic
 	return &r
 }
 
-// Validate reports configuration errors that must fail at startup. Currently: a display flag
-// may not be on while its data flag is off — that would silently show nothing (or imply the
-// analyzer ran when it did not). ShowCandlestick requires EnableCandlestick (SPEC R10-2 §9).
+// Validate reports configuration errors that must fail at startup.
+//
+// It is the CONFIG-WIDE validator despite living in this file — it started with the R10-2
+// rule and each feature that needs a startup check adds its own here rather than growing a
+// second entry point that a caller could forget.
+//
+// The rule every entry shares: a display flag may not be on while its data flag is off. That
+// combination renders a section for data nobody computed — an empty shell that reads as
+// "there was nothing to show" rather than "nobody looked". The reverse (compute without
+// display) is legitimate and deliberately allowed: R14 in particular is meant to be run that
+// way, persisting evidence for later validation while the report stays unchanged.
+//
+//	ShowCandlestick         requires EnableCandlestick         (SPEC R10-2 §9)
+//	ShowTechnicalIndicators requires EnableTechnicalIndicators (R14 §3)
 func (c Config) Validate() error {
 	if c.ShowCandlestick && !c.EnableCandlestick {
 		return fmt.Errorf("config: show_candlestick=true requires enable_candlestick=true")
+	}
+	if c.ShowTechnicalIndicators && !c.EnableTechnicalIndicators {
+		return fmt.Errorf("config: show_technical_indicators=true requires enable_technical_indicators=true")
 	}
 	return nil
 }

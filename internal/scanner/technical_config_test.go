@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -108,5 +109,72 @@ func TestShippedConfigIsCoherent(t *testing.T) {
 	if cfg.ShowTechnicalIndicators && !cfg.EnableTechnicalIndicators {
 		t.Error("show_technical_indicators is on while enable_technical_indicators is off — " +
 			"the report would render a section for data nobody computed")
+	}
+}
+
+// The R14 two-layer invariant, all four combinations.
+//
+// Compute-without-display is the combination R14 is actually meant to be run in — indicators
+// persisted as evidence for later validation while the report stays unchanged — so it must
+// stay valid. Display-without-compute is the one that has to fail: the report would render a
+// section for data nobody computed, and an empty shell reads as "there was nothing to show"
+// rather than "nobody looked". Same asymmetry internal/candlestick has enforced since R10-2.
+func TestTechnicalShowRequiresEnable(t *testing.T) {
+	for _, tc := range []struct {
+		enable, show bool
+		wantErr      bool
+	}{
+		{enable: false, show: false, wantErr: false}, // feature off entirely
+		{enable: true, show: false, wantErr: false},  // compute only — the intended R14 mode
+		{enable: true, show: true, wantErr: false},   // both on
+		{enable: false, show: true, wantErr: true},   // display with nothing behind it
+	} {
+		cfg := Config{
+			EnableTechnicalIndicators: tc.enable,
+			ShowTechnicalIndicators:   tc.show,
+		}
+		err := cfg.Validate()
+		if tc.wantErr && err == nil {
+			t.Errorf("enable=%v show=%v: Validate() = nil, want an error",
+				tc.enable, tc.show)
+		}
+		if !tc.wantErr && err != nil {
+			t.Errorf("enable=%v show=%v: Validate() = %v, want nil", tc.enable, tc.show, err)
+		}
+	}
+}
+
+// The error has to name BOTH flags, because the fix is not obvious from either one alone:
+// a reader seeing only "show_technical_indicators is invalid" would not know what to turn on.
+func TestTechnicalValidateErrorNamesBothFlags(t *testing.T) {
+	err := Config{ShowTechnicalIndicators: true}.Validate()
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for _, want := range []string{"show_technical_indicators", "enable_technical_indicators"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %s", err, want)
+		}
+	}
+}
+
+// The R14 rule must not have displaced the R10-2 one — they are independent checks, and a
+// config can be wrong in either way.
+func TestValidateStillEnforcesCandlestick(t *testing.T) {
+	if err := (Config{ShowCandlestick: true}).Validate(); err == nil {
+		t.Error("show_candlestick without enable_candlestick should still be rejected")
+	}
+	// And a config that is wrong in both ways still fails.
+	both := Config{ShowCandlestick: true, ShowTechnicalIndicators: true}
+	if err := both.Validate(); err == nil {
+		t.Error("a config wrong in both ways should be rejected")
+	}
+	// A fully coherent config passes.
+	ok := Config{
+		EnableCandlestick: true, ShowCandlestick: true,
+		EnableTechnicalIndicators: true, ShowTechnicalIndicators: true,
+	}
+	if err := ok.Validate(); err != nil {
+		t.Errorf("a coherent config was rejected: %v", err)
 	}
 }

@@ -103,6 +103,12 @@ func TestTechnicalDoesNotChangeTheScan(t *testing.T) {
 
 // Enabling the display flag alone must not change anything either: presentation is not
 // computation, and the scan is identical under all four flag combinations.
+//
+// "show only" is a config that Config.Validate now REJECTS at startup, so it cannot reach a
+// real run. It stays in this table as defence in depth: this test exercises EnrichWatchlist
+// directly, and the scan must remain inert under every flag combination even if the startup
+// check were bypassed, relaxed or removed. A guard that only holds while another guard holds
+// is not a guard.
 func TestTechnicalFlagCombinationsLeaveTheScanIdentical(t *testing.T) {
 	fixture := techFixture()
 	baseline := shapeOf(New(Config{}).EnrichWatchlist(fixture, nil, nil, nil, nil))
