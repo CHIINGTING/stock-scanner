@@ -54,17 +54,28 @@ research:
 	}
 }
 
-// The SHIPPED config must keep R13 off. This is a shadow layer whose first release is not
-// meant to be on by default, and a flag flipped by accident in a commit is exactly the kind
-// of thing nobody notices until the statistics are already polluted.
-func TestShippedConfigKeepsResearchOff(t *testing.T) {
+// The shipped config must stay USABLE.
+//
+// It deliberately no longer asserts that R13 is off — whether the research store runs is the
+// operator's decision. What is still worth protecting is that an ENABLED store has somewhere
+// to write: a blank path, or one that Defaulted() cannot fill, would turn the first scan
+// into a startup failure over a config typo.
+//
+// The "a config written before R13 defaults to off" guarantee lives in
+// TestResearchDefaultsOff, which tests an ABSENT block and is unaffected by whatever the
+// operator has switched on here.
+func TestShippedResearchConfigIsUsable(t *testing.T) {
 	path := filepath.Join("..", "..", "configs", "config.yaml")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Skipf("shipped config unavailable: %v", err)
 	}
-	cfg := parseConfig(t, string(data))
-	if cfg.Research.Enabled {
-		t.Error("configs/config.yaml has research.enabled=true — R13 must ship off")
+	cfg := parseConfig(t, string(data)).Research.Defaulted()
+
+	if cfg.Store.Path == "" || cfg.Store.BusyTimeoutMs <= 0 {
+		t.Errorf("the shipped research store is not runnable: %+v", cfg.Store)
+	}
+	if cfg.MarketSnapshotDir == "" {
+		t.Error("the shipped research block has no market snapshot directory")
 	}
 }

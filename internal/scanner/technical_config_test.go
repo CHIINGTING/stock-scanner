@@ -78,19 +78,35 @@ scanner:
 	}
 }
 
-// The SHIPPED config must keep R14 off. A flag flipped by accident in a commit is exactly
-// what nobody notices until a scan is already behaving differently.
-func TestShippedConfigKeepsTechnicalOff(t *testing.T) {
+// The shipped config must stay COHERENT.
+//
+// It deliberately no longer asserts that R14 is off. Whether the feature runs is the
+// operator's decision, and a test that fights it would just be deleted the first time
+// somebody enables it. What is still worth protecting is that the shipped file cannot put
+// the scanner into a state that is broken or silently useless:
+//
+//   - the parameters must validate, so turning the feature on cannot fail at startup;
+//   - the display flag must not be on while the compute flag is off. The two are
+//     independent by design (compute without display is a valid, intended combination), but
+//     the reverse renders a section for data nobody computed — an empty shell that looks
+//     like "there was nothing to show". internal/candlestick guards the same asymmetry in
+//     its Config.Validate; R14 has no such guard yet, so this is where it is caught.
+//
+// The "a config written before R14 defaults to off" guarantee lives in
+// TestTechnicalConfigDefaultsOff, which tests an ABSENT block and is unaffected by whatever
+// the operator has switched on here.
+func TestShippedConfigIsCoherent(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "configs", "config.yaml"))
 	if err != nil {
 		t.Skipf("shipped config unavailable: %v", err)
 	}
 	cfg := parseTechCfg(t, string(data))
-	if cfg.EnableTechnicalIndicators || cfg.ShowTechnicalIndicators {
-		t.Error("configs/config.yaml has R14 enabled — the first release must ship off")
-	}
-	// And the shipped parameters must be coherent, so turning it on cannot fail at startup.
+
 	if err := cfg.Technical.Validate(); err != nil {
 		t.Errorf("the shipped technical block does not validate: %v", err)
+	}
+	if cfg.ShowTechnicalIndicators && !cfg.EnableTechnicalIndicators {
+		t.Error("show_technical_indicators is on while enable_technical_indicators is off — " +
+			"the report would render a section for data nobody computed")
 	}
 }

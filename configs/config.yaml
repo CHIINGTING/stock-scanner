@@ -248,7 +248,7 @@ scanner:
   # 自己的歷史資料證明有預測力，才有資格談進入計分。
   #
   # RSI 與 ATR 直接沿用 internal/indicator 既有的 Wilder 實作，不另建第二套。
-  enable_technical_indicators: false               # 總開關，預設 false
+  enable_technical_indicators: true                # 總開關，預設 false
   show_technical_indicators: false                 # 顯示開關，預設 false
   technical:
     adx_period: 14                                 # Wilder ADX
@@ -302,7 +302,7 @@ report:
 # 寫入時機在報表與 analysis_history sidecar 之後，且來源是同一份 in-memory 結果 ——
 # 不是重新解析 sidecar JSON。sidecar 仍是 internal/validator 的權威來源，R13 不取代它。
 research:
-  enabled: false                                   # 總開關，預設 false
+  enabled: true                                    # 總開關，預設 false
   market_snapshot_dir: "data/market"               # cmd/market-fetch 既有輸出；只讀不算
   store:
     path: "data/research/r13.db"                   # SQLite 檔（已在 .gitignore）
