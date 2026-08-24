@@ -1,8 +1,6 @@
 bin/
-reports/
 .cache/
 .cache_fresh_r6_5/
-docs/
 *.log
 .DS_Store
 .claude/settings.local.json
@@ -21,3 +19,12 @@ data/research/*.db-wal
 data/research/*.db-shm
 index.html
 stocks.yaml
+
+# reports/ 與 docs/ 現在納入版控，但那是為了保存「無法重建」的東西：
+# 新聞快照（PublishedAt≠ObservedAt 的 look-ahead 證據）、候選名單、回測摘要、SPEC。
+# 渲染輸出與原始逐筆資料一律排除 —— 它們可以從 .cache 重跑，而且 git 一旦吃進
+# 數百 MB 就吐不出來（要清得改寫歷史）。索引頁 index.html 是例外，GitHub Pages 需要它。
+reports/report_*.html
+reports/signal_validation_*.html
+reports/*.csv
+reports/*/
