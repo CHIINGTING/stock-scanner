@@ -1016,6 +1016,38 @@ func (r *Report) Generate(
 				`<div class="score-bar"><div class="%s" style="width:%dpx"></div><span>%d</span></div>`,
 				cls, s, s))
 		},
+		// pvMagnitude renders the session's size next to the legacy direction-only signal,
+		// so "價跌量縮" can no longer read the same for a −0.3% drift and a −6% break. Empty
+		// when there was no previous close to measure against — never a fabricated 0.0%.
+		"pvMagnitude": func(a scanner.StockAnalysis) string {
+			if a.PriceMove == "" || a.PriceMove == scanner.MoveUnknown {
+				return ""
+			}
+			// An exactly unchanged session is neither a gain nor a loss, so it gets no sign.
+			// This matters more than it looks: the legacy PriceVolumeSignal puts a flat day
+			// in the "價跌" bucket (its priceUp is a strict >), and rendering "+0.00%" beside
+			// that produced a line that contradicted itself in both directions at once.
+			out := "0.00%"
+			if a.PriceChangePct != 0 {
+				out = fmt.Sprintf("%+.2f%%", a.PriceChangePct)
+			}
+			if a.PriceChangeATR != 0 {
+				out += fmt.Sprintf(" · %+.1f ATR", a.PriceChangeATR)
+			}
+			return out
+		},
+		// pvMoveCSS colours by SIZE, not by direction: a large move is worth noticing
+		// whichever way it went, and the direction already has its own colour.
+		"pvMoveCSS": func(move string) string {
+			switch move {
+			case scanner.MoveLargeUp, scanner.MoveLargeDown:
+				return "pv-mag-large"
+			case scanner.MoveFlat:
+				return "pv-mag-flat"
+			default:
+				return "pv-mag-small"
+			}
+		},
 		"pvCSS": func(sig string) string {
 			switch sig {
 			case "價漲量增":
@@ -1024,6 +1056,13 @@ func (r *Report) Generate(
 				return "pv-up-vol-down"
 			case "價跌量增":
 				return "pv-down-vol-up"
+			// Without their own cases these would fall through to the default and be
+			// coloured as a decline — reintroducing, in the UI, exactly the defect the
+			// label change just removed.
+			case "平盤量增":
+				return "pv-flat-vol-up"
+			case "平盤量縮":
+				return "pv-flat-vol-down"
 			case "漲停鎖量":
 				return "pv-locked"
 			case "漲停失敗":
@@ -1486,8 +1525,17 @@ func printConsole(market, portfolio []scanner.StockAnalysis, watchlist []scanner
 				bucketText(e.Consol.Bucket), e.Consol.Days, e.Backtest.PatternName,
 				e.Backtest.StockWinRate, e.Backtest.StockSampleCount,
 				e.Backtest.SectorWinRate, e.Backtest.SectorSampleCount, e.Backtest.Confidence)
-			fmt.Printf("    價位: 現價 %.2f／進場 %s／突破 %.2f／支撐 %.2f／停損 %.2f／停利 %s\n",
-				e.A.Close, e.EntryZone, e.BreakoutPrice, e.SupportPrice, e.StopLossPrice, e.TakeProfitZone)
+			// 今日漲跌幅緊接現價：沒有它，「價跌量縮」在終端上對 −0.3% 與 −6% 讀起來一樣。
+			day := ""
+			if e.A.PriceMove != "" && e.A.PriceMove != scanner.MoveUnknown {
+				chg := "0.00%"
+				if e.A.PriceChangePct != 0 {
+					chg = fmt.Sprintf("%+.2f%%", e.A.PriceChangePct)
+				}
+				day = fmt.Sprintf("（今日 %s／%s）", chg, e.A.PriceVolumeSignal)
+			}
+			fmt.Printf("    價位: 現價 %.2f%s／進場 %s／突破 %.2f／支撐 %.2f／停損 %.2f／停利 %s\n",
+				e.A.Close, day, e.EntryZone, e.BreakoutPrice, e.SupportPrice, e.StopLossPrice, e.TakeProfitZone)
 			fmt.Printf("    操作: %s｜風險: %s\n\n", string(e.WatchAction), e.RiskWarning)
 		}
 	}
@@ -1603,6 +1651,14 @@ tr:hover td{background:#0f1d30}
 .pv-up-vol-down{color:#fbbf24}
 .pv-down-vol-up{color:#f87171;font-weight:600}
 .pv-down-vol-down{color:#64748b}
+/* 平盤：既不是漲也不是跌，用中性色，不得沿用跌的顏色 */
+.pv-flat-vol-up{color:#c4b5fd;font-weight:600}
+.pv-flat-vol-down{color:#94a3b8}
+/* 漲跌幅度：附在方向訊號之後，依「大小」而非方向上色 —— 大幅移動不論漲跌都值得注意 */
+.pv-mag{display:inline-block;margin-left:6px;font-size:.68rem;font-weight:400;letter-spacing:.02em}
+.pv-mag.pv-mag-large{color:#fbbf24}
+.pv-mag.pv-mag-small{color:#94a3b8}
+.pv-mag.pv-mag-flat{color:#64748b}
 .pv-locked{color:#a3e635;font-weight:700}
 .pv-failed{color:#f87171;font-weight:700}
 
@@ -1845,7 +1901,7 @@ th.rotscore{min-width:120px}
     <td class="r {{ rsiCSS .RSI }}">{{ f1 .RSI }}</td>
     <td>{{ .MA20Trend }}</td>
     <td class="r {{ volCSS .VolumeRatio }}">{{ f1 .VolumeRatio }}x</td>
-    <td class="{{ pvCSS .PriceVolumeSignal }}">{{ .PriceVolumeSignal }}</td>
+    <td class="{{ pvCSS .PriceVolumeSignal }}">{{ .PriceVolumeSignal }}{{ $mag := pvMagnitude . }}{{ $mv := .PriceMove }}{{ with $mag }}<span class="pv-mag {{ pvMoveCSS $mv }}">{{ . }}</span>{{ end }}</td>
     <td><div class="reasons">{{ joinReasons .Reasons }}</div></td>
   </tr>
   {{ end }}
@@ -1914,7 +1970,7 @@ th.rotscore{min-width:120px}
           </div>
           <div class="wl-sec">
             <h4>④ 價位計畫</h4>
-            <div>現價：<b>{{ f2 $e.A.Close }}</b></div>
+            <div>現價：<b>{{ f2 $e.A.Close }}</b>{{ $mag := pvMagnitude $e.A }}{{ with $mag }}　今日：<span class="pv-mag {{ pvMoveCSS $e.A.PriceMove }}">{{ . }}</span>{{ end }}{{ if $e.A.PriceVolumeSignal }}　量比 {{ f1 $e.A.VolumeRatio }}x（<span class="{{ pvCSS $e.A.PriceVolumeSignal }}">{{ $e.A.PriceVolumeSignal }}</span>）{{ end }}</div>
             <div>進場區：{{ $e.EntryZone }}</div>
             <div>突破價：<span class="t-t1">{{ f1 $e.BreakoutPrice }}</span>　支撐價：{{ f1 $e.SupportPrice }}</div>
             <div>停損價：<span class="t-stop">{{ f1 $e.StopLossPrice }}</span>　停利區：<span class="t-t2">{{ $e.TakeProfitZone }}</span></div>
@@ -2229,7 +2285,7 @@ th.rotscore{min-width:120px}
     <td>{{ $a.MA20Trend }}</td>
     <td class="r">{{ f1 $a.KDJK }}</td>
     <td class="r">{{ f1 $a.KDJD }}</td>
-    <td class="{{ pvCSS $a.PriceVolumeSignal }}">{{ $a.PriceVolumeSignal }}</td>
+    <td class="{{ pvCSS $a.PriceVolumeSignal }}">{{ $a.PriceVolumeSignal }}{{ with pvMagnitude $a }}<span class="pv-mag {{ pvMoveCSS $a.PriceMove }}">{{ . }}</span>{{ end }}</td>
     <td class="r"><span class="vol-score">{{ $a.VolumeScore }}</span></td>
     <td><div class="reasons">{{ joinReasons $a.Reasons }}</div></td>
   </tr>

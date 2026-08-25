@@ -26,6 +26,7 @@ func main() {
 	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
 	recentBull := flag.Bool("recentbull", false, "R6-6: recent bull regime validation (20d primary, signal-date 2m/4m/6m windows)")
 	trendExt := flag.Bool("trendext", false, "R12: slope / BIAS / sector-heat condition comparison (baseline vs each leg vs combined states)")
+	priceVol := flag.Bool("pricevolume", false, "Flat-price × volume: measures whether an exactly-unchanged session behaves like DOWN, like UP, or like neither, before scorer.go decides")
 	technical := flag.Bool("technical", false, "R14: ADX / RSI / MACD / Keltner / pivot condition comparison (baseline vs each indicator vs confirmed combinations)")
 	sectors := flag.String("sectors", "configs/sectors.yaml", "R12: sector taxonomy for the heat panel (same file the scanner uses)")
 	heatStep := flag.Int("heatstep", 5, "R12: recompute the sector heat panel every N trading days (heat moves slowly; 1 = every day)")
@@ -101,6 +102,43 @@ func main() {
 			log.Fatalf("write trendext md: %v", err)
 		}
 		fmt.Printf("trendext: %d conditions, %d trades\nwrote %s and %s\n", len(teStats), len(teTrades), csv, md)
+		return
+	}
+
+	// ── Flat-price × volume semantics (separate output; baseline unchanged) ──
+	//
+	// The label correction (a 0.00% close is not a decline) shipped on its own because it
+	// fixed a false statement. What a flat session should be WORTH is measured here first.
+	if *priceVol {
+		var pvStats []r6backtest.SetupStat
+		var pvTrades []r6backtest.Trade
+		for _, st := range r6backtest.PVSetups() {
+			tRun := time.Now()
+			trades := r6backtest.RunSetup(u, rs, st, p)
+			pvTrades = append(pvTrades, trades...)
+			pvStats = append(pvStats, r6backtest.ComputeStats(st.Name(), 0, trades, p.Horizons, p))
+			fmt.Printf("  %-30s %6d trades  (%v)\n", st.Name(), len(trades), time.Since(tRun))
+		}
+		csv := filepath.Join(*outDir, "backtest_pricevolume_"+stamp+".csv")
+		md := filepath.Join(*outDir, "backtest_pricevolume_summary_"+stamp+".md")
+		if err := r6backtest.WriteCSV(csv, pvTrades); err != nil {
+			log.Fatalf("write pricevolume csv: %v", err)
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis)),
+			fmt.Sprintf("warmup: %d ; horizons: %v ; entry: %s ; stops: %v", p.Warmup, p.Horizons, p.EntryMode, p.StopRules),
+			"FLAT means EXACTLY zero change — the same definition the shipped label correction uses",
+			"volume bands 1.2 / 0.8 are the SHIPPED ones (analyzeVolume and its score table), not a private copy",
+			"READ AS DIFFERENCES FROM PV_BASELINE_ALL_BARS: the universe is survivorship-biased, so absolute returns are optimistic for every row alike",
+			"the question: does PV_FLAT_VOLUME_EXPANSION behave like PV_DOWN_VOLUME_EXPANSION (candidate A: keep scoring flat as down), like PV_UP_VOLUME_EXPANSION (candidate C), or like neither (candidate B: its own neutral bucket)?",
+			"PV_NEAR_FLAT_* rows exist to test the band the correction deliberately did NOT widen: if a −0.3% session behaves like an exactly-flat one, a wider neutral band is worth proposing; if it behaves like the decline it is currently called, the strict definition was right",
+			"no scoring change may be made from this run without the difference being larger than the noise these overlapping bar-level observations can support",
+		}
+		if err := r6backtest.WriteMarkdown(md, "Flat-Price × Volume Semantics", meta, pvStats, p.Horizons); err != nil {
+			log.Fatalf("write pricevolume md: %v", err)
+		}
+		fmt.Printf("pricevolume: %d conditions, %d trades\nwrote %s and %s\n", len(pvStats), len(pvTrades), csv, md)
 		return
 	}
 

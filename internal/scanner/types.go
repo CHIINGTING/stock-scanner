@@ -93,11 +93,31 @@ type StockAnalysis struct {
 	ATR         float64
 
 	// ── Volume analysis ──────────────────────────────────────────────────────
-	VolumeScore       int     // 0–25
-	AvgVolume20       int64   // 20-day average volume
-	PriceVolumeSignal string  // "價漲量增" | "價漲量縮" | "價跌量增" | "價跌量縮" | "漲停鎖量" | "漲停失敗"
-	BuySellRatio      float64 // approximated buying pressure ratio (> 1 = bullish)
-	IsLargeOrder      bool    // volume > 3× MA20
+	VolumeScore       int    // 0–25
+	AvgVolume20       int64  // 20-day average volume
+	PriceVolumeSignal string // "價漲量增" | "價漲量縮" | "價跌量增" | "價跌量縮" | "漲停鎖量" | "漲停失敗"
+
+	// ── Price-move magnitude ─────────────────────────────────────────────────
+	// PriceVolumeSignal above knows only the DIRECTION of the move, so +0.2% and +7.5%
+	// both read as "價漲量縮". These four fields carry the size. They are additive: the
+	// legacy signal keeps its exact vocabulary because report.pvCSS, the tests and every
+	// historical stored row depend on those literal strings.
+	//
+	// PriceChangePct is (Close/PrevClose - 1)*100. Zero WITH PriceMove == MoveUnknown means
+	// there was no previous close to measure against — not that the stock was unchanged.
+	PriceChangePct float64
+	// PriceChangeATR is the same move expressed in ATR multiples, so "3% on a quiet
+	// large-cap" and "3% on a volatile small-cap" stay distinguishable. Zero when ATR was
+	// unavailable (warm-up, or a perfectly flat tape).
+	PriceChangeATR float64
+	// PriceMove is the magnitude class: MoveLargeUp … MoveLargeDown, or MoveUnknown.
+	PriceMove string
+	// PriceVolumeState is the machine-readable combination, e.g. "LARGE_DOWN_VOLUME_SHRINK".
+	// It exists so the reading "a big drop that merely happened to be thin" lives in ONE
+	// place instead of being re-derived by the report, the AI prompt and the evidence store.
+	PriceVolumeState string
+	BuySellRatio     float64 // approximated buying pressure ratio (> 1 = bullish)
+	IsLargeOrder     bool    // volume > 3× MA20
 
 	// ── Limit-up (漲停) chip dynamics ────────────────────────────────────────
 	LimitStatus string // "" | LOCKED_LIMIT_UP_LOW_VOLUME | LIMIT_UP_FAILED | DISTRIBUTION_AFTER_LIMIT_UP

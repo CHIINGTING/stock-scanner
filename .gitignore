@@ -17,8 +17,8 @@ data/official/
 data/research/*.db
 data/research/*.db-wal
 data/research/*.db-shm
-index.html
-stocks.yaml
+/index.html
+/stocks.yaml
 
 # reports/ 與 docs/ 現在納入版控，但那是為了保存「無法重建」的東西：
 # 新聞快照（PublishedAt≠ObservedAt 的 look-ahead 證據）、候選名單、回測摘要、SPEC。

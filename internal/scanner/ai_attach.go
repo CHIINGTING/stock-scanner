@@ -107,6 +107,14 @@ func buildAIEvidence(e *WatchlistEntry, market AIMarketContext) ai.Evidence {
 	ev.MA20Trend = a.MA20Trend
 	ev.VolumeRatio = a.VolumeRatio
 	ev.PriceVolumeSignal = a.PriceVolumeSignal
+	ev.PriceChangePct = a.PriceChangePct
+	ev.PriceChangeATR = a.PriceChangeATR
+	// MoveUnknown means there was no previous close to measure against; sending it would
+	// invite the model to reason about a category that only means "we could not look".
+	if a.PriceMove != "" && a.PriceMove != MoveUnknown {
+		ev.PriceMove = a.PriceMove
+		ev.PriceVolumeState = a.PriceVolumeState
+	}
 
 	if e.Institution != nil {
 		ev.Institutional = aiInstitutionalLines(e.Institution)

@@ -361,6 +361,11 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 	// Volume analysis (for display fields)
 	va := analyzeVolume(closes, volumes, ind, limitStatus, limitNote)
 
+	// Price-move magnitude. Derived from the SAME closes and the SAME volume ratio the
+	// signal above used, so the two can never disagree about the session. Read-only with
+	// respect to everything below: nothing here feeds score, BFP, action or ordering.
+	pm := classifyPriceMove(closes, ind.ATR[n-1], va.ratio, DefaultPriceMoveThresholds())
+
 	// Blend BFP + score for base action
 	bfpAction := actionFromBFP(bfpPoints)
 	numAction := rawAction(sc)
@@ -462,6 +467,10 @@ func (s *Scanner) analyze(stock fetcher.StockData, ind indicator.Result) StockAn
 		VolumeScore:       va.score,
 		AvgVolume20:       int64(ind.VolumeMA[n-1]),
 		PriceVolumeSignal: va.signal,
+		PriceChangePct:    pm.changePct,
+		PriceChangeATR:    pm.changeATR,
+		PriceMove:         pm.move,
+		PriceVolumeState:  pm.state,
 		BuySellRatio:      va.buySellRatio,
 		IsLargeOrder:      va.isLargeOrder,
 

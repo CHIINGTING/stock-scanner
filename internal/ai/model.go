@@ -98,6 +98,14 @@ type Evidence struct {
 	VolumeRatio       float64 `json:"volume_ratio,omitempty"`
 	PriceVolumeSignal string  `json:"price_volume_signal,omitempty"`
 
+	// The magnitude of the session's move. Without these the model sees "價漲量縮" for both
+	// a +0.2% drift and a +7.5% surge, and cannot tell them apart. PriceChangeATR says how
+	// big that move was FOR THIS STOCK.
+	PriceChangePct   float64 `json:"price_change_pct,omitempty"`
+	PriceChangeATR   float64 `json:"price_change_atr,omitempty"`
+	PriceMove        string  `json:"price_move,omitempty"`
+	PriceVolumeState string  `json:"price_volume_state,omitempty"`
+
 	Consolidation string `json:"consolidation,omitempty"`
 
 	Sector      string `json:"sector,omitempty"`

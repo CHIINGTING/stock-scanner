@@ -175,6 +175,7 @@ func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicat
 	{
 		vr := volumeRatio(volumes, ind.VolumeMA)
 		priceUp := n >= 2 && closes[n-1] > closes[n-2]
+		priceFlat := n >= 2 && closes[n-1] == closes[n-2]
 		volUp := vr >= 1.3
 		// 量能確認：價漲量增 OR 量明顯放大
 		pass := (priceUp && volUp) || vr >= 2.0
@@ -187,6 +188,10 @@ func bestFourPoint(closes, volumes []float64, highs, lows []float64, ind indicat
 			reason = fmt.Sprintf("價漲量增（%.1fx），量能配合走揚，多頭訊號明確", vr)
 		case priceUp && !volUp:
 			reason = fmt.Sprintf("價漲量縮（%.1fx），漲幅缺乏量能支撐，注意假突破", vr)
+		case priceFlat && vr >= 2.0:
+			// The `pass` boolean above is untouched; only the wording is. Calling an
+			// unchanged close "賣壓沉重" is the same false statement the label carried.
+			reason = fmt.Sprintf("平盤量增（%.1fx），成交活躍但價格未形成方向", vr)
 		case !priceUp && vr >= 2.0:
 			reason = fmt.Sprintf("價跌量增（%.1fx），賣壓沉重，需等量縮止穩", vr)
 		default:
@@ -310,15 +315,28 @@ func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result, li
 	}
 
 	priceUp := closes[n-1] > closes[n-2]
+	// An EXACTLY unchanged close is neither a rise nor a fall. priceUp above is a strict >,
+	// so without this a flat session lands in the "跌" branch and the label states something
+	// that did not happen — on a real scan that was 13 of 123 stocks (10.6%).
+	//
+	// The band is exact equality, deliberately. "Is −0.26% a fall?" is a judgement about
+	// where to draw a line, and changing that would be a strategy change; "is 0.00% a fall?"
+	// is not a judgement, it is a false statement. Only the second is fixed here. Whether a
+	// wider neutral band pays is a question for the R14 backtest, not for this line.
+	priceFlat := closes[n-1] == closes[n-2]
 	volUp := res.ratio >= 1.2
 
 	// Price-volume signal
 	switch {
+	case priceFlat && volUp:
+		res.signal = "平盤量增"
+	case priceFlat:
+		res.signal = "平盤量縮"
 	case priceUp && volUp:
 		res.signal = "價漲量增"
 	case priceUp && !volUp:
 		res.signal = "價漲量縮"
-	case !priceUp && volUp:
+	case volUp:
 		res.signal = "價跌量增"
 	default:
 		res.signal = "價跌量縮"
@@ -344,7 +362,14 @@ func analyzeVolume(closes []float64, rawVols []float64, ind indicator.Result, li
 		res.reasons = append(res.reasons, fmt.Sprintf("放量 %.1fx，量能溫和確認漲勢", res.ratio))
 	case res.ratio >= 1.5 && !priceUp:
 		s = 5
-		res.reasons = append(res.reasons, fmt.Sprintf("量增 %.1fx 但下跌，賣壓較重", res.ratio))
+		// SAME score (5) for a flat session as before — only the wording is corrected.
+		// Saying "但下跌" about an unchanged close is the same false statement the label
+		// carried; changing the number here would be a strategy change and is out of scope.
+		if priceFlat {
+			res.reasons = append(res.reasons, fmt.Sprintf("量增 %.1fx 但收平盤，成交活躍卻未形成方向", res.ratio))
+		} else {
+			res.reasons = append(res.reasons, fmt.Sprintf("量增 %.1fx 但下跌，賣壓較重", res.ratio))
+		}
 	case res.ratio >= 0.8:
 		s = 8
 	case res.ratio > 0:

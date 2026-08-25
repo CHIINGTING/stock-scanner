@@ -142,6 +142,17 @@ func buildAnalysisEvidence(c *collector, a scanner.StockAnalysis) {
 	c.num(store.CategoryTechnical, "technical_score", float64(a.Score), "", srcAnalysis)
 	c.num(store.CategoryTechnical, "bfp_points", float64(a.BFPPoints), "of 5", srcAnalysis)
 	c.text(store.CategoryTechnical, "price_volume_signal", a.PriceVolumeSignal, srcAnalysis)
+	// The magnitude beside the direction. `num` (not `level`) because a genuine 0.0% session
+	// is a real reading; a stock with no previous close carries PriceMove == MoveUnknown and
+	// is filtered out below rather than stored as a confident zero.
+	if a.PriceMove != "" && a.PriceMove != scanner.MoveUnknown {
+		c.num(store.CategoryTechnical, "price_change_pct", a.PriceChangePct, "%", srcAnalysis)
+		c.text(store.CategoryTechnical, "price_move", a.PriceMove, srcAnalysis)
+		c.text(store.CategoryTechnical, "price_volume_state", a.PriceVolumeState, srcAnalysis)
+		// Zero means the ATR was unavailable, so it stays out rather than reading as
+		// "the move was worth zero ATRs".
+		c.level(store.CategoryTechnical, "price_change_atr", a.PriceChangeATR, "ATR", srcAnalysis)
+	}
 	c.text(store.CategoryTechnical, "limit_status", a.LimitStatus, srcAnalysis)
 
 	c.level(store.CategoryTechnical, "stop_loss", a.StopLoss, "TWD", srcAnalysis)
