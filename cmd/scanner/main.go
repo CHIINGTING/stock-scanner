@@ -11,6 +11,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/analysishistory"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	marketservice "github.com/deep-huang/stock-scanner/internal/market/service"
 	"github.com/deep-huang/stock-scanner/internal/news"
@@ -252,7 +253,16 @@ func main() {
 	// ── 4. Report ─────────────────────────────────────────────────────────────
 	fmt.Println("[4/4] 產生報告...")
 	r := report.New(cfg.Report)
+	// USD/TWD market context. Gated on research.enabled alone — the existing research switch
+	// already means "this run may do shadow research", and a second flag for one header line
+	// would be config for its own sake. A missing archive is simply no context.
+	var fxCtx *fx.Metrics
+	if cfg.Research.Enabled {
+		fxCtx = loadFXContext(cfg.Research.Defaulted().FXDir, analysisDate)
+	}
+
 	gv := report.GuardrailViewOptions{
+		FX:                          fxCtx,
 		Show:                        cfg.Scanner.ShowGuardrailSignals,
 		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,
 		ShowBacktestInsights:        cfg.Scanner.ShowBacktestInsights,
@@ -574,6 +584,32 @@ func loadMarketContext(dir, date string) research.MarketContext {
 		Confidence: &confidence,
 		AsOfDate:   snap.Date,
 	}
+}
+
+// loadFXContext reads the USD/TWD archive and returns the reading a session on analysisDate
+// could legitimately have had.
+//
+// It only LOADS. cmd/fx-fetch produces the archive; a scan that runs before it, or on a date
+// the archive does not reach, simply shows no currency context. A currency feed being stale
+// must never be able to stop a scan, so every failure here is a nil and a log line.
+func loadFXContext(dir string, analysisDate time.Time) *fx.Metrics {
+	series, err := fx.Load(dir)
+	if err != nil {
+		log.Printf("fx: no USD/TWD archive (%v) — run: go run ./cmd/fx-fetch", err)
+		return nil
+	}
+	m := series.MetricsAsOf(analysisDate.Format("2006-01-02"), fx.DefaultConfig())
+	if !m.Status.OK() {
+		log.Printf("fx: archive reaches %s but has nothing usable for %s (%s)",
+			series.Bars[len(series.Bars)-1].Date, analysisDate.Format("2006-01-02"), m.Status)
+		return nil
+	}
+	d1, _ := m.Change(1)
+	d5, _ := m.Change(5)
+	d20, _ := m.Change(20)
+	fmt.Printf("       USD/TWD %.3f（依 %s 收盤）1D %+.2f%% ｜5D %+.2f%% ｜20D %+.2f%% ｜%s\n",
+		m.Close, m.FXDate, d1, d5, d20, m.Context)
+	return &m
 }
 
 // qualifiesForWatchlist reports whether an action should land a stock on the

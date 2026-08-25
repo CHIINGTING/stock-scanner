@@ -279,8 +279,15 @@ func buildTrendExtEvidence(c *collector, e scanner.WatchlistEntry) {
 	c.ptr(store.CategoryTechnical, "ma20_slope_5d", t.MA20Slope5D, "%/day", srcTrendExt)
 	c.ptr(store.CategoryTechnical, "ma60_slope_10d", t.MA60Slope10D, "%/day", srcTrendExt)
 	c.ptr(store.CategoryTechnical, "bias20_percentile", t.Bias20Percentile, "pct", srcTrendExt)
-	// Heat travels with the sector rows, not the technical ones.
-	buildHeatEvidence(c, t.Heat)
+	// Sector heat is deliberately NOT written here. TrendExt.Heat is the very same
+	// *SectorHeatView the rotation entry holds — attachTrendExtension copies the pointer —
+	// so projecting it from both places wrote every heat row twice and the second insert hit
+	// the store's UNIQUE(snapshot, category, key) constraint. buildSectorEvidence owns it:
+	// heat IS a sector fact, and the rotation entry is where it originates.
+	//
+	// The reachability is a strict subset, so nothing is lost: TrendExt.Heat is non-nil only
+	// when the stock has a sector AND that sector had a rotation entry carrying heat — which
+	// is exactly when buildSectorEvidence reaches its own call.
 }
 
 // buildHeatEvidence projects the R12 sector heat panel, including its denominators.
@@ -500,8 +507,8 @@ func buildSectorEvidence(c *collector, e scanner.WatchlistEntry, rot *scanner.Se
 	c.num(store.CategorySector, "sector_above_ma60_ratio", rot.AboveMA60Ratio, "%", srcRotation)
 	c.num(store.CategorySector, "sector_trend_strength", rot.TrendStrength, "", srcRotation)
 	c.text(store.CategorySector, "sector_trend_label", rot.TrendLabel, srcRotation)
-	// Heat is a component of the rotation entry (R12). When trend extension is off it is
-	// nil here, and buildTrendExtEvidence contributed nothing either.
+	// Heat is a component of the rotation entry (R12) and this is its ONLY writer. nil when
+	// trend extension is off, which is the correct absence rather than a zeroed reading.
 	buildHeatEvidence(c, rot.Heat)
 }
 

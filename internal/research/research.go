@@ -21,6 +21,10 @@ type Config struct {
 	// loads the snapshot and passes the regime in as MarketContext; this package never
 	// imports internal/market. Empty → "data/market".
 	MarketSnapshotDir string `yaml:"market_snapshot_dir"`
+	// FXDir is where cmd/fx-fetch archives the USD/TWD series. Read-only from the scanner's
+	// side: the scan never fetches a currency, it only reads what acquisition already stored.
+	// Empty → "data/fx".
+	FXDir string `yaml:"fx_dir"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used across this repo.
@@ -28,6 +32,9 @@ func (c Config) Defaulted() Config {
 	c.Store = c.Store.Defaulted()
 	if c.MarketSnapshotDir == "" {
 		c.MarketSnapshotDir = "data/market"
+	}
+	if c.FXDir == "" {
+		c.FXDir = "data/fx"
 	}
 	return c
 }

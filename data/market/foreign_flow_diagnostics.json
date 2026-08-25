@@ -1,0 +1,1426 @@
+{
+  "2024-11-13": {
+    "date": "2024-11-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:13.873959+08:00"
+  },
+  "2024-11-14": {
+    "date": "2024-11-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1569,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:15.033726+08:00"
+  },
+  "2024-11-15": {
+    "date": "2024-11-15",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:16.270912+08:00"
+  },
+  "2025-01-20": {
+    "date": "2025-01-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1556,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:18.43106+08:00"
+  },
+  "2025-01-21": {
+    "date": "2025-01-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1552,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:19.584888+08:00"
+  },
+  "2025-01-22": {
+    "date": "2025-01-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:20.745282+08:00"
+  },
+  "2025-02-03": {
+    "date": "2025-02-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:22.708491+08:00"
+  },
+  "2025-02-04": {
+    "date": "2025-02-04",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:23.661387+08:00"
+  },
+  "2025-02-05": {
+    "date": "2025-02-05",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:24.604833+08:00"
+  },
+  "2025-02-06": {
+    "date": "2025-02-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:26.579981+08:00"
+  },
+  "2025-02-07": {
+    "date": "2025-02-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:27.538241+08:00"
+  },
+  "2025-02-10": {
+    "date": "2025-02-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:28.487987+08:00"
+  },
+  "2025-02-11": {
+    "date": "2025-02-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1556,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:29.401618+08:00"
+  },
+  "2025-02-12": {
+    "date": "2025-02-12",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1555,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:30.360274+08:00"
+  },
+  "2025-02-13": {
+    "date": "2025-02-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:31.338251+08:00"
+  },
+  "2025-02-14": {
+    "date": "2025-02-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:32.382949+08:00"
+  },
+  "2025-02-17": {
+    "date": "2025-02-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:33.33301+08:00"
+  },
+  "2025-02-18": {
+    "date": "2025-02-18",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:34.280869+08:00"
+  },
+  "2025-02-19": {
+    "date": "2025-02-19",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:35.234859+08:00"
+  },
+  "2025-02-20": {
+    "date": "2025-02-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:36.188325+08:00"
+  },
+  "2025-02-21": {
+    "date": "2025-02-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:37.137173+08:00"
+  },
+  "2025-02-24": {
+    "date": "2025-02-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:38.294023+08:00"
+  },
+  "2025-02-25": {
+    "date": "2025-02-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:39.250187+08:00"
+  },
+  "2025-02-26": {
+    "date": "2025-02-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:40.198406+08:00"
+  },
+  "2025-02-27": {
+    "date": "2025-02-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:41.152532+08:00"
+  },
+  "2025-03-03": {
+    "date": "2025-03-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:42.099722+08:00"
+  },
+  "2025-03-04": {
+    "date": "2025-03-04",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:43.047883+08:00"
+  },
+  "2025-03-05": {
+    "date": "2025-03-05",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:44.053957+08:00"
+  },
+  "2025-03-06": {
+    "date": "2025-03-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:45.003066+08:00"
+  },
+  "2025-03-07": {
+    "date": "2025-03-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:45.951118+08:00"
+  },
+  "2025-03-10": {
+    "date": "2025-03-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:46.895686+08:00"
+  },
+  "2025-03-11": {
+    "date": "2025-03-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1569,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:47.809269+08:00"
+  },
+  "2025-03-12": {
+    "date": "2025-03-12",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:48.767556+08:00"
+  },
+  "2025-03-13": {
+    "date": "2025-03-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:49.715523+08:00"
+  },
+  "2025-03-14": {
+    "date": "2025-03-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:50.665877+08:00"
+  },
+  "2025-03-17": {
+    "date": "2025-03-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:51.61878+08:00"
+  },
+  "2025-03-18": {
+    "date": "2025-03-18",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:52.562653+08:00"
+  },
+  "2025-03-19": {
+    "date": "2025-03-19",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:53.507442+08:00"
+  },
+  "2025-03-20": {
+    "date": "2025-03-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:54.475983+08:00"
+  },
+  "2025-03-21": {
+    "date": "2025-03-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:55.423336+08:00"
+  },
+  "2025-03-24": {
+    "date": "2025-03-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:56.368478+08:00"
+  },
+  "2025-03-25": {
+    "date": "2025-03-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1554,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:57.314724+08:00"
+  },
+  "2025-03-26": {
+    "date": "2025-03-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1554,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:58.262285+08:00"
+  },
+  "2025-03-27": {
+    "date": "2025-03-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:34:59.213334+08:00"
+  },
+  "2025-03-28": {
+    "date": "2025-03-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:35:00.157627+08:00"
+  },
+  "2025-03-31": {
+    "date": "2025-03-31",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1569,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:35:01.104819+08:00"
+  },
+  "2025-04-01": {
+    "date": "2025-04-01",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:35:02.133561+08:00"
+  },
+  "2025-04-02": {
+    "date": "2025-04-02",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:29:59.99367+08:00"
+  },
+  "2025-04-07": {
+    "date": "2025-04-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1549,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:01.898802+08:00"
+  },
+  "2025-04-08": {
+    "date": "2025-04-08",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:03.122732+08:00"
+  },
+  "2025-04-09": {
+    "date": "2025-04-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:03.891661+08:00"
+  },
+  "2025-04-10": {
+    "date": "2025-04-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:04.803772+08:00"
+  },
+  "2025-04-11": {
+    "date": "2025-04-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:05.598364+08:00"
+  },
+  "2025-04-14": {
+    "date": "2025-04-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:06.500857+08:00"
+  },
+  "2025-04-15": {
+    "date": "2025-04-15",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:37:32.369806+08:00"
+  },
+  "2025-04-16": {
+    "date": "2025-04-16",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:07.41634+08:00"
+  },
+  "2025-04-17": {
+    "date": "2025-04-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:09.132255+08:00"
+  },
+  "2025-04-18": {
+    "date": "2025-04-18",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:11.117883+08:00"
+  },
+  "2025-04-21": {
+    "date": "2025-04-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:11.793701+08:00"
+  },
+  "2025-04-22": {
+    "date": "2025-04-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:12.468814+08:00"
+  },
+  "2025-04-23": {
+    "date": "2025-04-23",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1557,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:13.150002+08:00"
+  },
+  "2025-04-24": {
+    "date": "2025-04-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:13.90125+08:00"
+  },
+  "2025-04-25": {
+    "date": "2025-04-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:14.771343+08:00"
+  },
+  "2025-04-28": {
+    "date": "2025-04-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1551,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:15.455732+08:00"
+  },
+  "2025-04-29": {
+    "date": "2025-04-29",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1552,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:16.407175+08:00"
+  },
+  "2025-04-30": {
+    "date": "2025-04-30",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:17.177084+08:00"
+  },
+  "2025-05-02": {
+    "date": "2025-05-02",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1557,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:19.082522+08:00"
+  },
+  "2025-05-05": {
+    "date": "2025-05-05",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:21.034421+08:00"
+  },
+  "2025-05-06": {
+    "date": "2025-05-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:21.730033+08:00"
+  },
+  "2025-05-07": {
+    "date": "2025-05-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:22.880097+08:00"
+  },
+  "2025-05-08": {
+    "date": "2025-05-08",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1553,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:23.55795+08:00"
+  },
+  "2025-05-09": {
+    "date": "2025-05-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:24.244118+08:00"
+  },
+  "2025-05-12": {
+    "date": "2025-05-12",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:24.918904+08:00"
+  },
+  "2025-05-13": {
+    "date": "2025-05-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:25.598707+08:00"
+  },
+  "2025-05-14": {
+    "date": "2025-05-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:27.313679+08:00"
+  },
+  "2025-05-15": {
+    "date": "2025-05-15",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1554,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:29.107632+08:00"
+  },
+  "2025-05-16": {
+    "date": "2025-05-16",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:29.821913+08:00"
+  },
+  "2025-05-19": {
+    "date": "2025-05-19",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:30.715505+08:00"
+  },
+  "2025-05-20": {
+    "date": "2025-05-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1555,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:31.396191+08:00"
+  },
+  "2025-05-21": {
+    "date": "2025-05-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:32.165322+08:00"
+  },
+  "2025-05-22": {
+    "date": "2025-05-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:32.837353+08:00"
+  },
+  "2025-05-23": {
+    "date": "2025-05-23",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:33.814034+08:00"
+  },
+  "2025-05-26": {
+    "date": "2025-05-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:34.580164+08:00"
+  },
+  "2025-05-27": {
+    "date": "2025-05-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:35.265838+08:00"
+  },
+  "2025-05-28": {
+    "date": "2025-05-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:35.972054+08:00"
+  },
+  "2025-05-29": {
+    "date": "2025-05-29",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:36.724433+08:00"
+  },
+  "2025-06-03": {
+    "date": "2025-06-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 4,
+    "observed_at": "2026-08-25T17:48:43.626788+08:00"
+  },
+  "2025-06-04": {
+    "date": "2025-06-04",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:48:56.73356+08:00"
+  },
+  "2025-06-05": {
+    "date": "2025-06-05",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:48:57.718401+08:00"
+  },
+  "2025-06-06": {
+    "date": "2025-06-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:48:58.718205+08:00"
+  },
+  "2025-06-09": {
+    "date": "2025-06-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1555,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:48:59.698057+08:00"
+  },
+  "2025-06-10": {
+    "date": "2025-06-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:00.68481+08:00"
+  },
+  "2025-06-11": {
+    "date": "2025-06-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:01.670158+08:00"
+  },
+  "2025-06-12": {
+    "date": "2025-06-12",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:02.657288+08:00"
+  },
+  "2025-06-13": {
+    "date": "2025-06-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:03.645092+08:00"
+  },
+  "2025-06-16": {
+    "date": "2025-06-16",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1557,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:05.716117+08:00"
+  },
+  "2025-06-17": {
+    "date": "2025-06-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:06.680538+08:00"
+  },
+  "2025-06-18": {
+    "date": "2025-06-18",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:08.696644+08:00"
+  },
+  "2025-06-19": {
+    "date": "2025-06-19",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T17:49:09.658261+08:00"
+  },
+  "2025-06-20": {
+    "date": "2025-06-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:37.401484+08:00"
+  },
+  "2025-06-23": {
+    "date": "2025-06-23",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:30:41.243391+08:00"
+  },
+  "2025-06-24": {
+    "date": "2025-06-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:04.394545+08:00"
+  },
+  "2025-06-25": {
+    "date": "2025-06-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:06.165225+08:00"
+  },
+  "2025-06-26": {
+    "date": "2025-06-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:07.104204+08:00"
+  },
+  "2025-06-27": {
+    "date": "2025-06-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:07.78367+08:00"
+  },
+  "2025-06-30": {
+    "date": "2025-06-30",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:08.480165+08:00"
+  },
+  "2025-07-01": {
+    "date": "2025-07-01",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:09.165111+08:00"
+  },
+  "2025-07-02": {
+    "date": "2025-07-02",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:09.844381+08:00"
+  },
+  "2025-07-03": {
+    "date": "2025-07-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:10.555676+08:00"
+  },
+  "2025-07-04": {
+    "date": "2025-07-04",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1557,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:11.237927+08:00"
+  },
+  "2025-07-07": {
+    "date": "2025-07-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:11.919907+08:00"
+  },
+  "2025-07-08": {
+    "date": "2025-07-08",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1556,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:12.624232+08:00"
+  },
+  "2025-07-09": {
+    "date": "2025-07-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:14.31404+08:00"
+  },
+  "2025-07-10": {
+    "date": "2025-07-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:14.995973+08:00"
+  },
+  "2025-07-11": {
+    "date": "2025-07-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:15.692915+08:00"
+  },
+  "2025-07-22": {
+    "date": "2025-07-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:16.372974+08:00"
+  },
+  "2025-09-24": {
+    "date": "2025-09-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:32:17.059238+08:00"
+  },
+  "2025-09-25": {
+    "date": "2025-09-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:22.488414+08:00"
+  },
+  "2025-09-26": {
+    "date": "2025-09-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:23.39482+08:00"
+  },
+  "2025-09-30": {
+    "date": "2025-09-30",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:24.30783+08:00"
+  },
+  "2025-10-01": {
+    "date": "2025-10-01",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:31:04.275514+08:00"
+  },
+  "2025-10-02": {
+    "date": "2025-10-02",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:31:04.893883+08:00"
+  },
+  "2025-10-03": {
+    "date": "2025-10-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:31:05.512487+08:00"
+  },
+  "2025-10-07": {
+    "date": "2025-10-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:31:06.131281+08:00"
+  },
+  "2025-10-08": {
+    "date": "2025-10-08",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:31:06.751955+08:00"
+  },
+  "2025-10-09": {
+    "date": "2025-10-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:25.187428+08:00"
+  },
+  "2025-10-13": {
+    "date": "2025-10-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:26.07365+08:00"
+  },
+  "2025-10-14": {
+    "date": "2025-10-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:26.875837+08:00"
+  },
+  "2025-10-15": {
+    "date": "2025-10-15",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:27.747428+08:00"
+  },
+  "2025-10-16": {
+    "date": "2025-10-16",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1560,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:28.539861+08:00"
+  },
+  "2025-10-17": {
+    "date": "2025-10-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:29.373601+08:00"
+  },
+  "2025-10-20": {
+    "date": "2025-10-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:30.355488+08:00"
+  },
+  "2025-10-21": {
+    "date": "2025-10-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:31.31008+08:00"
+  },
+  "2025-10-22": {
+    "date": "2025-10-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:32.149368+08:00"
+  },
+  "2025-10-23": {
+    "date": "2025-10-23",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:33.032286+08:00"
+  },
+  "2025-10-27": {
+    "date": "2025-10-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:33.948544+08:00"
+  },
+  "2025-10-28": {
+    "date": "2025-10-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:34.774755+08:00"
+  },
+  "2025-10-29": {
+    "date": "2025-10-29",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:35.63239+08:00"
+  },
+  "2025-10-30": {
+    "date": "2025-10-30",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:36.430652+08:00"
+  },
+  "2025-10-31": {
+    "date": "2025-10-31",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:37.209654+08:00"
+  },
+  "2025-11-03": {
+    "date": "2025-11-03",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1559,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:37.997347+08:00"
+  },
+  "2025-11-04": {
+    "date": "2025-11-04",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:38.8234+08:00"
+  },
+  "2025-11-05": {
+    "date": "2025-11-05",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:39.606575+08:00"
+  },
+  "2025-11-06": {
+    "date": "2025-11-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:40.382419+08:00"
+  },
+  "2025-11-07": {
+    "date": "2025-11-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:41.09868+08:00"
+  },
+  "2025-11-10": {
+    "date": "2025-11-10",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:41.846664+08:00"
+  },
+  "2025-11-11": {
+    "date": "2025-11-11",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:42.561209+08:00"
+  },
+  "2025-11-12": {
+    "date": "2025-11-12",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:43.27542+08:00"
+  },
+  "2025-11-13": {
+    "date": "2025-11-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:43.989998+08:00"
+  },
+  "2025-11-14": {
+    "date": "2025-11-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1569,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:44.70534+08:00"
+  },
+  "2025-11-17": {
+    "date": "2025-11-17",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:45.421691+08:00"
+  },
+  "2025-11-18": {
+    "date": "2025-11-18",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1571,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:36:46.136285+08:00"
+  },
+  "2025-11-19": {
+    "date": "2025-11-19",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:48.570131+08:00"
+  },
+  "2025-11-20": {
+    "date": "2025-11-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:49.364922+08:00"
+  },
+  "2025-11-21": {
+    "date": "2025-11-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1571,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:50.08174+08:00"
+  },
+  "2025-11-24": {
+    "date": "2025-11-24",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1563,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:50.798493+08:00"
+  },
+  "2025-11-25": {
+    "date": "2025-11-25",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1561,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:51.525005+08:00"
+  },
+  "2025-11-26": {
+    "date": "2025-11-26",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:52.240854+08:00"
+  },
+  "2025-11-27": {
+    "date": "2025-11-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:52.956619+08:00"
+  },
+  "2025-11-28": {
+    "date": "2025-11-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:53.674356+08:00"
+  },
+  "2026-06-29": {
+    "date": "2026-06-29",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:54.389525+08:00"
+  },
+  "2026-06-30": {
+    "date": "2026-06-30",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1562,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:55.104875+08:00"
+  },
+  "2026-07-02": {
+    "date": "2026-07-02",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1568,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:55.820343+08:00"
+  },
+  "2026-07-06": {
+    "date": "2026-07-06",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1566,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:56.533927+08:00"
+  },
+  "2026-07-07": {
+    "date": "2026-07-07",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1571,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:57.249482+08:00"
+  },
+  "2026-07-08": {
+    "date": "2026-07-08",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1571,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:57.968821+08:00"
+  },
+  "2026-07-09": {
+    "date": "2026-07-09",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1570,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:37:58.693038+08:00"
+  },
+  "2026-07-10": {
+    "date": "2026-07-10",
+    "outcome": "NO_SESSION",
+    "http_status": 200,
+    "body_bytes": 74,
+    "attempts": 1,
+    "observed_at": "2026-08-25T23:18:35.282713+08:00"
+  },
+  "2026-07-13": {
+    "date": "2026-07-13",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1571,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:00.12507+08:00"
+  },
+  "2026-07-14": {
+    "date": "2026-07-14",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1572,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:00.841536+08:00"
+  },
+  "2026-07-15": {
+    "date": "2026-07-15",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:01.557061+08:00"
+  },
+  "2026-07-16": {
+    "date": "2026-07-16",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1569,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:02.277142+08:00"
+  },
+  "2026-07-20": {
+    "date": "2026-07-20",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:02.993146+08:00"
+  },
+  "2026-07-21": {
+    "date": "2026-07-21",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1565,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:03.722158+08:00"
+  },
+  "2026-07-22": {
+    "date": "2026-07-22",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1567,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:04.438103+08:00"
+  },
+  "2026-07-23": {
+    "date": "2026-07-23",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1564,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:38:05.162122+08:00"
+  },
+  "2026-07-27": {
+    "date": "2026-07-27",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1558,
+    "attempts": 4,
+    "observed_at": "2026-08-25T18:17:13.661429+08:00"
+  },
+  "2026-07-28": {
+    "date": "2026-07-28",
+    "outcome": "AVAILABLE",
+    "http_status": 200,
+    "body_bytes": 1570,
+    "attempts": 1,
+    "observed_at": "2026-08-25T18:17:26.6927+08:00"
+  }
+}
