@@ -12,10 +12,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/fx"
+	"github.com/deep-huang/stock-scanner/internal/market/provider"
 	"github.com/deep-huang/stock-scanner/internal/r6backtest"
 )
 
@@ -26,6 +29,9 @@ func main() {
 	stopBench := flag.Bool("stopbench", false, "R6-3: run stop-policy benchmark instead of the default backtest")
 	recentBull := flag.Bool("recentbull", false, "R6-6: recent bull regime validation (20d primary, signal-date 2m/4m/6m windows)")
 	trendExt := flag.Bool("trendext", false, "R12: slope / BIAS / sector-heat condition comparison (baseline vs each leg vs combined states)")
+	fxStudy := flag.Bool("fx", false, "USD/TWD x foreign-flow market context, counted in TRADING DATES (not per-stock trades)")
+	fxDir := flag.String("fxdir", "data/fx", "USD/TWD archive directory")
+	flowDir := flag.String("flowdir", "data/market", "foreign-flow archive directory")
 	priceVol := flag.Bool("pricevolume", false, "Flat-price × volume: measures whether an exactly-unchanged session behaves like DOWN, like UP, or like neither, before scorer.go decides")
 	technical := flag.Bool("technical", false, "R14: ADX / RSI / MACD / Keltner / pivot condition comparison (baseline vs each indicator vs confirmed combinations)")
 	sectors := flag.String("sectors", "configs/sectors.yaml", "R12: sector taxonomy for the heat panel (same file the scanner uses)")
@@ -102,6 +108,102 @@ func main() {
 			log.Fatalf("write trendext md: %v", err)
 		}
 		fmt.Printf("trendext: %d conditions, %d trades\nwrote %s and %s\n", len(teStats), len(teTrades), csv, md)
+		return
+	}
+
+	// ── USD/TWD x foreign flow (separate output; DATE-level statistics) ──
+	//
+	// Deliberately does NOT go through RunSetup. The currency, the flow and the index are one
+	// observation per day shared by the whole universe; running them per stock would report
+	// ~1,900 samples for a single day's move. See internal/r6backtest/fx.go.
+	if *fxStudy {
+		series, err := fx.Load(*fxDir)
+		if err != nil {
+			log.Fatalf("fx archive: %v (run: go run ./cmd/fx-fetch)", err)
+		}
+		dxySeries, dxyErr := fx.LoadSeries(*fxDir, fx.SpecDXY)
+		if dxyErr != nil {
+			log.Printf("DXY archive unavailable (%v) — the dollar and residual rows will be "+
+				"empty, and USD/TWD cannot be separated from broad dollar moves", dxyErr)
+		}
+		flow, ferr := provider.LoadForeignFlow(*flowDir)
+		if ferr != nil {
+			log.Printf("foreign-flow archive unavailable (%v) — FX-only rows will still be "+
+				"produced; every interaction row will be empty", ferr)
+		}
+
+		horizons := []int{5, 10, 20}
+		panel := r6backtest.BuildFXPanel(u, series, dxySeries, flow, fx.DefaultConfig(), horizons)
+		stats := r6backtest.RunFXStudy(panel, r6backtest.FXConditions(), horizons)
+
+		fmt.Printf("fx panel: %d trading dates (%d stock observations the per-stock framing would have counted)\n",
+			len(panel.Days), panel.StockObservations)
+		md := filepath.Join(*outDir, "backtest_fx_summary_"+stamp+".md")
+		if err := r6backtest.WriteFXMarkdown(md, panel, stats, horizons, series, flow); err != nil {
+			log.Fatalf("write fx md: %v", err)
+		}
+		// Effective N is printed FIRST because it is the sample size; raw is the number
+		// that would be mistaken for one.
+		fmt.Println("\ncondition                      raw   eff20   20d win (95% CI)      20d median")
+		for _, st := range stats {
+			ci := "        —        "
+			if !math.IsNaN(st.WinRateLo[20]) {
+				ci = fmt.Sprintf("(%4.0f–%4.0f%%)", st.WinRateLo[20], st.WinRateHi[20])
+			}
+			if st.EffectiveN[20] == 0 {
+				fmt.Printf("  %-28s %4d      0          —\n", st.Name, st.RawDates)
+				continue
+			}
+			fmt.Printf("  %-28s %4d %6d   %5.1f%% %s  %+6.2f%%\n",
+				st.Name, st.RawDates, st.EffectiveN[20], st.WinRate[20], ci, st.Median[20])
+		}
+
+		// Confounder checks, printed because a market-level effect found once in a 26-month
+		// window is far more likely to be a description of that window than a rule.
+		cov := r6backtest.Coverage(panel)
+		fmt.Printf("\ncoverage: FX %d/%d dates, foreign %d/%d, BOTH %d\n",
+			cov.FXDates, cov.TotalDates, cov.ForeignDates, cov.TotalDates, cov.BothDates)
+		fmt.Println("FX context mix, dates WITH foreign data vs WITHOUT (a skew means the")
+		fmt.Println("interaction rows were measured on a non-random subsample):")
+		for _, k := range []string{fx.ContextStrongAppreciation, fx.ContextAppreciation,
+			fx.ContextStable, fx.ContextDepreciation, fx.ContextStrongDepreciation} {
+			in, out := cov.ContextWithin[k], cov.ContextOutside[k]
+			pin, pout := 0.0, 0.0
+			if cov.BothDates > 0 {
+				pin = float64(in) / float64(cov.BothDates) * 100
+			}
+			if n := cov.FXDates - cov.BothDates; n > 0 {
+				pout = float64(out) / float64(n) * 100
+			}
+			fmt.Printf("  %-26s within %3d (%4.1f%%)   outside %3d (%4.1f%%)\n", k, in, pin, out, pout)
+		}
+
+		fmt.Println("\nby trailing market trend (a rule that lives in only one half is not a rule):")
+		strata := r6backtest.RunFXStrata(panel, r6backtest.FXConditions(), horizons)
+		for _, st := range strata {
+			if st.Dates == 0 {
+				continue
+			}
+			fmt.Printf("  %-26s %-14s raw %3d eff20 %3d", st.Name, st.Regime, st.Dates, st.EffectiveN[20])
+			for _, h := range horizons {
+				if v, ok := st.WinRate[h]; ok {
+					fmt.Printf("  %dd %5.1f%%", h, v)
+				}
+			}
+			fmt.Println()
+		}
+
+		// The question that decides M8: does adding the currency condition change anything
+		// the foreign-flow leg was not already carrying?
+		fmt.Println("\nincremental value over the foreign-flow leg (20d):")
+		fmt.Println("  interaction                    leg        leg win  interact win   Δ    kept")
+		for _, inc := range r6backtest.Increments(stats, 20) {
+			fmt.Printf("  %-28s %-10s %6.1f%% (n=%d)  %5.1f%% (n=%d) %+5.1f  %4.0f%%\n",
+				inc.Interaction, inc.Leg, inc.LegWin, inc.LegEffN,
+				inc.InteractWin, inc.InteractEffN, inc.Delta, inc.RetainedPct)
+		}
+
+		fmt.Printf("\nwrote %s\n", md)
 		return
 	}
 

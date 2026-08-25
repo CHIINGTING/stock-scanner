@@ -35,6 +35,24 @@ func sampleEntry(withShadow bool) scanner.WatchlistEntry {
 	return e
 }
 
+// genFull renders with BOTH a market table and a watchlist, so a regression guard can compare
+// every stock row rather than only the tab that happens to be populated.
+func genFull(t *testing.T, market []scanner.StockAnalysis, entries []scanner.WatchlistEntry,
+	gv GuardrailViewOptions) string {
+	t.Helper()
+	dir := t.TempDir()
+	r := New(Config{OutputDir: dir})
+	date := time.Date(2026, 6, 5, 0, 0, 0, 0, time.UTC)
+	if err := r.Generate(market, nil, entries, nil, "-", date, gv, nil, nil); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir, "report_20260605.html"))
+	if err != nil {
+		t.Fatalf("read report: %v", err)
+	}
+	return string(b)
+}
+
 func genHTML(t *testing.T, entries []scanner.WatchlistEntry, gv GuardrailViewOptions) string {
 	t.Helper()
 	dir := t.TempDir()

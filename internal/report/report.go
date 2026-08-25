@@ -12,6 +12,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
+	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
@@ -409,6 +410,40 @@ func candleSummaryChip(r *candlestick.Result) string {
 	return fmt.Sprintf("🕯️ %s %s %s", top.Type, candleDirBadge(top.Direction), candleConfPct(top.Confidence))
 }
 
+// ── USD/TWD display helpers ──────────────────────────────────────────────────────
+//
+// The words describe the CURRENCY. USDTWD rising means it takes more TWD to buy one USD,
+// i.e. the local currency WEAKENED — the single easiest thing to render backwards, so the
+// mapping lives here and nowhere else.
+
+func fxContextText(c string) string {
+	switch c {
+	case fx.ContextStrongAppreciation:
+		return "台幣明顯升值"
+	case fx.ContextAppreciation:
+		return "台幣升值"
+	case fx.ContextStable:
+		return "匯率持平"
+	case fx.ContextDepreciation:
+		return "台幣貶值"
+	case fx.ContextStrongDepreciation:
+		return "台幣明顯貶值"
+	default:
+		return "匯率未知"
+	}
+}
+
+func fxContextCSS(c string) string {
+	switch c {
+	case fx.ContextStrongAppreciation, fx.ContextAppreciation:
+		return "fx-appr"
+	case fx.ContextStrongDepreciation, fx.ContextDepreciation:
+		return "fx-depr"
+	default:
+		return ""
+	}
+}
+
 // ── R14 technical (⑯) display helpers ────────────────────────────────────────────
 //
 // These colour a READING, never a recommendation. A bearish chip is red because the price is
@@ -632,6 +667,14 @@ type GuardrailViewOptions struct {
 	// touches score / action / probability / sorting / stop / WatchAction. When false the
 	// section is entirely absent (byte-identical output).
 	ShowCandlestick bool
+
+	// FX is the USD/TWD market context for this scan, or nil when the archive is absent or
+	// the research layer is off. It rides on this struct rather than becoming an eleventh
+	// Generate parameter: the signature already carries nine, and this struct is already the
+	// per-run display context (it holds live threshold values, not only flags).
+	//
+	// Market-level, so it renders ONCE in the header — never per stock.
+	FX *fx.Metrics
 
 	// ShowTechnicalIndicators gates the report ⑯ "技術指標" section (R14). Display-only, and
 	// independent of whether the indicators were COMPUTED: the scanner can have R14 on,
@@ -900,6 +943,33 @@ func (r *Report) Generate(
 		// R14 technical display helpers. techOK is what keeps a non-OK indicator from
 		// rendering as a row of zeros: the section prints its Status instead, so "not
 		// enough history" never looks like "ADX is 0".
+		// USD/TWD helpers. The colour follows the CURRENCY, not the quote: USDTWD rising
+		// means TWD weakened, which is why fxCSS inverts the sign of the change.
+		"fxOK":      func(s fx.Status) bool { return s.OK() },
+		"fxWindows": func() map[int]string { return map[int]string{1: "1D", 5: "5D", 20: "20D"} },
+		"fxChange": func(m *fx.Metrics, w int) float64 {
+			v, _ := m.Change(w)
+			return v
+		},
+		"fxPct": func(m *fx.Metrics, w int) string {
+			v, ok := m.Change(w)
+			if !ok {
+				return "—"
+			}
+			return fmt.Sprintf("%+.2f%%", v)
+		},
+		"fxCSS": func(chg float64) string {
+			switch {
+			case chg > 0:
+				return "fx-weak" // USDTWD up = TWD weaker
+			case chg < 0:
+				return "fx-strong"
+			default:
+				return ""
+			}
+		},
+		"fxCtxCSS":        fxContextCSS,
+		"fxCtxText":       fxContextText,
 		"techOK":          func(s technical.Status) bool { return s.OK() },
 		"techDirCSS":      techDirCSS,
 		"techStrengthCSS": techStrengthCSS,
@@ -1651,6 +1721,20 @@ tr:hover td{background:#0f1d30}
 .pv-up-vol-down{color:#fbbf24}
 .pv-down-vol-up{color:#f87171;font-weight:600}
 .pv-down-vol-down{color:#64748b}
+{{ if .GV.FX }}
+/* USD/TWD 市場環境列：市場級資訊，整份報告只出現一次 */
+.fx-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 14px;padding:6px 12px;
+  background:#0c1220;border:1px solid #1e3a5f;border-radius:8px;font-size:.75rem;color:#cbd5e1}
+.fx-bar .fx-label{color:#64748b;letter-spacing:.06em}
+.fx-bar .fx-sep{color:#334155}
+.fx-bar .fx-chg{color:#94a3b8}
+.fx-bar .fx-chg.fx-weak{color:#fca5a5}
+.fx-bar .fx-chg.fx-strong{color:#86efac}
+.fx-bar .fx-ctx{padding:1px 8px;border-radius:5px;border:1px solid #334155;background:#111827;font-weight:600}
+.fx-bar .fx-ctx.fx-appr{border-color:#14532d;background:#0b1f17;color:#86efac}
+.fx-bar .fx-ctx.fx-depr{border-color:#7f1d1d;background:#2a1414;color:#fca5a5}
+.fx-bar .fx-note{color:#64748b;font-size:.68rem;margin-left:auto}
+{{ end }}
 /* 平盤：既不是漲也不是跌，用中性色，不得沿用跌的顏色 */
 .pv-flat-vol-up{color:#c4b5fd;font-weight:600}
 .pv-flat-vol-down{color:#94a3b8}
@@ -1843,6 +1927,17 @@ th.rotscore{min-width:120px}
 <body>
 <div class="container">
 <h1>📡 股票雷達<small>{{ .Date }} 盤後分析</small></h1>
+{{ with .GV.FX }}{{ $m := . }}{{ if fxOK .Status }}
+<div class="fx-bar">
+  <span class="fx-label">USD/TWD</span>
+  <b>{{ printf "%.3f" .Close }}</b>
+  <span class="fx-sep">|</span>
+  {{ range $w, $lbl := fxWindows }}<span class="fx-chg {{ fxCSS (fxChange $m $w) }}">{{ $lbl }} {{ fxPct $m $w }}</span>{{ end }}
+  <span class="fx-sep">|</span>
+  <span class="fx-ctx {{ fxCtxCSS .Context }}">{{ fxCtxText .Context }}</span>
+  <span class="fx-note">依 {{ .FXDate }} 收盤（FX 日收在台北隔日清晨，故不使用當日）· 研究用，不影響任何評分</span>
+</div>
+{{ end }}{{ end }}
 
 <div class="tabs">
   <button class="tab-btn active" onclick="tab(event,'positions')">💼 持倉 ({{ len .Portfolio }})</button>
