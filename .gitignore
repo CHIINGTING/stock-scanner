@@ -17,7 +17,6 @@ data/official/
 data/research/*.db
 data/research/*.db-wal
 data/research/*.db-shm
-/index.html
 /stocks.yaml
 
 # reports/ 與 docs/ 現在納入版控，但那是為了保存「無法重建」的東西：
