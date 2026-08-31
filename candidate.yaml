@@ -1,0 +1,25 @@
+# Candidate Research Universe（R13-M4）
+#
+# 這是「人工挑選、值得持續研究」的股票清單，與 stocks.yaml 是兩個獨立的 universe：
+#
+#   stocks.yaml  positions = 真實部位；watchlist = 每次掃描重建的機器快照
+#   candidate.yaml         = 你決定要一直看的股票，掃描沒選中也不會消失
+#
+# 掃描器完全不讀這個檔案。這裡放什麼都不會影響 BUY/WATCH/SELL、RocketScore 或排序。
+#
+# 只有兩個欄位：
+#   symbol  必填，canonical ticker（2330.TW 上市 / 6488.TWO 上櫃）
+#   note    選填，給人看的備註，不進任何計算
+#
+# 順序會被保留 —— 那是你的優先順序，工具不會重排。
+# 這個檔案是唯讀的：沒有任何指令會自動改寫它。
+
+candidates:
+  - symbol: "2330.TW"
+    note: "AI 半導體核心"
+
+  - symbol: "2327.TW"
+    note: "AI server 被動元件"
+
+  - symbol: "6488.TWO"
+    note: "上櫃研究對象"
