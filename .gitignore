@@ -27,3 +27,6 @@ reports/report_*.html
 reports/signal_validation_*.html
 reports/*.csv
 reports/*/
+
+# 當沖 (day-trading) archive — 約 145 MB/2年，與 .cache 同理不進 git
+data/daytrading/
