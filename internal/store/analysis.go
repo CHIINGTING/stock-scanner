@@ -182,11 +182,11 @@ func (r *AnalysisRepo) SaveAgentAnalysis(ctx context.Context, a AgentAnalysis) (
 	res, err := r.s.db.ExecContext(ctx, `
 		INSERT INTO agent_analysis
 			(analysis_run_id, agent, verdict, score, confidence, reasoning, model, status,
-			 latency_ms, tokens, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 latency_ms, tokens, output_json, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		a.AnalysisRunID, a.Agent, a.Verdict, nullFloat(a.Score), nullFloat(a.Confidence),
 		a.Reasoning, a.Model, a.Status, nullInt64(a.LatencyMs), nullInt(a.Tokens),
-		formatTime(a.CreatedAt))
+		a.OutputJSON, formatTime(a.CreatedAt))
 	if err != nil {
 		return AgentAnalysis{}, fmt.Errorf("store: insert %s analysis for run %d: %w",
 			a.Agent, a.AnalysisRunID, err)
@@ -200,7 +200,7 @@ func (r *AnalysisRepo) SaveAgentAnalysis(ctx context.Context, a AgentAnalysis) (
 }
 
 const agentCols = `id, analysis_run_id, agent, verdict, score, confidence, reasoning,
-	model, status, latency_ms, tokens, created_at`
+	model, status, latency_ms, tokens, output_json, created_at`
 
 // AgentAnalysesByRun returns every agent's verdict from ONE execution, ordered by agent.
 //
@@ -219,7 +219,7 @@ func (r *AnalysisRepo) AgentAnalysesByRun(ctx context.Context, analysisRunID int
 func (r *AnalysisRepo) AgentAnalysesBySnapshot(ctx context.Context, snapshotID int64) ([]AgentAnalysis, error) {
 	return r.queryAgents(ctx, `
 		SELECT a.id, a.analysis_run_id, a.agent, a.verdict, a.score, a.confidence, a.reasoning,
-		       a.model, a.status, a.latency_ms, a.tokens, a.created_at
+		       a.model, a.status, a.latency_ms, a.tokens, a.output_json, a.created_at
 		FROM agent_analysis a
 		JOIN analysis_runs r ON r.id = a.analysis_run_id
 		WHERE r.stock_snapshot_id = ?
@@ -244,7 +244,8 @@ func (r *AnalysisRepo) queryAgents(ctx context.Context, q string, args ...any) (
 			createdAt string
 		)
 		if err := rows.Scan(&a.ID, &a.AnalysisRunID, &a.Agent, &a.Verdict, &score, &conf,
-			&a.Reasoning, &a.Model, &a.Status, &latency, &tokens, &createdAt); err != nil {
+			&a.Reasoning, &a.Model, &a.Status, &latency, &tokens, &a.OutputJSON,
+			&createdAt); err != nil {
 			return nil, fmt.Errorf("store: scan agent analysis: %w", err)
 		}
 		if a.CreatedAt, err = parseTime(createdAt); err != nil {

@@ -112,11 +112,17 @@ type Evidence struct {
 	SectorFlow  string `json:"sector_flow,omitempty"`
 	SectorStage string `json:"sector_stage,omitempty"`
 
-	// Institutional lines, present only when the institution layer is enabled and had data.
+	// InstitutionalStatus is AVAILABLE / UNAVAILABLE. It is sent even when unavailable,
+	// because "we have no chip data" is a different fact from "the institutions were flat",
+	// and an omitted field would let the model treat the first as the second.
+	InstitutionalStatus string `json:"institutional_status,omitempty"`
+	// Institutional lines, present only when the layer had data AND a leg was non-flat.
 	Institutional []string `json:"institutional,omitempty"`
 
-	MarketRegime string  `json:"market_regime,omitempty"`
-	MarketScore  float64 `json:"market_score,omitempty"`
+	// MarketDataStatus is AVAILABLE / UNAVAILABLE, sent either way for the same reason.
+	MarketDataStatus string  `json:"market_data_status,omitempty"`
+	MarketRegime     string  `json:"market_regime,omitempty"`
+	MarketScore      float64 `json:"market_score,omitempty"`
 
 	RiskLabel   string   `json:"risk_label,omitempty"`
 	RiskWarning string   `json:"risk_warning,omitempty"`

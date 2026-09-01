@@ -9,7 +9,7 @@ import (
 // SchemaVersion is the highest migration this build knows how to apply. A database
 // migrated PAST this version is refused rather than used: an older binary silently
 // writing into a newer schema is how audit stores quietly lose columns.
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 // migration is one forward-only schema step. There is deliberately no Down: this is an
 // audit store, and the answer to a bad migration is a new forward migration, not an
@@ -200,6 +200,25 @@ var migrations = []migration{
 				first_computed_at TEXT    NOT NULL,
 				last_updated_at   TEXT    NOT NULL
 			)`,
+		},
+	},
+	{
+		version: 2,
+		name:    "agent_output_json",
+		stmts: []string{
+			// R13-M3. `reasoning` holds one agent's prose; the R11 analyst also produces
+			// three DISTINCT LISTS (bull case, bear case, risk flags) plus a summary.
+			// Packing four structured values into the prose column would (a) void that
+			// column's documented meaning, (b) leave them unreadable without a parsing
+			// convention the schema does not state, and (c) make an agent writing genuine
+			// prose indistinguishable from one writing packed JSON. So the structure gets
+			// its own column.
+			//
+			// NOT NULL DEFAULT '' keeps every existing row valid and every existing INSERT
+			// (which does not name this column) working unchanged — the migration is
+			// backward-compatible by construction, and '' means "this agent produced no
+			// structured output", which is different from "{}".
+			`ALTER TABLE agent_analysis ADD COLUMN output_json TEXT NOT NULL DEFAULT ''`,
 		},
 	},
 }

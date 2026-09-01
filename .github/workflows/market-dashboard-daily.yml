@@ -82,7 +82,12 @@ jobs:
           if [ "${{ github.event.inputs.skip_guard }}" = "true" ]; then GUARD=""; fi
 
           set -o pipefail
-          go run ./cmd/market-fetch -date "${{ steps.d.outputs.date }}" $GUARD | tee snapshot.log
+          # -warm-benchmark: the step above cannot supply 0050. `scanner --all` builds its
+          # universe from FetchStockList, which drops every 4-digit code starting with "0"
+          # as an ETF — and the benchmark IS an ETF. On a fresh runner .cache therefore has
+          # every ordinary stock and no benchmark, and the trading-day guard fails with
+          # "0050 not found in .cache" before a snapshot is ever attempted.
+          go run ./cmd/market-fetch -date "${{ steps.d.outputs.date }}" -warm-benchmark $GUARD | tee snapshot.log
 
           if grep -q "No snapshot written" snapshot.log; then
             echo "written=false" >> "$GITHUB_OUTPUT"

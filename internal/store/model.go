@@ -75,6 +75,15 @@ const (
 // a model A/B, a research backtest). Both produce equally real, equally immutable history —
 // the mode is what lets R13-M7 exclude replays from live accuracy statistics, or study them
 // on purpose.
+// Agent names. Defined here, once, so a rename is a compile error rather than a silent
+// split into two populations that group-by no longer joins.
+const (
+	// AgentOpenAIAnalyst is the R11 single-model reading attached by internal/ai. It is an
+	// ANALYST, not a judge: it produces a description, never a BUY/WATCH/SELL, which is why
+	// rows it writes leave Verdict empty.
+	AgentOpenAIAnalyst = "OPENAI_ANALYST"
+)
+
 const (
 	ModeLive   = "LIVE"
 	ModeReplay = "REPLAY"
@@ -259,11 +268,16 @@ type AgentAnalysis struct {
 	Reasoning     string
 	// Model is per agent, because agents may legitimately run on different models within one
 	// run. The prompt-set version that governed them all lives on AnalysisRun.
-	Model     string
-	Status    string
-	LatencyMs *int64
-	Tokens    *int
-	CreatedAt time.Time
+	Model  string
+	Status string
+	// OutputJSON is the agent's STRUCTURED output, when it produced any. Reasoning stays
+	// prose; anything with shape (lists of cases, flags) belongs here, so neither column has
+	// to be parsed to find out what kind of content it holds. Empty means the agent produced
+	// no structured output — which is not the same as "{}".
+	OutputJSON string
+	LatencyMs  *int64
+	Tokens     *int
+	CreatedAt  time.Time
 }
 
 // Decision is one party's conclusion about one stock snapshot.

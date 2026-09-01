@@ -114,6 +114,18 @@ func main() {
 	f := fetcher.New(cfg.Fetcher)
 	s := scanner.New(cfg.Scanner)
 
+	// The market read is loaded ONCE, here, and shared by the AI prompt and the research
+	// record. Two loads could disagree — a snapshot written between them would give the
+	// model one regime and the audit trail another — and the whole point of the record is
+	// that it says what the model actually saw.
+	marketCtx := loadMarketContext(cfg.Research.Defaulted().MarketSnapshotDir,
+		analysisDate.Format("2006-01-02"))
+	if marketCtx.Regime == "" {
+		log.Printf("market: no dashboard snapshot for %s — regime recorded as UNAVAILABLE, "+
+			"not as neutral (run: go run ./cmd/market-fetch -date %s)",
+			analysisDate.Format("2006-01-02"), analysisDate.Format("2006-01-02"))
+	}
+
 	// ── 1. Portfolio & Watchlist ──────────────────────────────────────────────
 	var portfolioResults []scanner.StockAnalysis
 	var watchlistResults []scanner.WatchlistEntry
@@ -231,7 +243,7 @@ func main() {
 		// and sort position is final, so the model is reading a finished verdict rather
 		// than participating in one. Off by default; a missing OPENAI_API_KEY, a timeout,
 		// a 429/5xx or malformed output all leave the scan and the report untouched.
-		attachAI(watchlistResults, cfg.Scanner)
+		attachAI(watchlistResults, cfg.Scanner, marketCtx)
 	}
 
 	// ── 3.6 News / 消息面 (Phase 1) — SHADOW MODE, display/context only ──────────
@@ -301,7 +313,7 @@ func main() {
 	// from — never by re-reading either of them, which would make the store a second
 	// translation of a second source.
 	recordResearch(cfg, marketResults, portfolioResults, watchlistResults, rotationResults,
-		len(marketStocks), analysisDate)
+		len(marketStocks), analysisDate, marketCtx)
 
 	// Publish the latest report as index.html at the repo root so GitHub Pages
 	// serves the newest report at "/".
@@ -401,14 +413,20 @@ func attachInstitution(entries []scanner.WatchlistEntry, wStocks []fetcher.Stock
 // into a per-entry status, and a disabled feature or a missing OPENAI_API_KEY simply leaves
 // the AI field nil. The 60s ceiling bounds the whole stage so a hung endpoint cannot stall a
 // scheduled run — the deterministic report is already complete by this point.
-func attachAI(entries []scanner.WatchlistEntry, sc scanner.Config) {
+func attachAI(entries []scanner.WatchlistEntry, sc scanner.Config, mc research.MarketContext) {
 	if !sc.EnableAI {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(),
 		time.Duration(sc.AI.Defaulted().MaxStocks)*sc.AI.Timeout()+30*time.Second)
 	defer cancel()
-	scanner.AttachAI(ctx, entries, sc.AI, sc.EnableAI, scanner.AIMarketContext{}, log.Printf)
+	// R13-M3: the market read reaches the model. Availability is carried explicitly so a
+	// missing snapshot arrives as "we could not look", never as a neutral market.
+	aiMarket := scanner.AIMarketContext{Available: mc.Regime != "", Regime: mc.Regime}
+	if mc.Score != nil {
+		aiMarket.Score = *mc.Score
+	}
+	scanner.AttachAI(ctx, entries, sc.AI, sc.EnableAI, aiMarket, log.Printf)
 }
 
 // buildAnalysisHistory converts the enriched watchlist into the canonical structured
@@ -520,7 +538,7 @@ func collectNews(sc scanner.Config, reportDir string, sectorList *fetcher.Sector
 // and stepped over; a research store that cannot be written must never cost the user a scan.
 func recordResearch(cfg config, market, portfolio []scanner.StockAnalysis,
 	watchlist []scanner.WatchlistEntry, rotation []scanner.SectorRotation,
-	universeSize int, analysisDate time.Time) {
+	universeSize int, analysisDate time.Time, marketCtx research.MarketContext) {
 
 	if !cfg.Research.Enabled {
 		return
@@ -556,7 +574,7 @@ func recordResearch(cfg config, market, portfolio []scanner.StockAnalysis,
 		Market:       market,
 		Portfolio:    portfolio,
 		Rotation:     rotation,
-		MarketCtx:    loadMarketContext(rc.MarketSnapshotDir, date),
+		MarketCtx:    marketCtx,
 		UniverseSize: universeSize,
 	})
 	if err != nil {
@@ -565,6 +583,23 @@ func recordResearch(cfg config, market, portfolio []scanner.StockAnalysis,
 	}
 	fmt.Printf("       已寫入研究庫 %s（run %s，%d 檔快照 / %d 筆 evidence）\n",
 		rc.Store.Defaulted().Path, res.RunUID, res.Snapshots, res.Evidence)
+
+	// R13-M3: the AI reading, bound to the SAME snapshots the scanner's own decisions were
+	// recorded against. It runs after RecordScan because it needs those snapshot ids —
+	// binding an opinion to the snapshot rather than to a symbol+date is what makes the two
+	// comparable later without a join that could go wrong.
+	//
+	// A failure here is logged and dropped: the scan, the report and the scan record are all
+	// already complete and correct, and losing the AI row must not undo any of them.
+	aiRes, err := rec.RecordAI(context.Background(), res.RunUID, res.WatchlistSnapshots, watchlist)
+	if err != nil {
+		log.Printf("research: AI reading not recorded: %v", err)
+		return
+	}
+	if aiRes.Runs > 0 {
+		fmt.Printf("       已寫入 AI 解讀（run %s，%d 檔 / %d 筆 agent，略過 %d）\n",
+			aiRes.RunUID, aiRes.Runs, aiRes.Agents, aiRes.Skipped)
+	}
 }
 
 // loadMarketContext reads the regime the market dashboard already computed for this date.
