@@ -11,6 +11,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/analysishistory"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/fundamental"
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/macro"
@@ -21,6 +22,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/report"
 	"github.com/deep-huang/stock-scanner/internal/research"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
+	"github.com/deep-huang/stock-scanner/internal/valuation"
 	"gopkg.in/yaml.v3"
 )
 
@@ -288,7 +290,19 @@ func main() {
 		}
 	}
 
+	// Per-stock research reads for THIS report's date. LoadAsOf, not "the newest archive":
+	// a report dated in the past must show what was knowable then, or every historical page
+	// silently gains hindsight about earnings that had not been filed yet.
+	//
+	// Archive reads only — no network. The daily producers (fundamental-fetch,
+	// valuation-fetch) are what populate these; a report that fetched would be slow, would
+	// depend on four exchanges being up, and on a historical run would return today's
+	// figures under a past date.
+	fundViews, valViews := loadResearchViews(cfg, watchlistResults, analysisDate)
+
 	gv := report.GuardrailViewOptions{
+		Fundamental:                 fundViews,
+		Valuation:                   valViews,
 		Macro:                       macroCtx,
 		FX:                          fxCtx,
 		Show:                        cfg.Scanner.ShowGuardrailSignals,
@@ -635,6 +649,55 @@ func loadMarketContext(dir, date string) research.MarketContext {
 		Confidence: &confidence,
 		AsOfDate:   snap.Date,
 	}
+}
+
+// loadResearchViews reads the archived fundamental and valuation records for the stocks on
+// the page, as of the report's own date.
+//
+// Absent entries are simply absent: a symbol with nothing archived gets no map entry, and the
+// report renders no section for it. That is different from an archived record whose fields
+// are missing — which does render, saying UNAVAILABLE per field.
+func loadResearchViews(cfg config, entries []scanner.WatchlistEntry, date time.Time) (
+	map[string]*fundamental.View, map[string]*valuation.Valuation) {
+
+	if !cfg.Research.Enabled || len(entries) == 0 {
+		return nil, nil
+	}
+	rc := cfg.Research.Defaulted()
+	asOf := date.Format("2006-01-02")
+	fundSvc := fundamental.NewService(nil, rc.FundamentalDir, nil)
+	valSvc := valuation.NewService(nil, rc.ValuationDir, nil)
+
+	funds := map[string]*fundamental.View{}
+	vals := map[string]*valuation.Valuation{}
+	for i := range entries {
+		code := entries[i].A.Symbol
+		// StockAnalysis carries no market, and the archives are keyed by (code, market). A
+		// listing lives on exactly one exchange, so trying both is two lookups of which at
+		// most one hits — cheaper and more honest than threading a market field through the
+		// report path for this alone.
+		for _, market := range []string{fetcher.MarketTWSE, fetcher.MarketTPEX} {
+			symbol := fetcher.YahooSymbol(code, market)
+			if _, seen := funds[code]; !seen {
+				if v, err := fundSvc.LoadView(asOf, symbol); err == nil &&
+					v.Status != fundamental.Unavailable {
+					vc := v
+					funds[code] = &vc
+				}
+			}
+			if _, seen := vals[code]; !seen {
+				if v, err := valSvc.LoadValuation(asOf, symbol); err == nil &&
+					v.Status != valuation.Unavailable {
+					vc := v
+					vals[code] = &vc
+				}
+			}
+		}
+	}
+	if len(funds) > 0 || len(vals) > 0 {
+		fmt.Printf("       研究資料：基本面 %d 檔、估值 %d 檔（as of %s）\n", len(funds), len(vals), asOf)
+	}
+	return funds, vals
 }
 
 // loadFXContext reads the USD/TWD archive and returns the reading a session on analysisDate
