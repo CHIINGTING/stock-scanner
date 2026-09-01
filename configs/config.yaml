@@ -305,6 +305,7 @@ research:
   enabled: true                                    # 總開關，預設 false
   market_snapshot_dir: "data/market"               # cmd/market-fetch 既有輸出；只讀不算
   fx_dir: "data/fx"                                # cmd/fx-fetch 的 USD/TWD 封存；只讀不抓
+  fundamental_dir: "data/fundamental"              # cmd/fundamental-fetch 的財報封存；只讀不抓
   store:
     path: "data/research/r13.db"                   # SQLite 檔（已在 .gitignore）
     busy_timeout_ms: 5000                          # 等鎖上限（毫秒）

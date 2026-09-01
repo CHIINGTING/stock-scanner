@@ -25,6 +25,10 @@ type Config struct {
 	// side: the scan never fetches a currency, it only reads what acquisition already stored.
 	// Empty → "data/fx".
 	FXDir string `yaml:"fx_dir"`
+	// FundamentalDir is where cmd/fundamental-fetch archives dated MOPS snapshots. Read-only
+	// from every consumer: a research run reads history, it never fetches it.
+	// Empty → "data/fundamental".
+	FundamentalDir string `yaml:"fundamental_dir"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used across this repo.
@@ -35,6 +39,9 @@ func (c Config) Defaulted() Config {
 	}
 	if c.FXDir == "" {
 		c.FXDir = "data/fx"
+	}
+	if c.FundamentalDir == "" {
+		c.FundamentalDir = "data/fundamental"
 	}
 	return c
 }

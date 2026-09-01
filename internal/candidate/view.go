@@ -1,6 +1,11 @@
 package candidate
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/deep-huang/stock-scanner/internal/fundamental"
+)
 
 // The single presentation projection for candidate research.
 //
@@ -58,6 +63,37 @@ type View struct {
 
 	Blocks      []Block
 	DataQuality DataQuality
+
+	// Fundamental is the ACTUAL reported financial picture, already formatted. Every value
+	// here was derived by the fundamental service; this struct only carries strings, so a
+	// renderer has nothing left to compute and no way to compute it differently.
+	Fundamental FundamentalView
+}
+
+// FundamentalView is the presentation projection of reported financial data.
+//
+// Every field is a STRING, and an unavailable metric holds the word rather than a number.
+// That is deliberate: a float64 with a separate status invites a template to print the float
+// and forget the status, and "0.00%" is indistinguishable from a real zero.
+type FundamentalView struct {
+	Status Availability
+	Reason string
+	Source string
+
+	// Period is the human-readable reporting window, e.g. "2026 H1 (累計)" — carrying the
+	// cumulative marker into the label, because a reader who takes it for Q2 alone will halve
+	// every conclusion.
+	Period       string
+	RevenueMonth string
+
+	Revenue         string
+	RevenueYoY      string
+	RevenueMoM      string
+	CumulativeEPS   string
+	GrossMargin     string
+	OperatingMargin string
+	NetMargin       string
+	PublishedAt     string
 }
 
 // BuildViews projects evidence onto views, PRESERVING ORDER.
@@ -92,9 +128,69 @@ func buildView(e Evidence) View {
 		v.ExplosionProb = e.Entry.ExplosionProb
 	}
 
+	v.Fundamental = buildFundamentalView(e.Fundamental)
 	v.Blocks = buildBlocks(e)
 	v.DataQuality = quality(e, v.Blocks)
 	return v
+}
+
+// buildFundamentalView formats a fundamental view. It performs no arithmetic beyond turning
+// a ratio into a percentage for display — every metric arrives already derived.
+func buildFundamentalView(f *fundamental.View) FundamentalView {
+	if f == nil {
+		// nil means the layer was switched off, which is a DECISION and must not read as a
+		// missing feed.
+		return FundamentalView{Status: Disabled}
+	}
+	out := FundamentalView{
+		Status: Availability(f.Status), Reason: f.Reason, Source: f.Source,
+		Revenue: unavailableText, RevenueYoY: unavailableText, RevenueMoM: unavailableText,
+		CumulativeEPS: unavailableText, GrossMargin: unavailableText,
+		OperatingMargin: unavailableText, NetMargin: unavailableText,
+	}
+	if f.Revenue != nil {
+		out.RevenueMonth = fmt.Sprintf("%d-%02d", f.Revenue.Period.Year, f.Revenue.Period.Month)
+		out.Revenue = fmt.Sprintf("%.0f 億", float64(f.Revenue.Revenue)/1e8)
+		out.PublishedAt = f.Revenue.PublishedAt.Format("2006-01-02")
+	}
+	out.RevenueYoY = pct(f.RevenueMetrics.YoY)
+	out.RevenueMoM = pct(f.RevenueMetrics.MoM)
+
+	if f.Financials != nil {
+		p := f.Financials.Period
+		label := fmt.Sprintf("%d Q%d", p.Year, p.Quarter)
+		if p.Cumulative {
+			// The label says so explicitly. This source reports year-to-date, and a reader
+			// who takes "2026 Q2" for three months of activity will be wrong by half.
+			label = fmt.Sprintf("%d 前 %d 季累計", p.Year, p.Quarter)
+		}
+		out.Period = label
+		if f.Financials.CumulativeEPS != nil {
+			out.CumulativeEPS = fmt.Sprintf("%.2f", *f.Financials.CumulativeEPS)
+		}
+		if out.PublishedAt == "" {
+			out.PublishedAt = f.Financials.PublishedAt.Format("2006-01-02")
+		}
+	}
+	out.GrossMargin = pct(f.FinancialMetrics.GrossMargin)
+	out.OperatingMargin = pct(f.FinancialMetrics.OperatingMargin)
+	out.NetMargin = pct(f.FinancialMetrics.NetMargin)
+	return out
+}
+
+// unavailableText is what a missing metric renders as. Never "0", never "-", never "N/A" —
+// each of those can be read as a value.
+const unavailableText = "UNAVAILABLE"
+
+// pct renders a ratio as a percentage, or says why it cannot.
+func pct(m fundamental.Metric) string {
+	if m.Status != fundamental.Available {
+		if m.Reason != "" && strings.HasPrefix(m.Reason, "NOT_MEANINGFUL") {
+			return "NOT_MEANINGFUL"
+		}
+		return unavailableText
+	}
+	return fmt.Sprintf("%+.1f%%", m.Value*100)
 }
 
 // buildBlocks reports each evidence area.
@@ -113,6 +209,7 @@ func buildBlocks(e Evidence) []Block {
 			{Name: "Sector", Status: Unavailable},
 			{Name: "Institution", Status: e.InstitutionStatus},
 			{Name: "News", Status: e.NewsStatus},
+			fundamentalBlock(e.Fundamental),
 			marketBlock(e.Market),
 			fxBlock(e.FX),
 		}
@@ -141,13 +238,33 @@ func buildBlocks(e Evidence) []Block {
 	}
 	blocks = append(blocks, inst)
 
+	fund := Block{Name: "Fundamental", Status: Disabled}
+	if e.Fundamental != nil {
+		fund.Status = Availability(e.Fundamental.Status)
+		if fund.Status == Available || fund.Status == Partial {
+			fund.Detail = e.Fundamental.Source
+		}
+	}
+
 	news := Block{Name: "News", Status: e.NewsStatus}
 	if en.News != nil && en.News.Computed {
 		news.Status = Available
 		news.Detail = fmt.Sprintf("%d 則", len(en.News.StockItems))
 	}
-	blocks = append(blocks, news, marketBlock(e.Market), fxBlock(e.FX))
+	blocks = append(blocks, news, fund, marketBlock(e.Market), fxBlock(e.FX))
 	return blocks
+}
+
+// fundamentalBlock reports the fundamental layer for a stock with no scanner entry.
+func fundamentalBlock(f *fundamental.View) Block {
+	if f == nil {
+		return Block{Name: "Fundamental", Status: Disabled}
+	}
+	b := Block{Name: "Fundamental", Status: Availability(f.Status)}
+	if b.Status == Available || b.Status == Partial {
+		b.Detail = f.Source
+	}
+	return b
 }
 
 func ptrBlock(name string, present bool, detail string) Block {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
+	"github.com/deep-huang/stock-scanner/internal/fundamental"
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
@@ -55,6 +56,11 @@ const (
 	Unavailable Availability = "UNAVAILABLE"
 	Disabled    Availability = "DISABLED"
 	NotWired    Availability = "NOT_WIRED"
+	// Partial is for a layer with more than one half — fundamentals carry monthly revenue
+	// and quarterly statements, published on different schedules — where one arrived and the
+	// other did not. Without it, a company that has reported revenue but not yet filed its
+	// statement would show as having no financial data at all.
+	Partial Availability = "PARTIAL"
 )
 
 // MarketContext is the market read shared by every candidate in one run.
@@ -98,6 +104,11 @@ type Evidence struct {
 	// being off, the snapshot being absent, and a real reading that happens to be zero.
 	InstitutionStatus Availability
 	NewsStatus        Availability
+
+	// Fundamental is the ACTUAL reported financial data, already derived. It comes from the
+	// fundamental service's point-in-time view — the research layer never parses a source
+	// response and never computes a margin of its own.
+	Fundamental *fundamental.View
 }
 
 // Config drives one research run. It carries the SCANNER's config so every feature flag is
@@ -106,9 +117,14 @@ type Config struct {
 	Scanner scanner.Config
 	// ReportDate is the analysis date; snapshots are looked up for it.
 	ReportDate time.Time
-	// MarketSnapshotDir and FXDir point at the existing archives. Empty → the usual defaults.
+	// MarketSnapshotDir, FXDir and FundamentalDir point at the existing archives. Empty →
+	// the usual defaults.
 	MarketSnapshotDir string
 	FXDir             string
+	FundamentalDir    string
+	// EnableFundamental gates the layer. False → DISABLED, which is a different answer from
+	// "enabled but no data": one is a decision, the other is a fact about the archive.
+	EnableFundamental bool
 }
 
 // Resolver turns candidates into evidence.
@@ -138,6 +154,12 @@ func NewResolver(f *fetcher.Fetcher, s *scanner.Scanner, cfg Config, logf func(s
 // be fetched, or has too little history to analyse, appears with a non-OK status rather than
 // disappearing — the human asked about it, so the answer is "we could not", never silence.
 func (r *Resolver) Resolve(list *List, market MarketContext, fxCtx FXContext) []Evidence {
+	return r.ResolveAsOf(list, market, fxCtx, r.Cfg.ReportDate.Format("2006-01-02"))
+}
+
+// ResolveAsOf is Resolve with an explicit point-in-time date for the fundamental archive.
+func (r *Resolver) ResolveAsOf(list *List, market MarketContext, fxCtx FXContext,
+	asOfDate string) []Evidence {
 	if list == nil || len(list.Candidates) == 0 {
 		return nil
 	}
@@ -224,7 +246,32 @@ func (r *Resolver) Resolve(list *List, market MarketContext, fxCtx FXContext) []
 			}
 		}
 	}
+
+	// Fundamentals are attached to EVERY candidate, including ones whose price data failed:
+	// the financial statements come from a different source on a different schedule, and a
+	// Yahoo outage says nothing about whether a company filed its quarterly report.
+	r.attachFundamentals(out, asOfDate)
 	return out
+}
+
+// attachFundamentals reads the archived fundamental view for each candidate.
+//
+// It only READS. cmd/fundamental-fetch produces the archive; a research run never fetches,
+// because a live fetch during a historical run returns TODAY's figures and would label them
+// with a past date — the exact look-ahead the point-in-time archive exists to prevent.
+func (r *Resolver) attachFundamentals(ev []Evidence, asOfDate string) {
+	if !r.Cfg.EnableFundamental {
+		return // Fundamental stays nil; the view reports DISABLED.
+	}
+	svc := fundamental.NewService(nil, r.Cfg.FundamentalDir, r.Logf)
+	for i := range ev {
+		v, err := svc.LoadView(asOfDate, ev[i].Candidate.CanonicalSymbol())
+		if err != nil {
+			r.Logf("candidate: fundamentals for %s: %v", ev[i].Candidate.CanonicalSymbol(), err)
+		}
+		vc := v
+		ev[i].Fundamental = &vc
+	}
 }
 
 // attachInstitution runs the existing institutional pass and reports what it could do.

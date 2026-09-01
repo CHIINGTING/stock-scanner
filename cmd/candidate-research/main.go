@@ -75,7 +75,14 @@ func main() {
 	res := candidate.NewResolver(
 		fetcher.New(cfg.Fetcher),
 		scanner.New(cfg.Scanner),
-		candidate.Config{Scanner: cfg.Scanner, ReportDate: date},
+		candidate.Config{
+			Scanner: cfg.Scanner, ReportDate: date,
+			FundamentalDir: rc.FundamentalDir,
+			// Enabled whenever the archive is configured. This command is opt-in and has no
+			// scanner side effects, so gating it behind a second flag would only add a way
+			// to be surprised by an empty section.
+			EnableFundamental: true,
+		},
 		log.Printf,
 	)
 

@@ -30,3 +30,7 @@ reports/*/
 
 # 當沖 (day-trading) archive — 約 145 MB/2年，與 .cache 同理不進 git
 data/daytrading/
+
+# R13-M5 財報封存 —— 每日一目錄的 MOPS snapshot，是 point-in-time 歷史的來源。
+# 與 data/market 同理納入版控（每檔約 1KB，累積很慢），但 tmp 檔排除。
+data/fundamental/**/*.tmp

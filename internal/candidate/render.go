@@ -67,5 +67,41 @@ func renderOne(w io.Writer, v View) {
 		}
 		fmt.Fprintln(w, strings.TrimRight(line, " "))
 	}
+	renderFundamental(w, v.Fundamental)
 	fmt.Fprintf(w, "  %-17s %s\n", "Data Quality:", v.DataQuality)
+}
+
+// renderFundamental prints the ACTUAL reported financials.
+//
+// Every line is already a string from the view — this function does no arithmetic, which is
+// what stops the CLI and any future HTML page from computing a margin two different ways.
+func renderFundamental(w io.Writer, f FundamentalView) {
+	fmt.Fprintf(w, "\n  Fundamentals (Actual)\n")
+	fmt.Fprintf(w, "    %-15s %s\n", "Status:", f.Status)
+	if f.Status != Available && f.Status != Partial {
+		if f.Reason != "" {
+			fmt.Fprintf(w, "    %-15s %s\n", "Reason:", f.Reason)
+		}
+		return
+	}
+	if f.RevenueMonth != "" {
+		fmt.Fprintf(w, "    %-15s %s\n", "Revenue Month:", f.RevenueMonth)
+	}
+	fmt.Fprintf(w, "    %-15s %s\n", "Revenue:", f.Revenue)
+	fmt.Fprintf(w, "    %-15s %s\n", "Revenue YoY:", f.RevenueYoY)
+	fmt.Fprintf(w, "    %-15s %s\n", "Revenue MoM:", f.RevenueMoM)
+	if f.Period != "" {
+		// The period label carries the cumulative marker, because this source reports
+		// year-to-date and a reader who takes it for one quarter will be wrong by half.
+		fmt.Fprintf(w, "    %-15s %s\n", "Period:", f.Period)
+		fmt.Fprintf(w, "    %-15s %s\n", "累計 EPS:", f.CumulativeEPS)
+	}
+	fmt.Fprintf(w, "    %-15s %s\n", "Gross Margin:", f.GrossMargin)
+	fmt.Fprintf(w, "    %-15s %s\n", "Op Margin:", f.OperatingMargin)
+	if f.PublishedAt != "" {
+		fmt.Fprintf(w, "    %-15s %s\n", "Published:", f.PublishedAt)
+	}
+	if f.Source != "" {
+		fmt.Fprintf(w, "    %-15s %s\n", "Source:", f.Source)
+	}
 }
