@@ -155,6 +155,17 @@ jobs:
         if: steps.snap.outputs.written == 'true'
         run: go run ./cmd/valuation-fetch -candidates candidate.yaml
 
+      # Market-wide, so it reads no candidate list and its cost does not change with the
+      # universe: four requests, one snapshot. Gated on the trading day like its siblings —
+      # not because the sources close, but because a snapshot the rest of the pipeline will
+      # not consume is an archive entry with no reader.
+      #
+      # Archived BEFORE the commit step so the day's macro view lands in the same commit as
+      # the market, fundamental and valuation archives.
+      - name: Archive macro
+        if: steps.snap.outputs.written == 'true'
+        run: go run ./cmd/macro-fetch
+
       - name: Commit snapshot
         if: steps.snap.outputs.written == 'true'
         run: |
@@ -170,7 +181,7 @@ jobs:
           # untouched — which is the point. A P/E history that overwrote itself would be a
           # single observation wearing a series' clothes.
           git add data/market/market_${{ steps.d.outputs.date }}.json
-          git add data/fundamental data/valuation
+          git add data/fundamental data/valuation data/macro
           if git diff --cached --quiet; then
             echo "Nothing changed — nothing to commit (re-running a date is idempotent)."
             exit 0

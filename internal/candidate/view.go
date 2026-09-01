@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/deep-huang/stock-scanner/internal/fundamental"
+	"github.com/deep-huang/stock-scanner/internal/macro"
 	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
 
@@ -70,6 +71,11 @@ type View struct {
 	// renderer has nothing left to compute and no way to compute it differently.
 	Fundamental FundamentalView
 	Valuation   ValuationView
+	// Macro is the shared market-wide context, already interpreted. The view carries the
+	// domain's Research directly: it is already presentation-safe (states are strings,
+	// missing values are nil) and re-projecting it would be a second place for "elevated"
+	// to be defined.
+	Macro *macro.Research
 }
 
 // ValuationView is the presentation projection of the price-relative measures.
@@ -161,6 +167,7 @@ func buildView(e Evidence) View {
 
 	v.Fundamental = buildFundamentalView(e.Fundamental)
 	v.Valuation = buildValuationView(e.Valuation)
+	v.Macro = e.Macro
 	v.Blocks = buildBlocks(e)
 	v.DataQuality = quality(e, v.Blocks)
 	return v
@@ -323,6 +330,14 @@ func buildBlocks(e Evidence) []Block {
 		}
 	}
 
+	mac := Block{Name: "Macro", Status: Disabled}
+	if e.Macro != nil {
+		mac.Status = Availability(e.Macro.Status)
+		if mac.Status == Available || mac.Status == Partial {
+			mac.Detail = "NY Fed · Treasury · BLS · CBOE"
+		}
+	}
+
 	val := Block{Name: "Valuation", Status: Disabled}
 	if e.Valuation != nil {
 		val.Status = Availability(e.Valuation.Status)
@@ -336,7 +351,7 @@ func buildBlocks(e Evidence) []Block {
 		news.Status = Available
 		news.Detail = fmt.Sprintf("%d 則", len(en.News.StockItems))
 	}
-	blocks = append(blocks, news, fund, val, marketBlock(e.Market), fxBlock(e.FX))
+	blocks = append(blocks, news, fund, val, marketBlock(e.Market), fxBlock(e.FX), mac)
 	return blocks
 }
 

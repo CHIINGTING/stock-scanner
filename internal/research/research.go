@@ -33,6 +33,9 @@ type Config struct {
 	// ratios. Read-only from every consumer, same as the others.
 	// Empty → "data/valuation".
 	ValuationDir string `yaml:"valuation_dir"`
+	// MacroDir is where cmd/macro-fetch archives the point-in-time macro view.
+	// Empty → "data/macro".
+	MacroDir string `yaml:"macro_dir"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used across this repo.
@@ -49,6 +52,9 @@ func (c Config) Defaulted() Config {
 	}
 	if c.ValuationDir == "" {
 		c.ValuationDir = "data/valuation"
+	}
+	if c.MacroDir == "" {
+		c.MacroDir = "data/macro"
 	}
 	return c
 }

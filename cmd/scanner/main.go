@@ -13,6 +13,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
+	"github.com/deep-huang/stock-scanner/internal/macro"
 	marketservice "github.com/deep-huang/stock-scanner/internal/market/service"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/news/socialworkerdaily"
@@ -273,7 +274,22 @@ func main() {
 		fxCtx = loadFXContext(cfg.Research.Defaulted().FXDir, analysisDate)
 	}
 
+	// The macro view for THIS report's date. LoadAsOf, not "the newest file": a report dated
+	// in the past must show what was knowable then, or every historical page silently gains
+	// hindsight.
+	var macroCtx *macro.Research
+	if cfg.Research.Enabled {
+		if snap, err := macro.LoadAsOf(cfg.Research.Defaulted().MacroDir,
+			analysisDate.Format("2006-01-02")); err != nil {
+			log.Printf("macro: %v", err)
+		} else if snap != nil {
+			r := macro.Interpret(snap, analysisDate.Format("2006-01-02"))
+			macroCtx = &r
+		}
+	}
+
 	gv := report.GuardrailViewOptions{
+		Macro:                       macroCtx,
 		FX:                          fxCtx,
 		Show:                        cfg.Scanner.ShowGuardrailSignals,
 		GuardrailScoringEnabled:     cfg.Scanner.EnableSignalGuardrailScoring,

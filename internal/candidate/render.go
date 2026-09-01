@@ -1,9 +1,12 @@
 package candidate
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/deep-huang/stock-scanner/internal/macro"
 )
 
 // Text rendering for the CLI.
@@ -69,6 +72,7 @@ func renderOne(w io.Writer, v View) {
 	}
 	renderFundamental(w, v.Fundamental)
 	renderValuation(w, v.Valuation)
+	renderMacro(w, v.Macro)
 	fmt.Fprintf(w, "  %-17s %s\n", "Data Quality:", v.DataQuality)
 }
 
@@ -142,5 +146,24 @@ func renderValuation(w io.Writer, v ValuationView) {
 	fmt.Fprintf(w, "    %-19s %s\n", "Fair Value:", v.FairValue)
 	if v.Source != "" {
 		fmt.Fprintf(w, "    %-19s %s\n", "Source:", v.Source)
+	}
+}
+
+// renderMacro prints the shared market-wide context.
+//
+// It delegates to the macro package's own renderer, which is the only place that knows how a
+// state is spelled. A second formatter here would eventually disagree with it about what
+// "elevated" or "stale" looks like.
+func renderMacro(w io.Writer, r *macro.Research) {
+	fmt.Fprintf(w, "\n  Macro (market-wide)\n")
+	if r == nil {
+		fmt.Fprintf(w, "    %-15s %s\n", "Status:", Disabled)
+		return
+	}
+	fmt.Fprintf(w, "    %-15s %s\n", "Status:", r.Status)
+	var buf bytes.Buffer
+	macro.RenderText(&buf, *r)
+	for _, ln := range strings.Split(strings.TrimRight(buf.String(), "\n"), "\n") {
+		fmt.Fprintf(w, "    %s\n", ln)
 	}
 }

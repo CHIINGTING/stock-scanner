@@ -84,6 +84,8 @@ func main() {
 			EnableFundamental: true,
 			ValuationDir:      rc.ValuationDir,
 			EnableValuation:   true,
+			MacroDir:          rc.MacroDir,
+			EnableMacro:       true,
 		},
 		log.Printf,
 	)

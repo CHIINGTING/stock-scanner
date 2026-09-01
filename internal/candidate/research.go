@@ -8,6 +8,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fundamental"
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
+	"github.com/deep-huang/stock-scanner/internal/macro"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
@@ -116,6 +117,11 @@ type Evidence struct {
 	// authorized forecast source exists — the valuation reports that as a status, not as a
 	// gap the reader has to notice.
 	Valuation *valuation.Valuation
+
+	// Macro is the market-wide monetary, rate, inflation, labour and volatility picture. It
+	// is a POINTER SHARED by every candidate in a run: the Fed's rate is the same fact for
+	// every stock, and loading it per candidate would be a hundred reads of one file.
+	Macro *macro.Research
 }
 
 // Config drives one research run. It carries the SCANNER's config so every feature flag is
@@ -130,10 +136,12 @@ type Config struct {
 	FXDir             string
 	FundamentalDir    string
 	ValuationDir      string
+	MacroDir          string
 	// EnableFundamental gates the layer. False → DISABLED, which is a different answer from
 	// "enabled but no data": one is a decision, the other is a fact about the archive.
 	EnableFundamental bool
 	EnableValuation   bool
+	EnableMacro       bool
 }
 
 // Resolver turns candidates into evidence.
@@ -261,6 +269,7 @@ func (r *Resolver) ResolveAsOf(list *List, market MarketContext, fxCtx FXContext
 	// Yahoo outage says nothing about whether a company filed its quarterly report.
 	r.attachFundamentals(out, asOfDate)
 	r.attachValuation(out, asOfDate)
+	r.attachMacro(out, asOfDate)
 	return out
 }
 
@@ -301,6 +310,27 @@ func (r *Resolver) attachValuation(ev []Evidence, asOfDate string) {
 		}
 		vc := v
 		ev[i].Valuation = &vc
+	}
+}
+
+// attachMacro loads the market-wide macro view ONCE and shares it.
+//
+// Read-only, like the other archives. A historical run reads what was archived on or before
+// its date; it never fetches, because a live call returns today's Fed rate and would file it
+// under a past date.
+func (r *Resolver) attachMacro(ev []Evidence, asOfDate string) {
+	if !r.Cfg.EnableMacro {
+		return // Macro stays nil; the view reports DISABLED.
+	}
+	snap, err := macro.LoadAsOf(r.Cfg.MacroDir, asOfDate)
+	if err != nil {
+		r.Logf("candidate: macro: %v", err)
+	}
+	// Interpreted once. Every candidate then points at the SAME Research — one read, one
+	// interpretation, and no way for two candidates in one run to disagree about the Fed.
+	res := macro.Interpret(snap, asOfDate)
+	for i := range ev {
+		ev[i].Macro = &res
 	}
 }
 
