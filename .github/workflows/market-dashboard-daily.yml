@@ -130,18 +130,52 @@ jobs:
       # needed. A snapshot is ~4 KB, so a year of daily history is about 1 MB — small enough
       # that the simplicity is worth more than an artifact store the analysis code would then
       # have to learn to read.
+      # ── Research archives (R13-M5 / M6) ──────────────────────────────────────────
+      #
+      # Both commands read candidate.yaml for their universe and issue TWO bulk requests per
+      # market — the MOPS and ratio datasets each return every listed company in one response
+      # — so this costs four requests regardless of how many candidates there are.
+      #
+      # Gated on the trading-day flag for a reason beyond politeness: the exchanges publish
+      # nothing new on a closed day, so fetching then would archive a session that is already
+      # archived and count it twice in the P/E distribution.
+      #
+      # Both exit 0 on a per-symbol failure and non-zero only on a broken candidate.yaml, so
+      # they are called plainly. No `|| true`: a malformed universe file SHOULD stop the run
+      # rather than quietly produce an empty archive every day.
+      - name: Archive fundamentals
+        if: steps.snap.outputs.written == 'true'
+        run: go run ./cmd/fundamental-fetch -candidates candidate.yaml
+
+      # This one must run EVERY trading day, and skipping it when yesterday's file exists
+      # would defeat its purpose: the exchanges expose no historical P/E endpoint, so the
+      # daily archive IS the history. Twenty-odd observations are what turn a single ratio
+      # into a distribution with a median and a percentile.
+      - name: Archive valuation ratios
+        if: steps.snap.outputs.written == 'true'
+        run: go run ./cmd/valuation-fetch -candidates candidate.yaml
+
       - name: Commit snapshot
         if: steps.snap.outputs.written == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # The whole directories rather than one dated path: the research archives name
+          # their folder after the OBSERVATION date, which the runner derives itself and
+          # which need not equal the Taipei trading date resolved above. Adding the trees
+          # avoids encoding that relationship in two places.
+          #
+          # `git add` never rewrites an existing file, so yesterday's dated folders are
+          # untouched — which is the point. A P/E history that overwrote itself would be a
+          # single observation wearing a series' clothes.
           git add data/market/market_${{ steps.d.outputs.date }}.json
+          git add data/fundamental data/valuation
           if git diff --cached --quiet; then
-            echo "Snapshot unchanged — nothing to commit (re-running a date is idempotent)."
+            echo "Nothing changed — nothing to commit (re-running a date is idempotent)."
             exit 0
           fi
-          git commit -m "chore(market): snapshot ${{ steps.d.outputs.date }}"
+          git commit -m "chore(market): snapshot ${{ steps.d.outputs.date }} + research archives"
 
           # The hourly scanner workflow may have pushed while this job was running.
           for i in 1 2 3; do
