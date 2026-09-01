@@ -68,6 +68,7 @@ func renderOne(w io.Writer, v View) {
 		fmt.Fprintln(w, strings.TrimRight(line, " "))
 	}
 	renderFundamental(w, v.Fundamental)
+	renderValuation(w, v.Valuation)
 	fmt.Fprintf(w, "  %-17s %s\n", "Data Quality:", v.DataQuality)
 }
 
@@ -103,5 +104,43 @@ func renderFundamental(w io.Writer, f FundamentalView) {
 	}
 	if f.Source != "" {
 		fmt.Fprintf(w, "    %-15s %s\n", "Source:", f.Source)
+	}
+}
+
+// renderValuation prints the price-relative measures.
+//
+// The forward-looking lines print their STATUS rather than a dash. "NOT_IMPLEMENTED" tells a
+// reader there is no source for the number; a dash would leave them wondering whether the
+// computation failed, or whether they were looking at the wrong stock.
+func renderValuation(w io.Writer, v ValuationView) {
+	fmt.Fprintf(w, "\n  Valuation\n")
+	fmt.Fprintf(w, "    %-19s %s\n", "Status:", v.Status)
+	if v.Status == Disabled {
+		return
+	}
+	if v.TrailingDate != "" {
+		fmt.Fprintf(w, "    %-19s %s   (%s)\n", "Trailing P/E:", v.TrailingPE, v.TrailingDate)
+	} else {
+		fmt.Fprintf(w, "    %-19s %s\n", "Trailing P/E:", v.TrailingPE)
+	}
+	fmt.Fprintf(w, "    %-19s %s\n", "P/B:", v.PBRatio)
+	fmt.Fprintf(w, "    %-19s %s\n", "Dividend Yield:", v.DividendYield)
+
+	fmt.Fprintf(w, "    %-19s %s  (%d samples", "Historical P/E:", v.HistoryStatus, v.SampleCount)
+	if v.WindowDays > 0 {
+		fmt.Fprintf(w, ", %dd window", v.WindowDays)
+	}
+	fmt.Fprintln(w, ")")
+	if v.HistoryStatus == Available {
+		fmt.Fprintf(w, "      %-17s %s\n", "Median:", v.MedianPE)
+		fmt.Fprintf(w, "      %-17s %s / %s\n", "P25 / P75:", v.P25PE, v.P75PE)
+		fmt.Fprintf(w, "      %-17s %s\n", "Current percentile:", v.Percentile)
+	}
+
+	fmt.Fprintf(w, "    %-19s %s\n", "Forward P/E:", v.ForwardPE)
+	fmt.Fprintf(w, "    %-19s %s\n", "PEG:", v.PEG)
+	fmt.Fprintf(w, "    %-19s %s\n", "Fair Value:", v.FairValue)
+	if v.Source != "" {
+		fmt.Fprintf(w, "    %-19s %s\n", "Source:", v.Source)
 	}
 }

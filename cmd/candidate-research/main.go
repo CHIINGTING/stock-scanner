@@ -82,6 +82,8 @@ func main() {
 			// scanner side effects, so gating it behind a second flag would only add a way
 			// to be surprised by an empty section.
 			EnableFundamental: true,
+			ValuationDir:      rc.ValuationDir,
+			EnableValuation:   true,
 		},
 		log.Printf,
 	)

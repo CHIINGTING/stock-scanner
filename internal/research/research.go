@@ -29,6 +29,10 @@ type Config struct {
 	// from every consumer: a research run reads history, it never fetches it.
 	// Empty → "data/fundamental".
 	FundamentalDir string `yaml:"fundamental_dir"`
+	// ValuationDir is where cmd/valuation-fetch archives the exchanges' published price
+	// ratios. Read-only from every consumer, same as the others.
+	// Empty → "data/valuation".
+	ValuationDir string `yaml:"valuation_dir"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used across this repo.
@@ -42,6 +46,9 @@ func (c Config) Defaulted() Config {
 	}
 	if c.FundamentalDir == "" {
 		c.FundamentalDir = "data/fundamental"
+	}
+	if c.ValuationDir == "" {
+		c.ValuationDir = "data/valuation"
 	}
 	return c
 }

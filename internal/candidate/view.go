@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/deep-huang/stock-scanner/internal/fundamental"
+	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
 
 // The single presentation projection for candidate research.
@@ -68,6 +69,36 @@ type View struct {
 	// here was derived by the fundamental service; this struct only carries strings, so a
 	// renderer has nothing left to compute and no way to compute it differently.
 	Fundamental FundamentalView
+	Valuation   ValuationView
+}
+
+// ValuationView is the presentation projection of the price-relative measures.
+//
+// Strings throughout, for the same reason as FundamentalView: a number with a separate status
+// invites a template to print the number and forget the status.
+type ValuationView struct {
+	Status Availability
+	Source string
+
+	TrailingPE    string
+	TrailingDate  string
+	PBRatio       string
+	DividendYield string
+
+	// Historical distribution.
+	HistoryStatus Availability
+	SampleCount   int
+	WindowDays    int
+	MedianPE      string
+	P25PE         string
+	P75PE         string
+	Percentile    string
+
+	// These have no source. Carried as explicit statuses so a reader learns there is nothing
+	// to wait for, rather than assuming the computation failed.
+	ForwardPE string
+	PEG       string
+	FairValue string
 }
 
 // FundamentalView is the presentation projection of reported financial data.
@@ -129,6 +160,7 @@ func buildView(e Evidence) View {
 	}
 
 	v.Fundamental = buildFundamentalView(e.Fundamental)
+	v.Valuation = buildValuationView(e.Valuation)
 	v.Blocks = buildBlocks(e)
 	v.DataQuality = quality(e, v.Blocks)
 	return v
@@ -175,6 +207,51 @@ func buildFundamentalView(f *fundamental.View) FundamentalView {
 	out.GrossMargin = pct(f.FinancialMetrics.GrossMargin)
 	out.OperatingMargin = pct(f.FinancialMetrics.OperatingMargin)
 	out.NetMargin = pct(f.FinancialMetrics.NetMargin)
+	return out
+}
+
+// buildValuationView formats a valuation. No arithmetic: every number arrives computed.
+func buildValuationView(v *valuation.Valuation) ValuationView {
+	if v == nil {
+		return ValuationView{Status: Disabled}
+	}
+	out := ValuationView{
+		Status: Availability(v.Status), Source: v.Source,
+		TrailingPE: unavailableText, PBRatio: unavailableText, DividendYield: unavailableText,
+		HistoryStatus: Availability(v.HistoricalPE.Status),
+		SampleCount:   v.HistoricalPE.SampleCount,
+		WindowDays:    v.HistoricalPE.WindowDays,
+		MedianPE:      unavailableText, P25PE: unavailableText, P75PE: unavailableText,
+		Percentile: unavailableText,
+		// Rendered as the STATUS itself — "NOT_IMPLEMENTED" tells a reader there is no
+		// source, which "UNAVAILABLE" would not.
+		ForwardPE: string(v.ForwardPEStatus),
+		PEG:       string(v.PEGStatus),
+		FairValue: string(v.FairValueStatus),
+	}
+	out.TrailingDate = v.TrailingDate
+	if v.TrailingPE != nil {
+		out.TrailingPE = fmt.Sprintf("%.2f", *v.TrailingPE)
+	}
+	if v.PBRatio != nil {
+		out.PBRatio = fmt.Sprintf("%.2f", *v.PBRatio)
+	}
+	if v.DividendYield != nil {
+		out.DividendYield = fmt.Sprintf("%.2f%%", *v.DividendYield)
+	}
+	h := v.HistoricalPE
+	if h.Median != nil {
+		out.MedianPE = fmt.Sprintf("%.2f", *h.Median)
+	}
+	if h.P25 != nil {
+		out.P25PE = fmt.Sprintf("%.2f", *h.P25)
+	}
+	if h.P75 != nil {
+		out.P75PE = fmt.Sprintf("%.2f", *h.P75)
+	}
+	if h.CurrentPercentile != nil {
+		out.Percentile = fmt.Sprintf("%.0f%%", *h.CurrentPercentile*100)
+	}
 	return out
 }
 
@@ -246,12 +323,20 @@ func buildBlocks(e Evidence) []Block {
 		}
 	}
 
+	val := Block{Name: "Valuation", Status: Disabled}
+	if e.Valuation != nil {
+		val.Status = Availability(e.Valuation.Status)
+		if val.Status == Available || val.Status == Partial {
+			val.Detail = e.Valuation.Source
+		}
+	}
+
 	news := Block{Name: "News", Status: e.NewsStatus}
 	if en.News != nil && en.News.Computed {
 		news.Status = Available
 		news.Detail = fmt.Sprintf("%d 則", len(en.News.StockItems))
 	}
-	blocks = append(blocks, news, fund, marketBlock(e.Market), fxBlock(e.FX))
+	blocks = append(blocks, news, fund, val, marketBlock(e.Market), fxBlock(e.FX))
 	return blocks
 }
 

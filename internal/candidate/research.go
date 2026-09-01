@@ -9,6 +9,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
+	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
 
 // Candidate research: the same evidence the scanner already computes, assembled for a
@@ -109,6 +110,12 @@ type Evidence struct {
 	// fundamental service's point-in-time view — the research layer never parses a source
 	// response and never computes a margin of its own.
 	Fundamental *fundamental.View
+
+	// Valuation is the price-relative picture: the exchange's own trailing P/E plus its
+	// distribution over the archived history. Forward-looking measures are absent because no
+	// authorized forecast source exists — the valuation reports that as a status, not as a
+	// gap the reader has to notice.
+	Valuation *valuation.Valuation
 }
 
 // Config drives one research run. It carries the SCANNER's config so every feature flag is
@@ -122,9 +129,11 @@ type Config struct {
 	MarketSnapshotDir string
 	FXDir             string
 	FundamentalDir    string
+	ValuationDir      string
 	// EnableFundamental gates the layer. False → DISABLED, which is a different answer from
 	// "enabled but no data": one is a decision, the other is a fact about the archive.
 	EnableFundamental bool
+	EnableValuation   bool
 }
 
 // Resolver turns candidates into evidence.
@@ -251,6 +260,7 @@ func (r *Resolver) ResolveAsOf(list *List, market MarketContext, fxCtx FXContext
 	// the financial statements come from a different source on a different schedule, and a
 	// Yahoo outage says nothing about whether a company filed its quarterly report.
 	r.attachFundamentals(out, asOfDate)
+	r.attachValuation(out, asOfDate)
 	return out
 }
 
@@ -271,6 +281,26 @@ func (r *Resolver) attachFundamentals(ev []Evidence, asOfDate string) {
 		}
 		vc := v
 		ev[i].Fundamental = &vc
+	}
+}
+
+// attachValuation reads the archived price ratios for each candidate.
+//
+// Read-only, like the fundamentals: cmd/valuation-fetch produces the archive. A live fetch
+// during a historical run would return today's P/E and file it under a past date, which is
+// the same look-ahead the dated archive exists to prevent.
+func (r *Resolver) attachValuation(ev []Evidence, asOfDate string) {
+	if !r.Cfg.EnableValuation {
+		return // Valuation stays nil; the view reports DISABLED.
+	}
+	svc := valuation.NewService(nil, r.Cfg.ValuationDir, r.Logf)
+	for i := range ev {
+		v, err := svc.LoadValuation(asOfDate, ev[i].Candidate.CanonicalSymbol())
+		if err != nil {
+			r.Logf("candidate: valuation for %s: %v", ev[i].Candidate.CanonicalSymbol(), err)
+		}
+		vc := v
+		ev[i].Valuation = &vc
 	}
 }
 
