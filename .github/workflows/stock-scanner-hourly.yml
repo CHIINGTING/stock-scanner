@@ -1,9 +1,20 @@
+# ⚠️ 已停用（手動）— 2026-09-02
+#
+# 這個 workflow 目前不會執行。設定與說明全部保留，只是被註解掉：
+#
+#   1. on.schedule  已註解 → 不會自動觸發（否則排程仍會啟動一個什麼都不做的 run）
+#   2. jobs.*.steps 已註解 → 即使手動 workflow_dispatch 也不做任何事
+#
+# 這兩個 workflow 都會 `git push` 回本 repo，所以「跑但不做事」與「不跑」不是同一件事。
+#
+# 要恢復：把下方所有 `#DIS# ` 前綴刪掉即可（只有那個前綴是新加的，其餘一字未改）。
+#
 name: stock-scanner-hourly
 
 on:
-  schedule:
-    # GitHub cron is UTC. Taiwan (UTC+8) 08:30–13:30 on weekdays == UTC 00:30–05:30.
-    - cron: "30 0-5 * * 1-5"
+#DIS#   schedule:
+#DIS#     # GitHub cron is UTC. Taiwan (UTC+8) 08:30–13:30 on weekdays == UTC 00:30–05:30.
+#DIS#     - cron: "30 0-5 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -13,36 +24,39 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 執行內容已停用。下方每一行原封不動，只多了 #DIS# 前綴。
+      - name: Disabled
+        run: echo "::notice::這個 workflow 已被手動停用；見檔案頂端說明。"
+#DIS#       - name: Checkout
+#DIS#         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26"
+#DIS#       - name: Setup Go
+#DIS#         uses: actions/setup-go@v5
+#DIS#         with:
+#DIS#           go-version: "1.26"
 
-      - name: Run scanner (update watchlist)
-        run: |
-          go run ./cmd/scanner run-all \
-            --update-watchlist \
-            --stocks-file stocks.yaml
+#DIS#       - name: Run scanner (update watchlist)
+#DIS#         run: |
+#DIS#           go run ./cmd/scanner run-all \
+#DIS#             --update-watchlist \
+#DIS#             --stocks-file stocks.yaml
 
-      - name: Publish latest report & push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+#DIS#       - name: Publish latest report & push
+#DIS#         run: |
+#DIS#           git config user.name "github-actions[bot]"
+#DIS#           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # The scanner writes index.html (a copy of the latest report) to the
-          # repo root, which GitHub Pages serves at "/".
-          git add stocks.yaml index.html
-          # reports/ is gitignored, so force-add today's HTML report (archive).
-          git add -f reports/report_*.html
-          if git diff --cached --quiet; then
-            echo "No changes — nothing to commit."
-            exit 0
-          fi
-          git commit -m "Update watchlist & publish latest report"
-          git push
+#DIS#           # The scanner writes index.html (a copy of the latest report) to the
+#DIS#           # repo root, which GitHub Pages serves at "/".
+#DIS#           git add stocks.yaml index.html
+#DIS#           # reports/ is gitignored, so force-add today's HTML report (archive).
+#DIS#           git add -f reports/report_*.html
+#DIS#           if git diff --cached --quiet; then
+#DIS#             echo "No changes — nothing to commit."
+#DIS#             exit 0
+#DIS#           fi
+#DIS#           git commit -m "Update watchlist & publish latest report"
+#DIS#           git push
 
-      - name: Run tests
-        run: go test ./...
+#DIS#       - name: Run tests
+#DIS#         run: go test ./...
