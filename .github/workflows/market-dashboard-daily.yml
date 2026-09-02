@@ -1,3 +1,14 @@
+# ⚠️ 已停用（手動）— 2026-09-02
+#
+# 這個 workflow 目前不會執行。設定與說明全部保留，只是被註解掉：
+#
+#   1. on.schedule  已註解 → 不會自動觸發（否則排程仍會啟動一個什麼都不做的 run）
+#   2. jobs.*.steps 已註解 → 即使手動 workflow_dispatch 也不做任何事
+#
+# 這兩個 workflow 都會 `git push` 回本 repo，所以「跑但不做事」與「不跑」不是同一件事。
+#
+# 要恢復：把下方所有 `#DIS# ` 前綴刪掉即可（只有那個前綴是新加的，其餘一字未改）。
+#
 name: market-dashboard-daily
 
 # Builds one Market Dashboard snapshot per Taiwan trading day and commits it, so that real
@@ -9,21 +20,21 @@ name: market-dashboard-daily
 # candlestick, or any ranking. It writes data/market/ and nothing else.
 
 on:
-  schedule:
-    # GitHub cron is UTC; Taiwan is UTC+8 year-round (no DST), so 13:00 UTC is always
-    # 21:00 Taipei. Mon–Fri only; the job itself refuses non-trading days (see below).
-    #
-    # Why 21:00 Taipei rather than straight after the 13:30 close:
-    #   * TWSE BFI82U (foreign cash) is converted using the exchange rate TWSE announces at
-    #     15:30 — its own notes field says so — so it cannot be final before then.
-    #   * TWSE MI_MARGN (margin) depends on broker reporting and publishes later still.
-    #   * TAIFEX institutional futures cover the day session that ends 13:45.
-    #   * The job first refreshes the price cache, which takes ~30 minutes.
-    # Neither exchange documents an exact publication time on its data pages, so the schedule
-    # is deliberately conservative rather than tuned: several hours of margin past the latest
-    # known constraint, while staying on the same calendar day so the snapshot's date label is
-    # unambiguous. A too-early run degrades safely — it does not fabricate (see below).
-    - cron: "0 13 * * 1-5"
+#DIS#   schedule:
+#DIS#     # GitHub cron is UTC; Taiwan is UTC+8 year-round (no DST), so 13:00 UTC is always
+#DIS#     # 21:00 Taipei. Mon–Fri only; the job itself refuses non-trading days (see below).
+#DIS#     #
+#DIS#     # Why 21:00 Taipei rather than straight after the 13:30 close:
+#DIS#     #   * TWSE BFI82U (foreign cash) is converted using the exchange rate TWSE announces at
+#DIS#     #     15:30 — its own notes field says so — so it cannot be final before then.
+#DIS#     #   * TWSE MI_MARGN (margin) depends on broker reporting and publishes later still.
+#DIS#     #   * TAIFEX institutional futures cover the day session that ends 13:45.
+#DIS#     #   * The job first refreshes the price cache, which takes ~30 minutes.
+#DIS#     # Neither exchange documents an exact publication time on its data pages, so the schedule
+#DIS#     # is deliberately conservative rather than tuned: several hours of margin past the latest
+#DIS#     # known constraint, while staying on the same calendar day so the snapshot's date label is
+#DIS#     # unambiguous. A too-early run degrades safely — it does not fabricate (see below).
+#DIS#     - cron: "0 13 * * 1-5"
   workflow_dispatch:
     inputs:
       date:
@@ -48,103 +59,156 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # 執行內容已停用。下方每一行原封不動，只多了 #DIS# 前綴。
+      - name: Disabled
+        run: echo "::notice::這個 workflow 已被手動停用；見檔案頂端說明。"
+#DIS#       - name: Checkout
+#DIS#         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26"
+#DIS#       - name: Setup Go
+#DIS#         uses: actions/setup-go@v5
+#DIS#         with:
+#DIS#           go-version: "1.26"
 
-      - name: Resolve Taipei trading date
-        id: d
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            DATE="${{ github.event.inputs.date }}"
-          else
-            DATE="$(TZ=Asia/Taipei date +%F)"
-          fi
-          echo "date=$DATE" >> "$GITHUB_OUTPUT"
-          echo "Building Market Dashboard for $DATE (Taipei now: $(TZ=Asia/Taipei date '+%F %T'))"
+#DIS#       - name: Resolve Taipei trading date
+#DIS#         id: d
+#DIS#         run: |
+#DIS#           if [ -n "${{ github.event.inputs.date }}" ]; then
+#DIS#             DATE="${{ github.event.inputs.date }}"
+#DIS#           else
+#DIS#             DATE="$(TZ=Asia/Taipei date +%F)"
+#DIS#           fi
+#DIS#           echo "date=$DATE" >> "$GITHUB_OUTPUT"
+#DIS#           echo "Building Market Dashboard for $DATE (Taipei now: $(TZ=Asia/Taipei date '+%F %T'))"
 
-      # The market pipeline needs the benchmark series and the full breadth universe, both of
-      # which live in .cache — which is gitignored and therefore absent on a fresh runner.
-      # The scanner is what populates it. Its own report output is ignored here; this step
-      # exists purely to warm the cache, and it is also what makes the trading-day guard
-      # meaningful (the guard asks whether 0050 actually printed a close).
-      - name: Refresh price cache
-        run: go run ./cmd/scanner -config configs/config.yaml --all
+#DIS#       # The market pipeline needs the benchmark series and the full breadth universe, both of
+#DIS#       # which live in .cache — which is gitignored and therefore absent on a fresh runner.
+#DIS#       # The scanner is what populates it. Its own report output is ignored here; this step
+#DIS#       # exists purely to warm the cache, and it is also what makes the trading-day guard
+#DIS#       # meaningful (the guard asks whether 0050 actually printed a close).
+#DIS#       - name: Refresh price cache
+#DIS#         run: go run ./cmd/scanner -config configs/config.yaml --all
 
-      - name: Build market snapshot
-        id: snap
-        run: |
-          GUARD="-require-trading-day"
-          if [ "${{ github.event.inputs.skip_guard }}" = "true" ]; then GUARD=""; fi
+#DIS#       - name: Build market snapshot
+#DIS#         id: snap
+#DIS#         run: |
+#DIS#           GUARD="-require-trading-day"
+#DIS#           if [ "${{ github.event.inputs.skip_guard }}" = "true" ]; then GUARD=""; fi
 
-          set -o pipefail
-          go run ./cmd/market-fetch -date "${{ steps.d.outputs.date }}" $GUARD | tee snapshot.log
+#DIS#           set -o pipefail
+#DIS#           # -warm-benchmark: the step above cannot supply 0050. `scanner --all` builds its
+#DIS#           # universe from FetchStockList, which drops every 4-digit code starting with "0"
+#DIS#           # as an ETF — and the benchmark IS an ETF. On a fresh runner .cache therefore has
+#DIS#           # every ordinary stock and no benchmark, and the trading-day guard fails with
+#DIS#           # "0050 not found in .cache" before a snapshot is ever attempted.
+#DIS#           go run ./cmd/market-fetch -date "${{ steps.d.outputs.date }}" -warm-benchmark $GUARD | tee snapshot.log
 
-          if grep -q "No snapshot written" snapshot.log; then
-            echo "written=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "written=true" >> "$GITHUB_OUTPUT"
-          fi
+#DIS#           if grep -q "No snapshot written" snapshot.log; then
+#DIS#             echo "written=false" >> "$GITHUB_OUTPUT"
+#DIS#           else
+#DIS#             echo "written=true" >> "$GITHUB_OUTPUT"
+#DIS#           fi
 
-      # Every scheduled weekday run that is not a trading day ends here, having written
-      # nothing. That is a normal outcome, not a failure — Taiwan has ~15 market holidays a
-      # year plus typhoon closures, and none of them should produce a snapshot or a red run.
-      - name: Not a trading day
-        if: steps.snap.outputs.written == 'false'
-        run: |
-          echo "::notice::${{ steps.d.outputs.date }} is not a Taiwan trading day (or the price cache lagged). No snapshot written."
+#DIS#       # Every scheduled weekday run that is not a trading day ends here, having written
+#DIS#       # nothing. That is a normal outcome, not a failure — Taiwan has ~15 market holidays a
+#DIS#       # year plus typhoon closures, and none of them should produce a snapshot or a red run.
+#DIS#       - name: Not a trading day
+#DIS#         if: steps.snap.outputs.written == 'false'
+#DIS#         run: |
+#DIS#           echo "::notice::${{ steps.d.outputs.date }} is not a Taiwan trading day (or the price cache lagged). No snapshot written."
 
-      # Surface a partial day in the run summary. The pipeline's contract is that a dead
-      # exchange leaves its evidence explicitly missing with reduced confidence — never
-      # neutral, and never yesterday's value reused as today's — so a partial snapshot is a
-      # legitimate record. It is worth seeing at a glance, not worth failing over.
-      - name: Flag missing sources
-        if: steps.snap.outputs.written == 'true'
-        run: |
-          if grep -q "missing_evidence=none" snapshot.log; then
-            echo "::notice::All sources present."
-          else
-            echo "::warning::Partial snapshot — $(grep -o 'missing_evidence=.*' snapshot.log)"
-          fi
-          if grep -q "SOURCE_DATE_MISMATCH" snapshot.log; then
-            echo "::warning::A source returned a different trading date than requested; that source was recorded as unavailable rather than accepted."
-          fi
-          {
-            echo "### Market Dashboard — ${{ steps.d.outputs.date }}"
-            echo '```'
-            grep -E "^(requested_date|source=|missing_evidence)" snapshot.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+#DIS#       # Surface a partial day in the run summary. The pipeline's contract is that a dead
+#DIS#       # exchange leaves its evidence explicitly missing with reduced confidence — never
+#DIS#       # neutral, and never yesterday's value reused as today's — so a partial snapshot is a
+#DIS#       # legitimate record. It is worth seeing at a glance, not worth failing over.
+#DIS#       - name: Flag missing sources
+#DIS#         if: steps.snap.outputs.written == 'true'
+#DIS#         run: |
+#DIS#           if grep -q "missing_evidence=none" snapshot.log; then
+#DIS#             echo "::notice::All sources present."
+#DIS#           else
+#DIS#             echo "::warning::Partial snapshot — $(grep -o 'missing_evidence=.*' snapshot.log)"
+#DIS#           fi
+#DIS#           if grep -q "SOURCE_DATE_MISMATCH" snapshot.log; then
+#DIS#             echo "::warning::A source returned a different trading date than requested; that source was recorded as unavailable rather than accepted."
+#DIS#           fi
+#DIS#           {
+#DIS#             echo "### Market Dashboard — ${{ steps.d.outputs.date }}"
+#DIS#             echo '```'
+#DIS#             grep -E "^(requested_date|source=|missing_evidence)" snapshot.log
+#DIS#             echo '```'
+#DIS#           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Persistence: commit the snapshot into the repo, the same mechanism the hourly scanner
-      # workflow uses for its reports. data/market/ is NOT gitignored, so no force-add is
-      # needed. A snapshot is ~4 KB, so a year of daily history is about 1 MB — small enough
-      # that the simplicity is worth more than an artifact store the analysis code would then
-      # have to learn to read.
-      - name: Commit snapshot
-        if: steps.snap.outputs.written == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+#DIS#       # Persistence: commit the snapshot into the repo, the same mechanism the hourly scanner
+#DIS#       # workflow uses for its reports. data/market/ is NOT gitignored, so no force-add is
+#DIS#       # needed. A snapshot is ~4 KB, so a year of daily history is about 1 MB — small enough
+#DIS#       # that the simplicity is worth more than an artifact store the analysis code would then
+#DIS#       # have to learn to read.
+#DIS#       # ── Research archives (R13-M5 / M6) ──────────────────────────────────────────
+#DIS#       #
+#DIS#       # Both commands read candidate.yaml for their universe and issue TWO bulk requests per
+#DIS#       # market — the MOPS and ratio datasets each return every listed company in one response
+#DIS#       # — so this costs four requests regardless of how many candidates there are.
+#DIS#       #
+#DIS#       # Gated on the trading-day flag for a reason beyond politeness: the exchanges publish
+#DIS#       # nothing new on a closed day, so fetching then would archive a session that is already
+#DIS#       # archived and count it twice in the P/E distribution.
+#DIS#       #
+#DIS#       # Both exit 0 on a per-symbol failure and non-zero only on a broken candidate.yaml, so
+#DIS#       # they are called plainly. No `|| true`: a malformed universe file SHOULD stop the run
+#DIS#       # rather than quietly produce an empty archive every day.
+#DIS#       - name: Archive fundamentals
+#DIS#         if: steps.snap.outputs.written == 'true'
+#DIS#         run: go run ./cmd/fundamental-fetch -candidates candidate.yaml
 
-          git add data/market/market_${{ steps.d.outputs.date }}.json
-          if git diff --cached --quiet; then
-            echo "Snapshot unchanged — nothing to commit (re-running a date is idempotent)."
-            exit 0
-          fi
-          git commit -m "chore(market): snapshot ${{ steps.d.outputs.date }}"
+#DIS#       # This one must run EVERY trading day, and skipping it when yesterday's file exists
+#DIS#       # would defeat its purpose: the exchanges expose no historical P/E endpoint, so the
+#DIS#       # daily archive IS the history. Twenty-odd observations are what turn a single ratio
+#DIS#       # into a distribution with a median and a percentile.
+#DIS#       - name: Archive valuation ratios
+#DIS#         if: steps.snap.outputs.written == 'true'
+#DIS#         run: go run ./cmd/valuation-fetch -candidates candidate.yaml
 
-          # The hourly scanner workflow may have pushed while this job was running.
-          for i in 1 2 3; do
-            git pull --rebase --autostash && git push && exit 0
-            echo "push attempt $i failed; retrying"
-            sleep 5
-          done
-          exit 1
+#DIS#       # Market-wide, so it reads no candidate list and its cost does not change with the
+#DIS#       # universe: four requests, one snapshot. Gated on the trading day like its siblings —
+#DIS#       # not because the sources close, but because a snapshot the rest of the pipeline will
+#DIS#       # not consume is an archive entry with no reader.
+#DIS#       #
+#DIS#       # Archived BEFORE the commit step so the day's macro view lands in the same commit as
+#DIS#       # the market, fundamental and valuation archives.
+#DIS#       - name: Archive macro
+#DIS#         if: steps.snap.outputs.written == 'true'
+#DIS#         run: go run ./cmd/macro-fetch
 
-      - name: Run tests
-        run: go test ./...
+#DIS#       - name: Commit snapshot
+#DIS#         if: steps.snap.outputs.written == 'true'
+#DIS#         run: |
+#DIS#           git config user.name "github-actions[bot]"
+#DIS#           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+#DIS#           # The whole directories rather than one dated path: the research archives name
+#DIS#           # their folder after the OBSERVATION date, which the runner derives itself and
+#DIS#           # which need not equal the Taipei trading date resolved above. Adding the trees
+#DIS#           # avoids encoding that relationship in two places.
+#DIS#           #
+#DIS#           # `git add` never rewrites an existing file, so yesterday's dated folders are
+#DIS#           # untouched — which is the point. A P/E history that overwrote itself would be a
+#DIS#           # single observation wearing a series' clothes.
+#DIS#           git add data/market/market_${{ steps.d.outputs.date }}.json
+#DIS#           git add data/fundamental data/valuation data/macro
+#DIS#           if git diff --cached --quiet; then
+#DIS#             echo "Nothing changed — nothing to commit (re-running a date is idempotent)."
+#DIS#             exit 0
+#DIS#           fi
+#DIS#           git commit -m "chore(market): snapshot ${{ steps.d.outputs.date }} + research archives"
+
+#DIS#           # The hourly scanner workflow may have pushed while this job was running.
+#DIS#           for i in 1 2 3; do
+#DIS#             git pull --rebase --autostash && git push && exit 0
+#DIS#             echo "push attempt $i failed; retrying"
+#DIS#             sleep 5
+#DIS#           done
+#DIS#           exit 1
+
+#DIS#       - name: Run tests
+#DIS#         run: go test ./...

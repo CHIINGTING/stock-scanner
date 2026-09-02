@@ -12,11 +12,14 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/candlestick"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
+	"github.com/deep-huang/stock-scanner/internal/fundamental"
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/institution"
+	"github.com/deep-huang/stock-scanner/internal/macro"
 	"github.com/deep-huang/stock-scanner/internal/news"
 	"github.com/deep-huang/stock-scanner/internal/scanner"
 	"github.com/deep-huang/stock-scanner/internal/technical"
+	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
 
 // etfSignalLabel maps an ETF flow signal to a Chinese display label for report ⑨.
@@ -410,6 +413,192 @@ func candleSummaryChip(r *candlestick.Result) string {
 	return fmt.Sprintf("🕯️ %s %s %s", top.Type, candleDirBadge(top.Direction), candleConfPct(top.Confidence))
 }
 
+// ── ⑰ Fundamental / Valuation display helpers ────────────────────────────────────
+//
+// Formatting only. A missing value prints its STATUS, never 0 — a P/E of zero would place a
+// loss-making stock at the cheap end of any comparison, and a revenue of zero would be read
+// as a collapse rather than as an absent filing.
+
+const fvUnavailable = "UNAVAILABLE"
+
+func fvStatusCSS(s string) string {
+	switch s {
+	case "AVAILABLE":
+		return "fv-ok"
+	case "PARTIAL", "INSUFFICIENT_DATA":
+		return "fv-part"
+	default:
+		return "fv-none"
+	}
+}
+
+// fvFmtMoney renders whole TWD as 億, the unit a Taiwanese reader thinks in.
+func fvFmtMoney(m fundamental.Money) string {
+	return fmt.Sprintf("%.0f 億", float64(m)/1e8)
+}
+
+// fvFmtRatio renders a derived metric. The domain stores a RATIO (0.027); the reader sees
+// +2.7%. An unavailable metric shows why rather than a number.
+func fvFmtRatio(m fundamental.Metric) string {
+	if m.Status != fundamental.Available {
+		if strings.HasPrefix(m.Reason, "NOT_MEANINGFUL") {
+			return "NOT_MEANINGFUL"
+		}
+		return fvUnavailable
+	}
+	return fmt.Sprintf("%+.1f%%", m.Value*100)
+}
+
+// fvSignCSS colours a growth figure. Only an AVAILABLE metric gets a colour: tinting an
+// unavailable one green or red would imply a direction that was never measured.
+func fvSignCSS(m fundamental.Metric) string {
+	if m.Status != fundamental.Available {
+		return ""
+	}
+	switch {
+	case m.Value > 0:
+		return "fv-up"
+	case m.Value < 0:
+		return "fv-down"
+	default:
+		return ""
+	}
+}
+
+func fvFmtEPS(v *float64) string {
+	if v == nil {
+		return fvUnavailable
+	}
+	return fmt.Sprintf("%.2f", *v)
+}
+
+// fvFmtPeriod labels a reporting window, and says CUMULATIVE when it is one.
+//
+// This source reports year-to-date, so a period rendered as a bare "Q2" would be read as
+// three months of activity when it is six — and every per-quarter conclusion drawn from it
+// would be wrong by half.
+func fvFmtPeriod(p fundamental.Period) string {
+	if p.Cumulative {
+		return fmt.Sprintf("%d 前%d季累計", p.Year, p.Quarter)
+	}
+	return fmt.Sprintf("%d Q%d", p.Year, p.Quarter)
+}
+
+func fvFmtDate(t time.Time) string {
+	if t.IsZero() {
+		return fvUnavailable
+	}
+	return t.Format("2006-01-02")
+}
+
+func fvFmtNum(v *float64) string {
+	if v == nil {
+		return fvUnavailable
+	}
+	return fmt.Sprintf("%.2f", *v)
+}
+
+func fvFmtPct(v *float64) string {
+	if v == nil {
+		return fvUnavailable
+	}
+	return fmt.Sprintf("%.2f%%", *v)
+}
+
+// fvFmtHist renders the P/E distribution, or says how far the archive still has to go.
+//
+// The sample count travels with the statistic on purpose: a median over four observations and
+// one over four hundred are different claims, and the exchanges publish no historical P/E, so
+// this archive fills one trading day at a time.
+func fvFmtHist(h valuation.HistoricalPEStats) string {
+	if h.Status != valuation.Available {
+		return fmt.Sprintf("%s（%d 筆，需 %d）", h.Status, h.SampleCount,
+			valuation.MinHistoricalPESamples)
+	}
+	pct := fvUnavailable
+	if h.CurrentPercentile != nil {
+		pct = fmt.Sprintf("%.0f%%", *h.CurrentPercentile*100)
+	}
+	med := fvUnavailable
+	if h.Median != nil {
+		med = fmt.Sprintf("%.2f", *h.Median)
+	}
+	return fmt.Sprintf("中位 %s ・ 百分位 %s ・ %d 筆", med, pct, h.SampleCount)
+}
+
+// ── Macro display helpers ────────────────────────────────────────────────────────
+//
+// Formatting only. A missing value prints UNAVAILABLE, never 0 — a zero Fed funds rate is a
+// policy statement, and a zero VIX is not a thing.
+
+const macUnavailable = "UNAVAILABLE"
+
+func macFmtPct(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%.2f%%", *v)
+}
+
+func macFmtNum(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%.2f", *v)
+}
+
+// macFmtPP renders a yield spread. Its unit is percentage POINTS — a difference between two
+// percentages — and printing it with a % sign would invite it to be read as a growth rate.
+func macFmtPP(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%+.2f pp", *v)
+}
+
+func macFmtBps(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%+.0f bps", *v)
+}
+
+// macFmtRatio renders a stored ratio as a percentage: the domain holds 0.027, the reader sees
+// +2.7%.
+func macFmtRatio(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%+.1f%%", *v*100)
+}
+
+// macFmtThousands renders a payroll change, which BLS reports in thousands of persons.
+func macFmtThousands(v *float64) string {
+	if v == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%+.0fK", *v)
+}
+
+func macFmtTargetRange(lo, hi *float64) string {
+	if lo == nil || hi == nil {
+		return macUnavailable
+	}
+	return fmt.Sprintf("%.2f–%.2f%%", *lo, *hi)
+}
+
+// macFmtObserved shows the observation date and marks a stale reading WITHOUT hiding its
+// value — a reader needs both what it was and how old that is.
+func macFmtObserved(date string, f macro.Freshness) string {
+	if date == "" {
+		return macUnavailable
+	}
+	if f == macro.Stale {
+		return date + " STALE"
+	}
+	return date
+}
+
 // ── USD/TWD display helpers ──────────────────────────────────────────────────────
 //
 // The words describe the CURRENCY. USDTWD rising means it takes more TWD to buy one USD,
@@ -675,6 +864,25 @@ type GuardrailViewOptions struct {
 	//
 	// Market-level, so it renders ONCE in the header — never per stock.
 	FX *fx.Metrics
+
+	// Macro is the market-wide monetary picture for this report's date, or nil when no
+	// snapshot was archived by then. Like FX it rides on this struct rather than becoming an
+	// eleventh Generate parameter, and like FX it renders ONCE — the Fed's rate is the same
+	// fact for every stock on the page.
+	//
+	// Already interpreted: every state was decided by internal/macro. The template applies no
+	// threshold of its own, so it cannot disagree with the CLI about what "elevated" means.
+	Macro *macro.Research
+
+	// Fundamental and Valuation are the archived research reads for THIS report's date,
+	// keyed by stock code. Per-stock rather than market-wide, so they are maps: a page
+	// covering a hundred stocks needs a hundred answers, and the assembler has already done
+	// the point-in-time selection for each.
+	//
+	// A symbol absent from either map has nothing archived, which is different from having
+	// archived nothing — the section simply does not render for it.
+	Fundamental map[string]*fundamental.View
+	Valuation   map[string]*valuation.Valuation
 
 	// ShowTechnicalIndicators gates the report ⑯ "技術指標" section (R14). Display-only, and
 	// independent of whether the indicators were COMPUTED: the scanner can have R14 on,
@@ -945,8 +1153,48 @@ func (r *Report) Generate(
 		// enough history" never looks like "ADX is 0".
 		// USD/TWD helpers. The colour follows the CURRENCY, not the quote: USDTWD rising
 		// means TWD weakened, which is why fxCSS inverts the sign of the change.
-		"fxOK":      func(s fx.Status) bool { return s.OK() },
-		"fxWindows": func() map[int]string { return map[int]string{1: "1D", 5: "5D", 20: "20D"} },
+		// Macro helpers. Formatting ONLY — every state arrived already decided by
+		// internal/macro, so the template applies no threshold and cannot drift from the CLI.
+		// ⑰ helpers. Formatting and lookup ONLY — every value arrives already derived by
+		// internal/fundamental or internal/valuation, so this page cannot compute a margin
+		// or a percentile differently from the CLI that shows the same numbers.
+		"fundOf": func(gv GuardrailViewOptions, symbol string) *fundamental.View {
+			return gv.Fundamental[symbol]
+		},
+		"valOf": func(gv GuardrailViewOptions, symbol string) *valuation.Valuation {
+			return gv.Valuation[symbol]
+		},
+		"fvCSS":     func(s fundamental.Availability) string { return fvStatusCSS(string(s)) },
+		"fvValCSS":  func(s valuation.Availability) string { return fvStatusCSS(string(s)) },
+		"fvMoney":   fvFmtMoney,
+		"fvRatio":   fvFmtRatio,
+		"fvSignCSS": fvSignCSS,
+		"fvEPS":     fvFmtEPS,
+		"fvPeriod":  fvFmtPeriod,
+		"fvDate":    fvFmtDate,
+		"fvNum":     fvFmtNum,
+		"fvPct":     fvFmtPct,
+		"fvHist":    fvFmtHist,
+		"macCSS": func(s macro.Status) string {
+			switch s {
+			case macro.Available:
+				return "ok"
+			case macro.Partial:
+				return "part"
+			default:
+				return "none"
+			}
+		},
+		"macPct":         macFmtPct,
+		"macNum":         macFmtNum,
+		"macPP":          macFmtPP,
+		"macBps":         macFmtBps,
+		"macRatio":       macFmtRatio,
+		"macThousands":   macFmtThousands,
+		"macTargetRange": macFmtTargetRange,
+		"macObserved":    macFmtObserved,
+		"fxOK":           func(s fx.Status) bool { return s.OK() },
+		"fxWindows":      func() map[int]string { return map[int]string{1: "1D", 5: "5D", 20: "20D"} },
 		"fxChange": func(m *fx.Metrics, w int) float64 {
 			v, _ := m.Change(w)
 			return v
@@ -1721,6 +1969,37 @@ tr:hover td{background:#0f1d30}
 .pv-up-vol-down{color:#fbbf24}
 .pv-down-vol-up{color:#f87171;font-weight:600}
 .pv-down-vol-down{color:#64748b}
+/* ⑰ 基本面／估值（R13-M8）— 官方申報值，密度優先，不搶主表版面 */
+.wl-sec.wl-fund .fv-grp{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin:3px 0}
+.wl-fund .fv-label{color:#64748b;letter-spacing:.05em;min-width:2.6em}
+.wl-fund .fv-badge{padding:0 6px;border-radius:4px;border:1px solid #334155;font-size:.68rem;font-weight:600}
+.wl-fund .fv-badge.fv-ok{border-color:#14532d;background:#0b1f17;color:#86efac}
+.wl-fund .fv-badge.fv-part{border-color:#78350f;background:#241a0b;color:#fcd34d}
+.wl-fund .fv-badge.fv-none{border-color:#7f1d1d;background:#2a1414;color:#fca5a5}
+.wl-fund .fv-item{color:#94a3b8}
+.wl-fund .fv-item b{color:#e2e8f0}
+.wl-fund .fv-item b.fv-up{color:#86efac}
+.wl-fund .fv-item b.fv-down{color:#fca5a5}
+.wl-fund .fv-hist{color:#7dd3fc}
+.wl-fund .fv-asof{color:#475569;font-size:.68rem}
+.wl-fund .fv-notimpl{color:#64748b;font-size:.68rem;margin-top:2px}
+{{ if .GV.Macro }}
+/* 總經列：市場級資訊，整份報告只出現一次 */
+.macro-bar{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:-2px 0 14px;
+  padding:8px 12px;background:#0c1220;border:1px solid #1e3a5f;border-radius:8px;
+  font-size:.72rem;color:#cbd5e1}
+.macro-bar .macro-title{color:#64748b;letter-spacing:.06em}
+.macro-bar .macro-status{padding:1px 7px;border-radius:5px;border:1px solid #334155;font-weight:600}
+.macro-bar .macro-status.mac-ok{border-color:#14532d;background:#0b1f17;color:#86efac}
+.macro-bar .macro-status.mac-part{border-color:#78350f;background:#241a0b;color:#fcd34d}
+.macro-bar .macro-status.mac-none{border-color:#7f1d1d;background:#2a1414;color:#fca5a5}
+.macro-bar .macro-grp{color:#94a3b8}
+.macro-bar .macro-grp b{color:#e2e8f0;font-weight:600}
+.macro-bar .macro-grp i{font-style:normal;color:#7dd3fc}
+.macro-bar .macro-grp em{font-style:normal;color:#475569;font-size:.66rem}
+.macro-bar .macro-flags i{font-style:normal;color:#fca5a5;margin-right:6px}
+.macro-bar .macro-note{color:#64748b;font-size:.66rem;margin-left:auto}
+{{ end }}
 {{ if .GV.FX }}
 /* USD/TWD 市場環境列：市場級資訊，整份報告只出現一次 */
 .fx-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:-4px 0 14px;padding:6px 12px;
@@ -1927,6 +2206,28 @@ th.rotscore{min-width:120px}
 <body>
 <div class="container">
 <h1>📡 股票雷達<small>{{ .Date }} 盤後分析</small></h1>
+{{ with .GV.Macro }}
+<div class="macro-bar">
+  <span class="macro-title">總經（美國）</span>
+  <span class="macro-status mac-{{ macCSS .Status }}">{{ .Status }}</span>
+  <span class="macro-grp">Fed <b>{{ macTargetRange .Fed.TargetLower .Fed.TargetUpper }}</b>
+    <i>{{ .Fed.Direction }}</i>{{ with .Fed.LastChangeBps }} <i>{{ macBps . }}</i>{{ end }}
+    <em>{{ macObserved .Fed.Date .Fed.Freshness }}</em></span>
+  <span class="macro-grp">2Y/10Y <b>{{ macPct .Treasury.Yield2Y }} / {{ macPct .Treasury.Yield10Y }}</b>
+    <i>{{ macPP .Treasury.Spread }} · {{ .Treasury.Curve }}</i>
+    <em>{{ macObserved .Treasury.Date .Treasury.Freshness }}</em></span>
+  <span class="macro-grp">CPI <b>{{ macRatio .Inflation.CPIYoY }}</b>
+    核心 <b>{{ macRatio .Inflation.CoreCPIYoY }}</b> <i>{{ .Inflation.Trend }}</i>
+    <em>{{ macObserved .Inflation.Date .Inflation.Freshness }}</em></span>
+  <span class="macro-grp">失業 <b>{{ macPct .Labor.Unemployment }}</b>
+    NFP <b>{{ macThousands .Labor.PayrollChange }}</b> <i>{{ .Labor.State }}</i>
+    <em>{{ macObserved .Labor.Date .Labor.Freshness }}</em></span>
+  <span class="macro-grp">VIX <b>{{ macNum .Volatility.VIX }}</b> <i>{{ .Volatility.State }}</i>
+    <em>{{ macObserved .Volatility.Date .Volatility.Freshness }}</em></span>
+  {{ if .RiskFlags }}<span class="macro-flags">{{ range .RiskFlags }}<i>{{ . }}</i>{{ end }}</span>{{ end }}
+  <span class="macro-note">PCE／FOMC 行事曆：NOT_IMPLEMENTED · 官方來源，研究用，不影響任何評分</span>
+</div>
+{{ end }}
 {{ with .GV.FX }}{{ $m := . }}{{ if fxOK .Status }}
 <div class="fx-bar">
   <span class="fx-label">USD/TWD</span>
@@ -2251,6 +2552,41 @@ th.rotscore{min-width:120px}
             <div class="wl-note">本區塊由 AI 解讀掃描器已算出的證據產生，不改變任何分數、階段或 BUY／WATCH／SELL。</div>
           </div>
           {{- end }}{{- end }}{{- end }}
+          {{- $fund := fundOf $.GV $e.A.Symbol }}{{- $val := valOf $.GV $e.A.Symbol }}
+          {{- if or $fund $val }}
+          <div class="wl-sec wl-fund">
+            <h4>⑰ 基本面／估值（官方申報值，不影響 BUY／WATCH／SELL）</h4>
+            {{- with $fund }}
+            <div class="fv-grp">
+              <span class="fv-label">財報</span>
+              <span class="fv-badge {{ fvCSS .Status }}">{{ .Status }}</span>
+              {{- if .Revenue }}
+              <span class="fv-item">{{ .Revenue.Period.Year }}-{{ printf "%02d" .Revenue.Period.Month }} 月營收 <b>{{ fvMoney .Revenue.Revenue }}</b></span>
+              <span class="fv-item">YoY <b class="{{ fvSignCSS .RevenueMetrics.YoY }}">{{ fvRatio .RevenueMetrics.YoY }}</b></span>
+              <span class="fv-item">MoM <b class="{{ fvSignCSS .RevenueMetrics.MoM }}">{{ fvRatio .RevenueMetrics.MoM }}</b></span>
+              {{- end }}
+              {{- with .Financials }}
+              <span class="fv-item">{{ fvPeriod .Period }} 累計EPS <b>{{ fvEPS .CumulativeEPS }}</b></span>
+              {{- end }}
+              <span class="fv-item">毛利率 <b>{{ fvRatio .FinancialMetrics.GrossMargin }}</b></span>
+              <span class="fv-item">營益率 <b>{{ fvRatio .FinancialMetrics.OperatingMargin }}</b></span>
+              {{- if .Revenue }}<span class="fv-asof">公布 {{ fvDate .Revenue.PublishedAt }}</span>{{- end }}
+            </div>
+            {{- end }}
+            {{- with $val }}
+            <div class="fv-grp">
+              <span class="fv-label">估值</span>
+              <span class="fv-badge {{ fvValCSS .Status }}">{{ .Status }}</span>
+              <span class="fv-item">本益比 <b>{{ fvNum .TrailingPE }}</b></span>
+              <span class="fv-item">股價淨值比 <b>{{ fvNum .PBRatio }}</b></span>
+              <span class="fv-item">殖利率 <b>{{ fvPct .DividendYield }}</b></span>
+              <span class="fv-item">歷史本益比 <b class="fv-hist">{{ fvHist .HistoricalPE }}</b></span>
+              {{- if .TrailingDate }}<span class="fv-asof">{{ .TrailingDate }} 收盤</span>{{- end }}
+            </div>
+            <div class="fv-notimpl">前向本益比／PEG／合理價：{{ .ForwardPEStatus }}（無授權預估來源）</div>
+            {{- end }}
+          </div>
+          {{- end }}
           {{- if $.GV.ShowTechnicalIndicators }}{{- with $e.Technical }}
           <div class="wl-sec wl-tech">
             <h4>⑯ 技術指標（Shadow Only，不影響 BUY／WATCH／SELL）</h4>

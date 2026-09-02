@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "symbol": "2330.TW",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-01T11:46:29.593274+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "2330.TW",
+    "date": "2026-08-31",
+    "pe_ratio": 27.88,
+    "pb_ratio": 9.7,
+    "dividend_yield": 0.91
+  }
+}

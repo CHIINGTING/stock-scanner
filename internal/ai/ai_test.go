@@ -479,9 +479,15 @@ func TestUserMessageCarriesOnlySuppliedEvidence(t *testing.T) {
 	}
 	// Absent fields must not appear at all, so the model sees them as missing rather than
 	// as a zero it might narrate.
+	//
+	// Scoped to the serialised EVIDENCE, not the whole message: the instruction preamble
+	// legitimately names fields in order to explain them (R13-M3 tells the model what
+	// market_data_status=UNAVAILABLE means), and matching against that would fail for a
+	// sentence rather than for a leaked value.
+	body := msg[strings.Index(msg, "{"):]
 	for _, absent := range []string{"market_regime", "institutional", "risk_label"} {
-		if strings.Contains(msg, absent) {
-			t.Errorf("unsupplied field %q leaked into the prompt", absent)
+		if strings.Contains(body, absent) {
+			t.Errorf("unsupplied field %q leaked into the evidence: %s", absent, body)
 		}
 	}
 }

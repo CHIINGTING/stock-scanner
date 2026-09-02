@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// PromptSetVersion identifies the instruction set and output contract this package sends.
+//
+// It is stored beside every persisted analysis so that "the model changed its mind" stays
+// distinguishable from "we changed the question". Bump it whenever the system prompt, the
+// evidence contract or the expected output shape changes — never for an unrelated edit.
+const PromptSetVersion = "r11-v1"
+
 // systemInstruction frames the model as an interpreter of someone else's work.
 //
 // The constraints are here rather than in the user message on purpose: they must apply to
@@ -53,7 +60,13 @@ func buildUserMessage(e Evidence) (string, error) {
 	}
 	var sb strings.Builder
 	sb.WriteString("以下是掃描器針對這一檔股票已經計算完成的證據。只根據這些欄位做解讀，")
-	sb.WriteString("缺少的欄位就當作沒有資訊，不要自行補上。\n\n")
+	sb.WriteString("缺少的欄位就當作沒有資訊，不要自行補上。\n")
+	// The two status fields exist precisely so the model can tell "we could not look" from
+	// "we looked and it was unremarkable". Saying so here is what makes them do any work —
+	// without this line UNAVAILABLE is just an unexplained string.
+	sb.WriteString("market_data_status 或 institutional_status 若為 UNAVAILABLE，代表該層資料")
+	sb.WriteString("這次取不到，**不是**代表大盤中性或法人沒有動作。這種情況請明說該面向無法判斷，")
+	sb.WriteString("不要用其他欄位推測它。\n\n")
 	sb.Write(b)
 	return sb.String(), nil
 }

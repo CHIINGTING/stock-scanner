@@ -214,7 +214,10 @@ func TestBuildAIEvidenceCopiesOnlyExistingValues(t *testing.T) {
 		WatchAction: ActPrepare, Sector: "半導體", RiskLabel: "中",
 		Consol: Consolidation{Days: 12, Bucket: "理想"},
 	}
-	ev := buildAIEvidence(&e, AIMarketContext{Regime: "RISK_ON", Score: 72})
+	ev := buildAIEvidence(&e, // R13-M3: Available is now the authority. A context whose regime is set but
+		// whose Available is false means "we could not look", and the projection
+		// deliberately refuses to pass the regime through.
+		AIMarketContext{Available: true, Regime: "RISK_ON", Score: 72})
 
 	if ev.Symbol != "2330" || ev.TechnicalScore != 77 || ev.RocketScore != 82 {
 		t.Errorf("copied fields wrong: %+v", ev)

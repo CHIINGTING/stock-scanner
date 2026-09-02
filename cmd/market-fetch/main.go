@@ -17,10 +17,43 @@ import (
 	"os"
 	"time"
 
+	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/market/model"
 	"github.com/deep-huang/stock-scanner/internal/market/provider"
 	"github.com/deep-huang/stock-scanner/internal/market/service"
 )
+
+// warmBenchmarkCache fetches the benchmark's bars into the price cache.
+//
+// The fetcher's own cache TTL decides whether a request is actually made, so a warm cache
+// costs nothing and a stale one is refreshed. Any failure is returned for the caller to log:
+// an unwarmable benchmark leaves the existing behaviour, which is a clear error from the
+// trading-day guard rather than a silent wrong answer.
+func warmBenchmarkCache(cacheDir string, benchmark model.Benchmark, timeout time.Duration) error {
+	symbol := string(benchmark)
+	// No "skip if the file exists" check here on purpose. The fetcher already owns the
+	// caching policy (cache_ttl_min), and a coarser second policy in this file would do the
+	// opposite of what it looks like: it would treat a MONTHS-OLD benchmark as fine and let
+	// the snapshot be built on a stale series, which is how SOURCE_DATE_MISMATCH gets
+	// silently normalised. One policy, in the layer that owns it.
+	f := fetcher.New(fetcher.Config{
+		Concurrency:  1,
+		TimeoutSec:   int(timeout / time.Second),
+		CacheDir:     cacheDir,
+		HistoryRange: "2y",
+	})
+	// FetchSectorStocks is the existing entry point for "fetch exactly these symbols"; it
+	// writes through the same cache the feed reads, so nothing here learns a second layout.
+	got, err := f.FetchSectorStocks([]fetcher.StockInfo{{Symbol: symbol, Market: "TW"}})
+	if err != nil {
+		return err
+	}
+	if len(got) == 0 || len(got[0].Candles) == 0 {
+		return fmt.Errorf("no bars returned for %s", symbol)
+	}
+	log.Printf("warmed benchmark %s into %s (%d bars)", symbol, cacheDir, len(got[0].Candles))
+	return nil
+}
 
 // exitNotTradingDay is returned when the requested date is not a trading day (or the local
 // price cache has not caught up yet). It is deliberately 0: for a scheduled weekday job,
@@ -37,12 +70,30 @@ func main() {
 	offline := flag.Bool("offline", false, "skip the exchange calls; price/breadth only")
 	timeout := flag.Duration("timeout", 25*time.Second, "per-request HTTP timeout")
 	quiet := flag.Bool("quiet", false, "only print the verdict line")
+	warmBenchmark := flag.Bool("warm-benchmark", false,
+		"fetch the benchmark into the price cache first when it is absent (CI: the scanner's "+
+			"universe excludes ETF codes, so `scanner --all` never warms it)")
 	requireTradingDay := flag.Bool("require-trading-day", false,
 		"refuse to write a snapshot unless the benchmark actually traded on -date")
 	flag.Parse()
 
 	cfg := model.MarketConfig{StorageDir: *outDir}.Defaulted()
 	feed := provider.CacheFeed{Dir: *cacheDir}
+
+	// The benchmark is the one symbol this command cannot do without, and it is the one
+	// symbol the cache-warming step upstream can never supply: `scanner --all` builds its
+	// universe from FetchStockList, whose isOrdinaryStockCode drops every 4-digit code
+	// starting with "0" as an ETF — and the benchmark, 0050, is an ETF. On a developer
+	// machine the file is usually present from some earlier run; on a fresh CI runner
+	// .cache is empty and this command fails before doing anything.
+	//
+	// Opt-in rather than automatic, so the documented contract holds: by default this
+	// command still only READS the cache, and cmd/scanner remains its sole writer.
+	if *warmBenchmark {
+		if err := warmBenchmarkCache(*cacheDir, cfg.Benchmark, *timeout); err != nil {
+			log.Printf("market-fetch: could not warm benchmark %s: %v", cfg.Benchmark, err)
+		}
+	}
 
 	var net []service.NetProvider
 	if !*offline {

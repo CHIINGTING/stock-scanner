@@ -25,6 +25,17 @@ type Config struct {
 	// side: the scan never fetches a currency, it only reads what acquisition already stored.
 	// Empty → "data/fx".
 	FXDir string `yaml:"fx_dir"`
+	// FundamentalDir is where cmd/fundamental-fetch archives dated MOPS snapshots. Read-only
+	// from every consumer: a research run reads history, it never fetches it.
+	// Empty → "data/fundamental".
+	FundamentalDir string `yaml:"fundamental_dir"`
+	// ValuationDir is where cmd/valuation-fetch archives the exchanges' published price
+	// ratios. Read-only from every consumer, same as the others.
+	// Empty → "data/valuation".
+	ValuationDir string `yaml:"valuation_dir"`
+	// MacroDir is where cmd/macro-fetch archives the point-in-time macro view.
+	// Empty → "data/macro".
+	MacroDir string `yaml:"macro_dir"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used across this repo.
@@ -35,6 +46,15 @@ func (c Config) Defaulted() Config {
 	}
 	if c.FXDir == "" {
 		c.FXDir = "data/fx"
+	}
+	if c.FundamentalDir == "" {
+		c.FundamentalDir = "data/fundamental"
+	}
+	if c.ValuationDir == "" {
+		c.ValuationDir = "data/valuation"
+	}
+	if c.MacroDir == "" {
+		c.MacroDir = "data/macro"
 	}
 	return c
 }

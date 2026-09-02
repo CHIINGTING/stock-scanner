@@ -62,12 +62,26 @@ func AttachAI(ctx context.Context, entries []WatchlistEntry, cfg ai.Config, enab
 }
 
 // AIMarketContext is the top-level market read, passed in rather than imported so the
-// scanner package keeps no dependency on internal/market. Both fields are optional; when the
-// market dashboard has not run they stay empty and simply do not appear in the prompt.
+// scanner package keeps no dependency on internal/market.
+//
+// Available is what makes this struct honest. Without it, "the market dashboard has not run"
+// and "the market is unremarkable" reach the model as the same thing — an absent field — and
+// a model that cannot tell those apart will reason about the second when the truth is the
+// first. R13-M3 makes the distinction explicit: a scan with no snapshot says so.
 type AIMarketContext struct {
-	Regime string
-	Score  float64
+	// Available is false when no snapshot covered this trading date. Regime and Score are
+	// then meaningless and must not be read.
+	Available bool
+	Regime    string
+	Score     float64
 }
+
+// Market data status values sent to the model. Two states, both explicit — there is no
+// third "probably fine".
+const (
+	MarketDataAvailable   = "AVAILABLE"
+	MarketDataUnavailable = "UNAVAILABLE"
+)
 
 // buildAIEvidence projects one entry onto the evidence contract.
 //
@@ -92,8 +106,15 @@ func buildAIEvidence(e *WatchlistEntry, market AIMarketContext) ai.Evidence {
 		RiskLabel:      e.RiskLabel,
 		RiskWarning:    e.RiskWarning,
 		Reasons:        e.Reasons,
-		MarketRegime:   market.Regime,
-		MarketScore:    market.Score,
+	}
+	// Market context, stated either way. An unavailable market is a FACT about this scan, so
+	// it is sent rather than omitted; omitting it would leave the model to assume.
+	if market.Available {
+		ev.MarketDataStatus = MarketDataAvailable
+		ev.MarketRegime = market.Regime
+		ev.MarketScore = market.Score
+	} else {
+		ev.MarketDataStatus = MarketDataUnavailable
 	}
 	if e.Consol.Days > 0 {
 		ev.Consolidation = fmt.Sprintf("%s／整理 %d 天", e.Consol.Bucket, e.Consol.Days)
@@ -116,11 +137,23 @@ func buildAIEvidence(e *WatchlistEntry, market AIMarketContext) ai.Evidence {
 		ev.PriceVolumeState = a.PriceVolumeState
 	}
 
-	if e.Institution != nil {
+	// Institutional flow, with the same missing-vs-zero discipline. A nil view means the
+	// layer did not run or had no snapshot for this date; that is NOT "the institutions did
+	// not trade this stock", and the two must never arrive as the same evidence.
+	if e.Institution == nil {
+		ev.InstitutionalStatus = InstitutionDataUnavailable
+	} else {
+		ev.InstitutionalStatus = InstitutionDataAvailable
 		ev.Institutional = aiInstitutionalLines(e.Institution)
 	}
 	return ev
 }
+
+// Institutional data status values. Same two-state discipline as the market context.
+const (
+	InstitutionDataAvailable   = "AVAILABLE"
+	InstitutionDataUnavailable = "UNAVAILABLE"
+)
 
 // aiInstitutionalLines renders the three institutional legs as short factual lines.
 //
@@ -141,7 +174,11 @@ func aiInstitutionalLines(v *institution.StockChipView) []string {
 	var out []string
 	for _, l := range legs {
 		if l.s.TodayNet == 0 && l.s.Sum5d == 0 {
-			continue // nothing observed for this leg; say nothing rather than "0"
+			// A leg that netted exactly zero on both windows is indistinguishable, in this
+			// projection, from a leg the snapshot never covered — so it is omitted rather
+			// than reported as "0". The AVAILABLE status above already tells the model the
+			// LAYER had data; silence on one leg means "not asserted", not "zero".
+			continue
 		}
 		out = append(out, fmt.Sprintf("%s 今日 %+d 張、近5日 %+d 張", l.name, l.s.TodayNet, l.s.Sum5d))
 	}

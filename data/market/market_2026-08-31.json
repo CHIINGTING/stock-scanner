@@ -1,0 +1,140 @@
+{
+  "date": "2026-08-31",
+  "generated_at": "2026-09-01T00:32:18.733152+08:00",
+  "schema_version": 1,
+  "score": 61.43,
+  "confidence": 0.1,
+  "regime": "BULL_PULLBACK",
+  "rule_id": "R8",
+  "structure": {
+    "benchmark": "0050",
+    "structure": "UPTREND",
+    "breadth_quality": "COOLING",
+    "institutional_posture": "UNKNOWN",
+    "trend_intact": true,
+    "price_resilient": true,
+    "orderly_correction": true,
+    "failed_highs": 0,
+    "metrics": {
+      "advancing_ratio": 22.39,
+      "breadth_above_ma120": 39.04,
+      "breadth_above_ma20": 46.65,
+      "breadth_above_ma60": 34.46,
+      "breadth_base120": 1921,
+      "breadth_base60": 1921,
+      "breadth_drop20_pp": 18.78,
+      "breadth_valid_count": 1925,
+      "close": 106.25,
+      "dd_from_high60": 4.41,
+      "ma120": 96.22,
+      "ma20": 104.7,
+      "ma200": 84.97,
+      "ma60": 104.33,
+      "realized_vol20": 18.07,
+      "realized_vol20_percentile": 28.17,
+      "ret20": 4.17,
+      "ret60": 2.02
+    }
+  },
+  "flags": {
+    "high_volatility": false,
+    "crash_event": false,
+    "recovery_event": false
+  },
+  "evidence": [
+    {
+      "source": "Price",
+      "direction": "BULLISH",
+      "strength": "MODERATE",
+      "confidence": 1,
+      "summary": "多頭：收盤 106.25，20日 +4.2%、60日 +2.0%，距 60 日高 -4.4%",
+      "metrics": {
+        "close": 106.25,
+        "dd_from_high60": 4.41,
+        "ma120": 96.22,
+        "ma20": 104.7,
+        "ma200": 84.97,
+        "ma60": 104.33,
+        "realized_vol20": 18.07,
+        "realized_vol20_percentile": 28.17,
+        "ret20": 4.17,
+        "ret60": 2.02
+      },
+      "available": true
+    },
+    {
+      "source": "Breadth",
+      "direction": "NEUTRAL",
+      "strength": "WEAK",
+      "confidence": 1,
+      "summary": "廣度降溫：站上 MA20 46.6%（近 20 日高點 -18.8pp）、MA60 34.5%，1925 檔可計算",
+      "metrics": {
+        "advancing_ratio": 22.39,
+        "breadth_above_ma120": 39.04,
+        "breadth_above_ma20": 46.65,
+        "breadth_above_ma60": 34.46,
+        "breadth_base120": 1921,
+        "breadth_base60": 1921,
+        "breadth_drop20_pp": 18.78,
+        "breadth_valid_count": 1925
+      },
+      "available": true
+    },
+    {
+      "source": "ForeignCash",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TWSE 三大法人買賣金額缺漏"
+    },
+    {
+      "source": "ForeignFutures",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TAIFEX 未平倉資料缺漏"
+    },
+    {
+      "source": "Margin",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TWSE 信用交易統計缺漏"
+    }
+  ],
+  "raw": {
+    "date": "2026-08-31",
+    "fetched_at": "2026-09-01T00:32:19.961817+08:00",
+    "sources": [
+      {
+        "name": "cache/0050",
+        "status": "OK",
+        "fetched_at": "2026-09-01T00:32:19.961815+08:00",
+        "as_of_date": "2026-08-31"
+      }
+    ]
+  },
+  "reasons": [
+    "價格結構 UPTREND／廣度 COOLING／法人 UNKNOWN",
+    "距 60 日高 -4.4%，站上 MA20 家數 46.6%（近 20 日高點 -18.8pp）",
+    "回檔幅度可控、主趨勢未破",
+    "Score 61（可用權重 35/100）",
+    "Confidence 0.10 = 完整度 0.35 × 一致性 0.51 × 強度 0.61",
+    "  Price 貢獻 +400（子分 70 × 有效權重 20.0）",
+    "  Breadth 貢獻 +0（子分 50 × 有效權重 15.0）"
+  ],
+  "caveats": [
+    "僅 35% 的證據權重可用，信心上限壓在 0.5",
+    "證據方向分歧，信心下修",
+    "缺漏證據 ForeignCash：TWSE 三大法人買賣金額缺漏",
+    "缺漏證據 ForeignFutures：TAIFEX 未平倉資料缺漏",
+    "缺漏證據 Margin：TWSE 信用交易統計缺漏",
+    "universe 有 58 個低覆蓋日期被排除在日期軸外"
+  ]
+}

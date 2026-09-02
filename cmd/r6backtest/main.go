@@ -20,6 +20,7 @@ import (
 	"github.com/deep-huang/stock-scanner/internal/fx"
 	"github.com/deep-huang/stock-scanner/internal/market/provider"
 	"github.com/deep-huang/stock-scanner/internal/r6backtest"
+	"github.com/deep-huang/stock-scanner/internal/scanner"
 )
 
 func main() {
@@ -34,6 +35,9 @@ func main() {
 	flowDir := flag.String("flowdir", "data/market", "foreign-flow archive directory")
 	priceVol := flag.Bool("pricevolume", false, "Flat-price × volume: measures whether an exactly-unchanged session behaves like DOWN, like UP, or like neither, before scorer.go decides")
 	technical := flag.Bool("technical", false, "R14: ADX / RSI / MACD / Keltner / pivot condition comparison (baseline vs each indicator vs confirmed combinations)")
+	dumpRisk := flag.Bool("dumprisk", false, "Next-Day Dump Risk: T+1/T+2 downside after a large-gain session, measured from the SIGNAL CLOSE (not a next-open entry)")
+	dumpDir := flag.String("dumpdir", "data/daytrading", "當沖 (day-trading) archive directory; rows stay empty when absent")
+	dumpSelloffPctile := flag.Float64("dump-selloff-pctile", 5.0, "Next-Day Dump Risk: the baseline percentile of T+1 MAE that defines a selloff")
 	sectors := flag.String("sectors", "configs/sectors.yaml", "R12: sector taxonomy for the heat panel (same file the scanner uses)")
 	heatStep := flag.Int("heatstep", 5, "R12: recompute the sector heat panel every N trading days (heat moves slowly; 1 = every day)")
 	flag.Parse()
@@ -108,6 +112,71 @@ func main() {
 			log.Fatalf("write trendext md: %v", err)
 		}
 		fmt.Printf("trendext: %d conditions, %d trades\nwrote %s and %s\n", len(teStats), len(teTrades), csv, md)
+		return
+	}
+
+	// ── Next-Day Dump Risk (separate output; SIGNAL-CLOSE reference, T+1/T+2 horizon) ──
+	//
+	// Deliberately does NOT go through RunSetup. Every setup in this package enters at the
+	// next open, which prices the overnight gap into the entry — and the gap IS the risk
+	// being measured here. The reference price is therefore the signal close, and the
+	// horizon is the next one or two sessions rather than 5–60 days.
+	if *dumpRisk {
+		var dtLookup r6backtest.DayTradingLookup
+		if arch, err := r6backtest.LoadDayTradingArchive(*dumpDir); err != nil {
+			fmt.Printf("day-trading archive unavailable (%v) — 當沖 rows will be empty\n", err)
+		} else {
+			dtLookup = arch
+			fmt.Printf("day-trading archive: %d symbols across %d dates\n", arch.Codes(), arch.Dates())
+		}
+
+		tD := time.Now()
+		obs := r6backtest.CollectDumpObs(u, p.Warmup, dtLookup)
+		dates := r6backtest.DumpObsDateIndex(obs)
+		fmt.Printf("dumprisk: %d observations over %d signal dates (%v)\n", len(obs), len(dates), time.Since(tD))
+		if len(obs) == 0 {
+			log.Fatalf("dumprisk: no observations — check the cache and warmup")
+		}
+
+		bands := scanner.DefaultPriceMoveThresholds()
+		th := r6backtest.DeriveDumpThresholds(obs, bands.LargePct, bands.VolExpansionRatio, *dumpSelloffPctile)
+		stats := r6backtest.RunDumpStudy(obs, th)
+		dists := r6backtest.DumpDistributions(obs, th)
+
+		// Regime split reuses the SAME grid, so a regime-specific effect is visible as a
+		// difference between two identically-built tables rather than as a separate claim.
+		regimeOf := r6backtest.BreadthRegimeLabeller(u)
+		regimeStats := map[string][]r6backtest.DumpStat{}
+		for label, sub := range r6backtest.DumpRegimeSplit(obs, regimeOf) {
+			regimeStats[label] = r6backtest.RunDumpStudy(sub, th)
+		}
+
+		for _, st := range stats {
+			fmt.Println("  " + st.String())
+		}
+
+		csvPath := filepath.Join(*outDir, "backtest_dumprisk_"+stamp+".csv")
+		mdPath := filepath.Join(*outDir, "backtest_dumprisk_summary_"+stamp+".md")
+		if err := r6backtest.WriteDumpCSV(csvPath, stats); err != nil {
+			log.Fatalf("write dumprisk csv: %v", err)
+		}
+		meta := []string{
+			fmt.Sprintf("universe: %d stocks (cache, read-only)", len(u.Stocks)),
+			fmt.Sprintf("coverage: %s → %s (%d trading days in the cache; %d distinct SIGNAL dates)", u.Axis[0], u.Axis[len(u.Axis)-1], len(u.Axis), len(dates)),
+			fmt.Sprintf("warmup: %d bars", p.Warmup),
+			"reference price: the SIGNAL CLOSE on day T — not a next-open entry, because the overnight gap is the risk being measured",
+			"horizon: T+1 and T+2 only. The 5/10/20/60d horizons elsewhere in this package answer a different question and are not used here",
+			"bands: large gain and volume spike are scanner.DefaultPriceMoveThresholds() — the SHIPPED values, not a tuned copy",
+			"cuts: close-strength, upper-shadow and day-trading cuts are TERCILES OF THE OBSERVED trigger population, computed at run time and printed above — not chosen in advance",
+			"selloff: defined on the BASELINE distribution of T+1 MAE in ATR, so the label means 'worse than all but the stated percentile of ordinary days' rather than a fixed −3%",
+			"READ AS DIFFERENCES FROM DUMP_BASELINE_ALL_BARS: the universe is survivorship-biased (delisted names absent), so absolute returns are optimistic for every row alike",
+			"INDEPENDENCE: observations are per stock-bar and are NOT independent — on a strong day hundreds of stocks trigger together. Read unique_dates and max_date_share before believing any n",
+			"NO SCORING CHANGE may be made from this run: it is a shadow-layer study",
+		}
+		if err := r6backtest.WriteDumpMarkdown(mdPath, "Next-Day Dump Risk — T+1 / T+2 Downside", meta, stats, dists, th, regimeStats); err != nil {
+			log.Fatalf("write dumprisk md: %v", err)
+		}
+		fmt.Printf("dumprisk: %d conditions\nwrote %s and %s\n", len(stats), csvPath, mdPath)
 		return
 	}
 
