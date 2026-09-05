@@ -194,6 +194,320 @@ presentation boundary.
 Forward P/E, PEG and fair value are `NOT_IMPLEMENTED`: no authorized source for Taiwanese
 estimates exists.
 
+### Availability vs quality (FU-9)
+
+These are **two axes, and the second never overrides the first.**
+
+```
+AVAILABLE + HIGH        AVAILABLE + MEDIUM        AVAILABLE + LOW        INSUFFICIENT_DATA
+```
+
+Availability answers one deterministic question — are there at least `MinHistoricalPESamples`
+usable observations — and it alone gates the target price. Quality answers a second one: how
+much history is behind those observations. It is reported beside the statistics, and **nothing
+in the quality layer can make a computable distribution uncomputable.** A `LOW` grade is a
+caveat printed next to a number, never the removal of the number.
+
+The floor stays at 20. FU-9 did not move it and must not be used as an argument to.
+
+**Coverage semantics — `N/A` is not a missing session.**
+
+```
+coverage_ratio = valid_samples ÷ window_sessions
+```
+
+`window_sessions` is every session ARCHIVED in the window, whether or not the exchange
+published a P/E for it. A session with no ratio is an **acquired** session: the company had no
+positive earnings, which is a fact about the company and not a gap in this repo's data. The
+denominator is never `valid_samples`, which would make coverage 100% for every stock by
+construction — including one with four usable observations.
+
+```
+2330 台積電   225 valid / 225 archived   coverage 100%   valid span 339 days   HIGH
+2337 旺宏      26 valid / 225 archived   coverage  12%   valid span  36 days   LOW
+3055 蔚華科     0 valid / 225 archived   coverage   0%                          INSUFFICIENT
+```
+
+Both of the first two are `AVAILABLE` and both produce a target price. The third has no
+distribution at all, and is `INSUFFICIENT` rather than `LOW` — `LOW` says "here is a number,
+trust it less", and there is no number.
+
+**Span, because a count cannot see concentration.** 26 samples spread across a year and 26
+clustered in one recent month are the same count and different evidence. Reported per stock:
+`valid_samples`, `window_sessions`, `coverage_ratio`, `oldest_valid_session`,
+`newest_valid_session`, `sample_span_sessions`, `sample_span_days`.
+
+**Rule version.** Every grade carries `valuation_quality_rule_version` (currently `FU9-v1`) and
+is persisted with it. Thresholds will change; a stored `LOW` with no version cannot be read
+afterwards, because nobody can tell whether the stock changed or the rule did.
+
+**Thresholds are HEURISTIC and NOT BACKTEST-FITTED.** They are derived from the arithmetic of
+the trading calendar — ~21 sessions a month, so a quarter ≈ 60 sessions ≈ 90 days and half a
+year ≈ 120 sessions ≈ 180 days — and from the fact that a trailing P/E's denominator only moves
+when earnings are reported, i.e. quarterly. A distribution spanning less than one reporting
+cycle has seen the denominator change zero times. Nothing here was tuned against outcomes,
+because no outcome data exists that could tune it.
+
+### Data quality is not model suitability
+
+**FU-9 does not determine whether P/E is the appropriate valuation model for a company.**
+
+3037 欣興 has 225 of 225 sessions and a median around 120x. The evidence could not be better,
+and the multiple may still be the wrong lens for a cyclical substrate maker at the top of a
+cycle. That is a question about the MODEL, and answering it needs sector knowledge this layer
+does not have.
+
+For the same reason **dispersion is reported but does not feed the grade.** `IQR` and
+`RelativeIQR` are shown — 6274 台燿's relative IQR is 91% — but a wide range usually means the
+market re-rated the company, a real event correctly recorded, not that the observations are
+poor. Letting width lower a data-quality grade would file "this stock re-rated" and "our
+archive is thin" under the same warning.
+
+### Model suitability (FU-11) — the fourth layer
+
+FU-9 ended by naming this as a separate question. It now has an answer, and the four layers
+are permanent and must not collapse into one another:
+
+```
+Availability       can the historical P/E distribution be computed?
+Data Quality       is the evidence behind it sufficient?              (FU-9)
+Dispersion         how wide is the distribution?                      (FU-9, descriptive)
+Model Suitability  is P/E the right lens for this company at all?      (FU-11)
+```
+
+The first three describe the DATA. The fourth describes the COMPANY, and the two can point in
+opposite directions. Every combination below is reachable, and tests prove it:
+
+```
+Quality HIGH         + SUITABLE
+Quality HIGH         + WEAK               ← the one that proves the layers are separate
+Quality LOW          + CONDITIONAL
+Quality INSUFFICIENT + UNSUITABLE
+Quality INSUFFICIENT + INSUFFICIENT_DATA
+```
+
+**Suitability consumes FU-9 metrics as evidence and is never derived from the FU-9 grade.**
+There is no mapping table, in either direction.
+
+**Vocabulary:** `SUITABLE` / `CONDITIONAL` / `WEAK` / `UNSUITABLE` / `INSUFFICIENT_DATA`,
+rule version `FU11-v1`, persisted with every verdict.
+
+```
+UNSUITABLE  ≠  bad company        UNSUITABLE  ≠  overpriced
+UNSUITABLE  ≠  HIGH_RISK          UNSUITABLE  ≠  SELL
+```
+
+It says one thing: under current evidence, a P/E multiple is not the right primary anchor.
+
+#### Earnings denominator semantics
+
+`PE = Price / Earnings`, so the question is whether the DENOMINATOR has enough economic
+stability to anchor anything. Two deterministic inputs, both from timestamped archives:
+
+| input | source | values |
+|---|---|---|
+| filed earnings sign | MOPS 綜合損益表 `CumulativeEPS` + `NetIncome`, which must AGREE | POSITIVE / NON_POSITIVE / UNKNOWN |
+| P/E availability shape | the nil/non-nil pattern across archived sessions | PERSISTENT / RECENT_ONLY / INTERMITTENT / NEVER / UNKNOWN |
+
+The second input is the important one and it is **structural, not thresholded**.
+`RECENT_ONLY` is an ORDERING, not a recency window: every session WITHOUT a P/E precedes every
+session with one, i.e. a single loss-to-profit transition. `N N N P P P` is RECENT_ONLY;
+`N N P P N P` is INTERMITTENT, and so is `P P P N N N`.
+
+##### What that signal is, precisely
+
+The exchanges do not compute a P/E when the reference EPS is zero or negative. So the pattern
+is a **positive-earnings eligibility history** — a trailing-earnings **sign-state proxy**.
+
+It is **NOT an earnings-magnitude history**, and a PERSISTENT pattern does **not** show that
+earnings are stable:
+
+```
+TTM EPS   20 → 10 → 5 → 1     stays PERSISTENT throughout
+```
+
+A denominator collapsing by 95% is invisible here, because it never crossed zero. Nothing in
+this layer may be described as showing stable, healthy or improving earnings. The phrase
+"stable earnings denominator" must not appear.
+
+##### An acquisition gap is not a financial fact
+
+The pattern may use a P/E absence only where the session observation actually exists. A stock
+absent from a whole-market response is archived with `Ratios` **nil** — no row — so an
+unfetched stretch SHORTENS the series rather than punching a hole in it:
+
+```
+P P [archive hole] P P   →   PERSISTENT, never INTERMITTENT
+```
+
+Missing acquisition data is a data-completeness problem, not evidence about earnings. The cost
+is that PERSISTENT means "no ARCHIVED session lacked a P/E", not "no session lacked one" — the
+same archive-completeness caveat FU-9 carries, and it cannot be closed without a trading
+calendar.
+
+**The corollary, which is where the real bug was.** If an absent P/E is a financial fact, then
+every path that can produce one must be able to justify it. An unresolvable P/E COLUMN cannot:
+`fieldIndex` returns −1 for an unmatched header, `pick` turns that into `""`, and `ratio("")`
+returns nil — so a renamed header used to archive "this company had no positive earnings" for
+every row it touched. One bad backfill month inside a good series read as
+`P P [renamed month] P P` → INTERMITTENT → "the denominator crossed zero", and on the live
+whole-market endpoint it would have done so for the entire market at once.
+
+`TWSEMonth` and `TPEXSession` now FAIL the response when the P/E column cannot be resolved, and
+`parseRatioRows` skips a row whose P/E KEY is absent. The distinction is:
+
+| | meaning | handling |
+|---|---|---|
+| the P/E **key/column** is missing | we cannot see the column — a parse problem | refuse / skip |
+| the P/E **value** is `-` or empty | the exchange published no ratio — the financial fact | archive as nil |
+
+Losing a month to an error a human will see is recoverable. Writing a false earnings history
+into the archive is not, because nothing downstream can afterwards tell which nils were real.
+
+The TPEx code column is guarded the same way, against a different false fact: an unmatched
+`股票代號` header empties every row's code, every row is skipped, the caller receives an empty
+map — and reads it as a **non-trading day**. A renamed column would report the whole backfill
+window as holidays, with no error and no rows.
+
+The general rule this layer now follows: **a parse failure must never be reported in the
+vocabulary of an observation.** Not as "no earnings", not as "market closed".
+
+The wording guard on rendered reasons is enforced the same way — driven by the reason-code
+table (`AllSuitabilityReasons`) rather than by sampled inputs, in both directions: every
+declared code must have wording that claims no stability, and every code the classifier can
+actually produce must be declared. A sampled version of that test covered 11 of 14 notes, and
+two of the three it missed are live on real stocks.
+
+**Known limit of that guard.** Its coverage over CODES is now exhaustive; its coverage over
+VOCABULARY is not, and cannot be — `stabilityClaims` is a hand-written denylist, so a phrasing
+outside it (「盈餘表現穩定」 rather than 「盈餘穩定」) passes. The guard catches the specific
+regression it was built for and raises the cost of the general one; it is not a proof. Anyone
+rewording a note is still responsible for the claim it makes.
+
+Guarded columns are likewise `code` and `pe` only. `pb` and `yield` still fall through to nil
+on a renamed header, which is correct under the rule above: a nil P/B is displayed as an honest
+absent value and feeds no judgement, whereas a nil P/E and an empty row set are both
+INTERPRETED. If a future layer ever gives P/B a meaning, its column needs the same guard on the
+same day.
+
+##### The observation floor
+
+`MinSuitabilityWindowSessions = 60` — approximately one reporting cycle (~21 sessions a month).
+
+It proves only that the window is **long enough to potentially span** one reporting cycle. It
+does **not** prove an earnings update occurred inside it; the filing dates that would establish
+that are not part of this input. The weaker claim is what the rules rely on.
+
+It applies to WINDOW SESSIONS, a different quantity from FU-9's `QualityMediumMinSamples`,
+which counts VALID SAMPLES.
+
+It also gates the `NEVER` conclusion: fewer than 60 archived sessions with no published P/E is
+`INSUFFICIENT_DATA` with `INSUFFICIENT_OBSERVATION_WINDOW`, never UNSUITABLE. Three sessions of
+silence is not a year of it. **The filed earnings evidence does not bypass this floor** — that
+would be a different rule, concluding from a statement rather than from a pattern, and folding
+it into `NEVER` would leave the stored verdict unable to say which evidence produced it. If it
+is ever wanted, it gets its own name and its own reason code.
+
+**HEURISTIC / NOT BACKTEST-FITTED.** There is very little here that could be fitted.
+
+##### What SUITABLE actually claims
+
+Narrowly: **P/E is structurally usable under the observed positive-earnings eligibility
+history.** Nothing more.
+
+Every SUITABLE verdict carries `EARNINGS_MAGNITUDE_NOT_ESTABLISHED`, unconditionally, so the
+limit travels with the conclusion instead of living in a document. FU11-v1 does **not**
+establish earnings-magnitude stability, and cannot: that needs multi-period earnings, which
+needs a fundamental archive holding more than one filed period per stock. Future work, not a
+threshold change.
+
+#### Three things that must never decide a verdict
+
+| | real case | contract |
+|---|---|---|
+| a high P/E | 3037 欣興, median ≈ 120x on 225/225 | a level is a property of the NUMERATOR. `SuitabilityInput` carries no P/E level at all. |
+| a wide distribution | 6274 台燿, relative IQR ≈ 0.91 | a re-rating the archive captured correctly. Attaches `VALUATION_REGIME_WIDE`, nothing more. |
+| an extreme target upside | 1815 富喬, base case > +100% | what a low current multiple against the stock's own distribution arithmetically produces. Attaches `TARGET_SENSITIVITY_REVIEW`. |
+
+The last two are CAUTION reasons, appended after the class is decided and structurally
+incapable of changing it. Reasoning from a result back to the validity of the model that
+produced it is reasoning backwards, and it would contradict FU-9, which kept dispersion out
+of the quality grade for the same reason.
+
+#### An absent P/E is not proof of a loss
+
+`UNSUITABLE` with `NO_POSITIVE_TRAILING_EARNINGS` requires **two independent sources agreeing**:
+no P/E anywhere in the window AND a filing showing the earnings basis is not positive.
+
+Silence alone is consistent with a suspension, a listing change, or a dataset gap. 3055 蔚華科
+qualifies because its 2026Q2 filing reports EPS −0.03 on net income −7,061,000; the same
+archive with no filing is `INSUFFICIENT_DATA`.
+
+`NEVER` additionally requires at least `MinSuitabilityWindowSessions` archived sessions — see
+the observation floor above.
+
+**And a non-observation is not silence.** `NEVER` means this repo watched N sessions and the
+exchange published no ratio on any of them. An EMPTY archive is `UNKNOWN`, classified
+`INSUFFICIENT_DATA` with `NO_ARCHIVED_SESSIONS`, and may never carry
+`PE_NEVER_PUBLISHED_IN_WINDOW` — that reason asserts something about an exchange, and an
+exchange that was never queried has not said anything. This is the same error as reading
+silence as a loss, arrived at from the other side, and it is reachable: 3037 欣興 held a
+valuation archive and no fundamental one for the whole of FU-11.
+
+#### The AI decides no verdict, structurally
+
+Every deterministic conclusion this repo computes is now a WORD rather than a number — entry
+assessment, data quality, model suitability — so "the reply schema has no numeric field" has
+stopped being the same claim as "the model decides nothing". A string field named
+`suitability` is neither numeric nor on any denylist.
+
+The reply's field set is therefore an ALLOWLIST — **default-deny** — enforced over both the
+schema and the decoded struct, plus an end-to-end test in which the model actively attempts to
+set every verdict and changes none of them. Any future field, of any type, fails until it is
+explicitly added to the interpretation-only set. Adding one is a decision someone has to make
+deliberately, which is the moment to ask whether the model should be able to send it at all.
+
+These classes may never become AI-authoritative: assessment, verdict, quality, suitability, any
+deterministic status, EPS, P/E, target price, margin of safety, or any deterministic rule
+output. **Do not revert to a denylist of dangerous field names** — that is the design that
+failed, because it could only enumerate the fields someone had already thought of.
+
+The evidence table's exception for classification keys is justified the same way: each such key
+declares its CLOSED VOCABULARY in the test, and the stored value must be a member of it. A
+figure key has no vocabulary to declare and so cannot be admitted; numeric evidence keys keep
+their protection against storing `INSUFFICIENT_DATA` as though it were a measurement.
+
+#### Target price independence, and same-session
+
+`git diff internal/valuation/target_price.go` is empty and `SuitabilityInput` carries nothing
+the target engine reads. `Target Price: AVAILABLE` beside `Suitability: WEAK` is the expected
+pairing, not a contradiction — the system can compute it, and it should not be treated as a
+high-confidence long-run anchor.
+
+The same-session invariant is untouched: `ImpliedTTMEPS = close(EPSBaseDate) / trailingPE`
+only where `Close.Date == PE.Date`, `closeOn` still an exact match with no nearest-earlier
+fallback.
+
+#### Non-goals
+
+No P/B target, EV/EBITDA, DCF, normalized EPS, analyst consensus, sector-specific model
+selection, or automatic model switching. FU-11 says which lens is appropriate; it does not
+provide an alternative one. The AI may explain a verdict and may not change it, recompute it,
+propose a threshold, or suggest another valuation model.
+
+`FU-12 — Alternative Valuation Models / Model Selection` is the follow-up.
+
+#### Coverage is not archive completeness
+
+FU-9's coverage is `valid P/E sessions ÷ ARCHIVED sessions`. It is **not**
+`archived sessions ÷ expected market sessions`. A stock with 100 archived sessions, all
+carrying a P/E, reports 100% coverage even if the window should have held 225 — the missing
+125 were never fetched, and nothing in FU-9 or FU-11 can see that.
+
+FU-11 does not implement a trading calendar. FU-8's daily pipeline is the place a real
+market-session expectation would come from; integrating it is future work, and a second
+calendar must not be built for this.
+
 ---
 
 ## 7. Target price contract
