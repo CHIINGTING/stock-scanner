@@ -325,6 +325,36 @@ func evidenceRows(hc *Health) []store.Evidence {
 	out = append(out, store.Num(CategoryValuation, "historical_pe_samples",
 		float64(hc.Valuation.Historical.SampleCount), "筆", hc.Valuation.Source))
 
+	// Evidence quality, persisted beside the statistics it qualifies.
+	//
+	// The rule version travels with the grade and is not optional: thresholds will change,
+	// and a stored "LOW" with no version is a row nobody can interpret afterwards — it does
+	// not say whether the stock got worse or the rule got stricter. The metrics are stored
+	// too, so a future rule can be applied retroactively to rows graded under this one.
+	q := hc.Valuation.Historical.Quality
+	text(CategoryValuation, "quality", q.Quality, q.RuleVersion)
+	text(CategoryValuation, "quality_rule_version", q.RuleVersion, HistoryVersion)
+	out = append(out, store.Num(CategoryValuation, "quality_valid_samples",
+		float64(q.ValidSamples), "筆", hc.Valuation.Source))
+	out = append(out, store.Num(CategoryValuation, "quality_window_sessions",
+		float64(q.WindowSessions), "個", hc.Valuation.Source))
+	num(CategoryValuation, "quality_coverage", q.Coverage)
+
+	// Model suitability (FU-11). Stored with its own rule version, for the same reason the
+	// quality grade is: thresholds and rules move, and a bare "WEAK" with no version cannot
+	// afterwards be told apart from a rule change.
+	//
+	// The canonical reason CODES are stored, not the wording. Wording is presentation and may
+	// be reworded; a stored conclusion has to stay machine-readable.
+	ms := hc.Valuation.ModelSuitability
+	text(CategoryValuation, "model_suitability", ms.Suitability, ms.RuleVersion)
+	text(CategoryValuation, "model_suitability_rule_version", ms.RuleVersion, HistoryVersion)
+	text(CategoryValuation, "model_suitability_reasons", joinReasons(ms.Reasons), ms.RuleVersion)
+	// The two evidence axes the verdict turns on, so a stored verdict can be re-derived
+	// rather than merely re-read.
+	text(CategoryValuation, "earnings_sign", ms.EarningsSign, ms.EarningsSource)
+	text(CategoryValuation, "pe_persistence", ms.PEPersistence, hc.Valuation.Source)
+
 	// The target price and every input that produced it, so a later reader can re-derive it.
 	t := hc.Target
 	text(CategoryTarget, "status", string(t.Status), HistoryVersion)
@@ -396,4 +426,19 @@ func intAsFloat(v int) *float64 {
 	}
 	f := float64(v)
 	return &f
+}
+
+// joinReasons renders the canonical codes as one comma-separated field.
+//
+// One row rather than N: the evidence table is key/value, and a variable number of rows per
+// check would make "which reasons did this check have" a query over an unknown key space.
+func joinReasons(rs []string) string {
+	out := ""
+	for i, r := range rs {
+		if i > 0 {
+			out += ","
+		}
+		out += r
+	}
+	return out
 }

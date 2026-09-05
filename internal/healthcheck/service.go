@@ -231,6 +231,10 @@ func (s *Service) Check(ctx context.Context, req Request) (*Health, error) {
 		News:        newsBlock(ev),
 	}
 	h.Target = buildTargetPrice(ev, h.Price)
+	// After the target, because one of its CAUTION notes refers to the target's own output.
+	// That does not make the target an input to the verdict: the class is decided from the
+	// earnings evidence alone, and cautions are appended afterwards.
+	h.Valuation.ModelSuitability = buildSuitability(ev, h)
 	h.DataQuality = dataQuality(ev, h)
 	// Deterministic, and computed before the model is called: the judge is TOLD the verdict
 	// as evidence it may explain, and has no path by which it could produce one.

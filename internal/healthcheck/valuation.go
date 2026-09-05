@@ -36,6 +36,46 @@ type HistoricalPEBlock struct {
 	// "INSUFFICIENT_DATA（1 筆，需 20）". It exists so "0x" and "0 percentile" have nowhere
 	// to come from.
 	Summary string `json:"summary"`
+
+	// Quality grades the evidence behind the statistics — a SECOND axis, beside Status and
+	// never instead of it. A distribution can be AVAILABLE and LOW at the same time, and
+	// that pairing is the whole point: the number is computable and deserves a caveat.
+	Quality QualityBlock `json:"quality"`
+}
+
+// QualityBlock is the evidence-quality view of the distribution, ready to print.
+//
+// Everything a grade rests on is carried beside it. A page that shows only "LOW" tells a
+// reader to distrust a number without telling them why, which is worse than showing nothing:
+// they cannot judge whether the caveat applies to the decision they are making.
+type QualityBlock struct {
+	// Quality is HIGH / MEDIUM / LOW / INSUFFICIENT — the domain's vocabulary, carried
+	// through unchanged.
+	Quality string `json:"quality"`
+	// RuleVersion identifies the thresholds. Persisted with the grade so a stored "LOW"
+	// stays interpretable after the rules change.
+	RuleVersion string `json:"rule_version"`
+
+	ValidSamples   int   `json:"valid_samples"`
+	WindowSessions int   `json:"window_sessions"`
+	Coverage       Value `json:"coverage"`
+
+	OldestValidSession string `json:"oldest_valid_session,omitempty"`
+	NewestValidSession string `json:"newest_valid_session,omitempty"`
+	SampleSpanSessions int    `json:"sample_span_sessions"`
+	SampleSpanDays     int    `json:"sample_span_days"`
+
+	// IQR and RelativeIQR describe how WIDE the distribution is. Shown, and deliberately not
+	// part of the grade — see internal/valuation/quality.go.
+	IQR         Value `json:"iqr"`
+	RelativeIQR Value `json:"relative_iqr"`
+
+	// Caveats are the specific reasons behind a grade below HIGH, each naming its own
+	// numbers. Empty for HIGH and for INSUFFICIENT — the first has nothing to caveat, and
+	// the second is already saying there is no distribution.
+	Caveats []string `json:"caveats,omitempty"`
+	// Summary is one line a UI may print instead of the grade alone.
+	Summary string `json:"summary"`
 }
 
 // ValuationBlock is the price-relative picture.
@@ -58,6 +98,12 @@ type ValuationBlock struct {
 	ForwardPE Value `json:"forward_pe"`
 	PEG       Value `json:"peg"`
 	FairValue Value `json:"fair_value"`
+
+	// ModelSuitability is the FOURTH layer: whether trailing P/E is the right primary anchor
+	// for this company at all. Independent of Status (can it be computed), of
+	// Historical.Quality (is the evidence sufficient), and of Historical.Dispersion (how wide
+	// it is). Filled after the target price — see suitability.go.
+	ModelSuitability SuitabilityBlock `json:"model_suitability"`
 }
 
 func valuationBlock(ev *Evidence) ValuationBlock {
@@ -138,7 +184,92 @@ func emptyHistorical(reason string) HistoricalPEBlock {
 		CurrentPercentile: none,
 		Summary: fmt.Sprintf("%s（0 筆，需 %d）", StatusInsufficientData,
 			valuation.MinHistoricalPESamples),
+		Quality: qualityBlock(valuation.QualityBlock{
+			Quality: valuation.QualityInsufficient, RuleVersion: valuation.QualityRuleVersion,
+		}, valuation.Dispersion{Status: valuation.InsufficientData, Reason: reason}, reason),
 	}
+}
+
+// qualityBlock formats the domain's grade for display.
+//
+// It adds exactly one thing the domain does not carry: the wording. Every number here comes
+// from internal/valuation, and there is no path by which this file could change a grade — the
+// classification happens in a pure function two packages down, and this one only reads it.
+func qualityBlock(q valuation.QualityBlock, d valuation.Dispersion, source string) QualityBlock {
+	b := QualityBlock{
+		Quality:            string(q.Quality),
+		RuleVersion:        q.RuleVersion,
+		ValidSamples:       q.ValidSamples,
+		WindowSessions:     q.WindowSessions,
+		OldestValidSession: q.OldestValidSession,
+		NewestValidSession: q.NewestValidSession,
+		SampleSpanSessions: q.SampleSpanSessions,
+		SampleSpanDays:     q.SampleSpanDays,
+		Coverage: Missing(StatusInsufficientData,
+			"沒有任何已封存的交易 session，無法計算 coverage"),
+		IQR:         Missing(mapAvailability(string(d.Status)), dispersionReason(d)),
+		RelativeIQR: Missing(mapAvailability(string(d.Status)), dispersionReason(d)),
+	}
+	// The domain carries coverage as a RATIO in [0,1]; the ×100 happens once, here — the same
+	// convention and the same single scaling point as CurrentPercentile.
+	if q.CoverageRatio != nil {
+		b.Coverage = Num(*q.CoverageRatio*100, "%", 1,
+			fmt.Sprintf("%d 個有效樣本 ÷ %d 個已封存 session", q.ValidSamples, q.WindowSessions))
+	}
+	if d.IQR != nil {
+		b.IQR = Num(*d.IQR, "x", 2, source)
+	}
+	if d.RelativeIQR != nil {
+		b.RelativeIQR = Num(*d.RelativeIQR*100, "%", 0, "四分位距 ÷ 中位數")
+	}
+	b.Caveats = qualityCaveats(q)
+	b.Summary = qualitySummary(q)
+	return b
+}
+
+func dispersionReason(d valuation.Dispersion) string {
+	if d.Reason != "" {
+		return d.Reason
+	}
+	return "離散度不可得"
+}
+
+// qualityCaveats states the specific shortfalls behind a grade, each with its own numbers.
+//
+// Written as observations rather than warnings. A reader deciding whether to act on a target
+// price needs to know that the samples cover a twelfth of the window; they do not need to be
+// told the number is dangerous, which is a judgement this layer has no standing to make.
+func qualityCaveats(q valuation.QualityBlock) []string {
+	if q.Quality == valuation.QualityHigh || q.Quality == valuation.QualityInsufficient {
+		return nil
+	}
+	var out []string
+	if q.WindowSessions > 0 {
+		out = append(out, fmt.Sprintf("歷史本益比有效樣本 %d 筆，涵蓋期間內已封存的 %d 個交易 session",
+			q.ValidSamples, q.WindowSessions))
+	}
+	if c := q.CoverageRatio; c != nil && *c < valuation.QualityHighMinCoverage {
+		out = append(out, fmt.Sprintf("樣本 coverage %.1f%%（其餘 session 交易所未公告本益比）",
+			*c*100))
+	}
+	if q.SampleSpanDays > 0 && q.SampleSpanDays < valuation.QualityHighMinSpanDays {
+		out = append(out, fmt.Sprintf("有效樣本集中在 %s ～ %s，共 %d 天",
+			q.OldestValidSession, q.NewestValidSession, q.SampleSpanDays))
+	}
+	return out
+}
+
+func qualitySummary(q valuation.QualityBlock) string {
+	if q.Quality == valuation.QualityInsufficient {
+		return fmt.Sprintf("%s（沒有可用的歷史本益比樣本；規則 %s）",
+			q.Quality, q.RuleVersion)
+	}
+	cov := "—"
+	if c := q.CoverageRatio; c != nil {
+		cov = fmt.Sprintf("%.1f%%", *c*100)
+	}
+	return fmt.Sprintf("%s（有效樣本 %d／已封存 session %d，coverage %s；規則 %s）",
+		q.Quality, q.ValidSamples, q.WindowSessions, cov, q.RuleVersion)
 }
 
 func historicalBlock(h valuation.HistoricalPEStats, source string) HistoricalPEBlock {
@@ -155,6 +286,7 @@ func historicalBlock(h valuation.HistoricalPEStats, source string) HistoricalPEB
 		b.CurrentPercentile = none
 		b.Summary = fmt.Sprintf("%s（%d 筆，需 %d）", b.Status, h.SampleCount,
 			valuation.MinHistoricalPESamples)
+		b.Quality = qualityBlock(h.Quality, h.Dispersion, source)
 		return b
 	}
 	b.Median = peValue(h.Median, source)
@@ -169,6 +301,7 @@ func historicalBlock(h valuation.HistoricalPEStats, source string) HistoricalPEB
 		b.CurrentPercentile = Missing(StatusUnavailable, "沒有當期本益比可以定位")
 	}
 	b.Summary = fmt.Sprintf("%d 筆樣本，中位數 %s", h.SampleCount, b.Median.Display)
+	b.Quality = qualityBlock(h.Quality, h.Dispersion, source)
 	return b
 }
 

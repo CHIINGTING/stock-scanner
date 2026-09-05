@@ -193,6 +193,26 @@ const judgeInstruction = `你是一位台股研究員，正在為一份「個股
 頁面上的進場評估結論由程式規則決定，已經寫在證據裡。你可以解釋它、指出它的前提，
 但不得改變它，也不得在文字中給出不同的結論。
 
+【估值樣本品質】
+「估值樣本品質」（HIGH／MEDIUM／LOW／INSUFFICIENT）同樣由程式的確定性規則判定，
+規則版本已寫在證據裡。你可以引用它來說明「目標價可以計算，但歷史估值樣本涵蓋率偏低」，
+但不得改變這個等級、不得自行重算、不得提出不同的門檻或自己的信心度判斷。
+它評估的是「資料證據的充分程度」，不是「本益比適不適合用來評價這家公司」。
+
+【本益比估值模型適用性】
+「本益比估值模型適用性」（SUITABLE／CONDITIONAL／WEAK／UNSUITABLE／INSUFFICIENT_DATA）
+同樣由程式的確定性規則判定，規則版本與理由代碼都已寫在證據裡。
+你可以引用它來解釋，例如「目標價可以計算，但歷史本益比只在近期部分期間存在，
+因此這個以本益比為基礎的目標價不宜視為高信心的長期估值錨」。
+
+但你不得：改變這個判定、自行重新計算、自行提出新的本益比門檻、
+自行產生每股盈餘或目標價、自行改用其他估值模型（例如股價淨值比、EV/EBITDA）、
+或建議系統改用其他模型。本 repo 目前只實作本益比一種估值模型，
+提出替代模型的數字就是憑空捏造。
+
+UNSUITABLE 的意思只有一個：「以目前證據，本益比不適合作為主要估值錨」。
+它不代表公司不好、不代表股價偏貴、不代表高風險、也不代表賣出。不得作這些延伸。
+
 【欄位】
 summary       一段話總結這檔股票目前的處境。
 bull_points   支持買進的理由，每點一句，必須對應到 evidence 中的事實。
@@ -399,6 +419,25 @@ func buildJudgePrompt(h *Health) string {
 		h.Valuation.PBRatio.Display, h.Valuation.DividendYield.Display)
 	w("歷史本益比分布：%s", h.Valuation.Historical.Summary)
 	w("目前所在百分位：%s", h.Valuation.Historical.CurrentPercentile.Display)
+	// Evidence quality, given to the model as a FINDING it may explain — never as a question
+	// it may answer. The grade, its rule version and the counts behind it are all computed by
+	// a pure function before this prompt is built; nothing the model returns is read back
+	// into them.
+	q := h.Valuation.Historical.Quality
+	w("估值樣本品質：%s", q.Summary)
+	for _, c := range q.Caveats {
+		w("　- %s", c)
+	}
+	// Model suitability, given as a finding with its canonical reason codes. Like the grade
+	// above, it is decided by a pure function before this prompt exists.
+	ms := h.Valuation.ModelSuitability
+	w("本益比估值模型適用性：%s", ms.Summary)
+	if len(ms.Reasons) > 0 {
+		w("　適用性理由代碼：%s", strings.Join(ms.Reasons, "、"))
+	}
+	for _, n := range ms.Notes {
+		w("　- %s", n)
+	}
 
 	w("\n【目標價】狀態 %s（規則：%s）", h.Target.Status, h.Target.Rule)
 	if h.Target.RuleDetail != "" {

@@ -682,3 +682,256 @@ func withTarget(m map[string]any) {
 }
 
 func jsStr(s string) string { return `"` + s + `"` }
+
+// ── FU-9: evidence quality on the page ────────────────────────────────────────────────
+
+// qualityHealth builds a health body whose historical P/E carries a quality block.
+func qualityHealth(t *testing.T, q map[string]any) string {
+	t.Helper()
+	num := func(v float64, disp string) map[string]any {
+		return map[string]any{"status": "AVAILABLE", "value": v, "display": disp}
+	}
+	return health(t, func(m map[string]any) {
+		hp := map[string]any{"status": "AVAILABLE", "sample_count": 26, "required_samples": 20,
+			"summary":            "26 筆樣本，中位數 28.79x",
+			"median":             num(28.79, "28.79x"),
+			"p25":                num(28.00, "28.00x"),
+			"p75":                num(30.48, "30.48x"),
+			"current_percentile": num(31, "31%"),
+			"quality":            q}
+		m["valuation"].(map[string]any)["historical_pe"] = hp
+		m["valuation"].(map[string]any)["status"] = "AVAILABLE"
+	})
+}
+
+func lowQuality() map[string]any {
+	return map[string]any{
+		"quality": "LOW", "rule_version": "FU9-v1",
+		"valid_samples": 26, "window_sessions": 225,
+		"coverage":             map[string]any{"status": "AVAILABLE", "value": 11.6, "display": "11.6%"},
+		"oldest_valid_session": "2026-07-31", "newest_valid_session": "2026-09-04",
+		"sample_span_sessions": 26, "sample_span_days": 36,
+		"iqr":          map[string]any{"status": "AVAILABLE", "value": 2.48, "display": "2.48x"},
+		"relative_iqr": map[string]any{"status": "AVAILABLE", "value": 9, "display": "9%"},
+		"caveats": []any{
+			"歷史本益比有效樣本 26 筆，涵蓋期間內已封存的 225 個交易 session",
+			"樣本 coverage 11.6%（其餘 session 交易所未公告本益比）",
+			"有效樣本集中在 2026-07-31 ～ 2026-09-04，共 36 天"},
+		"summary": "LOW（有效樣本 26／已封存 session 225，coverage 11.6%；規則 FU9-v1）",
+	}
+}
+
+// A LOW grade must arrive with its evidence. The failure this blocks is a page that prints
+// the word and nothing else: a reader told to distrust a number, with no way to judge whether
+// the reason matters to the decision they are making.
+func TestLowQualityRendersItsEvidenceNotJustTheGrade(t *testing.T) {
+	out := runPage(t, `
+render(`+qualityHealth(t, lowQuality())+`);
+var txt = IDS.out.textContent;
+print('GRADE ' + /LOW/.test(txt));
+print('RULE ' + /FU9-v1/.test(txt));
+print('VALID ' + /26 筆/.test(txt));
+print('WINDOW ' + /225 個/.test(txt));
+print('COVERAGE ' + /11\.6%/.test(txt));
+print('OLDEST ' + /2026-07-31/.test(txt));
+print('NEWEST ' + /2026-09-04/.test(txt));
+print('SPAN ' + /36 天/.test(txt));
+print('CAVEATS ' + byClass(IDS.out, 'qual-caveats').length);
+print('PILL ' + byClass(IDS.out, 'qual').length);
+`)
+	for _, want := range []string{"GRADE true", "RULE true", "VALID true", "WINDOW true",
+		"COVERAGE true", "OLDEST true", "NEWEST true", "SPAN true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing from the page: %s\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "CAVEATS 0") {
+		t.Errorf("the caveats were not rendered:\n%s", out)
+	}
+	if strings.Contains(out, "PILL 0") {
+		t.Errorf("the grade pill was not rendered:\n%s", out)
+	}
+}
+
+// The target price must still be shown in full beside a LOW grade. Quality is a caveat next
+// to a number, not the removal of the number.
+func TestALowGradeDoesNotSuppressTheTargetPriceOnThePage(t *testing.T) {
+	num := func(v float64, disp string) map[string]any {
+		return map[string]any{"status": "AVAILABLE", "value": v, "display": disp}
+	}
+	body := health(t, func(m map[string]any) {
+		hp := map[string]any{"status": "AVAILABLE", "sample_count": 26, "required_samples": 20,
+			"summary": "26 筆樣本，中位數 28.79x", "median": num(28.79, "28.79x"),
+			"current_percentile": num(31, "31%"), "quality": lowQuality()}
+		m["valuation"].(map[string]any)["historical_pe"] = hp
+		m["target_price"] = map[string]any{"status": "AVAILABLE",
+			"rule": "HISTORICAL_PERCENTILE", "sample_count": 26, "required_samples": 20,
+			"current_price": num(50, "50.00 TWD"), "eps": num(1.72, "1.72 TWD"),
+			"margin_of_safety": num(0.1, "0.10%"),
+			"scenarios": []any{map[string]any{"name": "BASE", "status": "AVAILABLE",
+				"pe_multiple":  num(29.09, "29.09x"),
+				"target_price": num(50.05, "50.05 TWD"),
+				"upside_pct":   num(0.1, "0.10%")}}}
+	})
+	out := runPage(t, `
+render(`+body+`);
+var txt = IDS.out.textContent;
+print('TARGET ' + /50\.05 TWD/.test(txt));
+print('MULTIPLE ' + /29\.09x/.test(txt));
+print('GRADE ' + /LOW/.test(txt));
+`)
+	for _, want := range []string{"TARGET true", "MULTIPLE true", "GRADE true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("%s — a LOW grade suppressed the target price:\n%s", want, out)
+		}
+	}
+}
+
+// INSUFFICIENT has no distribution to describe. Printing a coverage of 0% and a span of
+// nothing would dress an absence up as a measurement.
+func TestInsufficientQualityDoesNotRenderFabricatedMetrics(t *testing.T) {
+	q := map[string]any{
+		"quality": "INSUFFICIENT", "rule_version": "FU9-v1",
+		"valid_samples": 0, "window_sessions": 225,
+		"coverage":             map[string]any{"status": "AVAILABLE", "value": 0, "display": "0.0%"},
+		"sample_span_sessions": 0, "sample_span_days": 0,
+		"summary": "INSUFFICIENT（沒有可用的歷史本益比樣本；規則 FU9-v1）",
+	}
+	out := runPage(t, `
+render(`+qualityHealth(t, q)+`);
+var txt = IDS.out.textContent;
+print('GRADE ' + /INSUFFICIENT/.test(txt));
+print('SPANZERO ' + /0 天/.test(txt));
+print('CAVEATS ' + byClass(IDS.out, 'qual-caveats').length);
+`)
+	if !strings.Contains(out, "GRADE true") {
+		t.Errorf("the grade was not rendered:\n%s", out)
+	}
+	if !strings.Contains(out, "SPANZERO false") {
+		t.Errorf("a span of 0 days was rendered as a measurement:\n%s", out)
+	}
+	if !strings.Contains(out, "CAVEATS 0") {
+		t.Errorf("INSUFFICIENT rendered caveats; it has no distribution to caveat:\n%s", out)
+	}
+}
+
+// ── FU-11: model suitability on the page ──────────────────────────────────────────────
+
+func weakSuitability() map[string]any {
+	return map[string]any{
+		"suitability": "WEAK", "rule_version": "FU11-v1",
+		"reasons":         []any{"PE_AVAILABLE_ONLY_RECENTLY", "EARNINGS_SIGN_CHANGE"},
+		"notes":           []any{"本益比只在近期出現：較早的 session 全部沒有，之後才全部有"},
+		"earnings_sign":   "POSITIVE",
+		"earnings_period": "2026 H1（累計 Q1–Q2）",
+		"pe_persistence":  "RECENT_ONLY",
+		"window_sessions": 225,
+		"summary":         "WEAK：本益比算得出來，但作為長期主要估值錨的經濟意義偏弱（規則 FU11-v1）",
+	}
+}
+
+// Data quality and model suitability are DIFFERENT axes, and the page must show both. The
+// failure this blocks is one being rendered as the other — "資料品質 LOW" quietly turned into
+// "P/E 不適用", which is a claim about the company that the data never made.
+func TestQualityAndSuitabilityAreBothRenderedAndDistinct(t *testing.T) {
+	num := func(v float64, disp string) map[string]any {
+		return map[string]any{"status": "AVAILABLE", "value": v, "display": disp}
+	}
+	body := health(t, func(m map[string]any) {
+		v := m["valuation"].(map[string]any)
+		v["status"] = "AVAILABLE"
+		v["historical_pe"] = map[string]any{"status": "AVAILABLE", "sample_count": 26,
+			"required_samples": 20, "summary": "26 筆樣本，中位數 28.79x",
+			"median": num(28.79, "28.79x"), "current_percentile": num(31, "31%"),
+			"quality": lowQuality()}
+		v["model_suitability"] = weakSuitability()
+	})
+	out := runPage(t, `
+render(`+body+`);
+var txt = IDS.out.textContent;
+print('QUALITY_PILL ' + byClass(IDS.out, 'qual').length);
+print('SUIT_PILL ' + byClass(IDS.out, 'suit').length);
+print('SUIT_GRADE ' + /WEAK/.test(txt));
+print('SUIT_RULE ' + /FU11-v1/.test(txt));
+print('CODES ' + /PE_AVAILABLE_ONLY_RECENTLY/.test(txt));
+print('PERSIST ' + /RECENT_ONLY/.test(txt));
+print('EARNINGS ' + /POSITIVE/.test(txt));
+print('QUALITY_GRADE ' + /LOW/.test(txt));
+`)
+	for _, want := range []string{"SUIT_GRADE true", "SUIT_RULE true", "CODES true",
+		"PERSIST true", "EARNINGS true", "QUALITY_GRADE true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing from the page: %s\n%s", want, out)
+		}
+	}
+	// Two separate badges, so neither axis can be read as the other.
+	if strings.Contains(out, "QUALITY_PILL 0") || strings.Contains(out, "SUIT_PILL 0") {
+		t.Errorf("the two axes are not both badged:\n%s", out)
+	}
+}
+
+// A WEAK verdict must not delete the target price from the page.
+func TestAWeakVerdictDoesNotSuppressTheTargetPriceOnThePage(t *testing.T) {
+	num := func(v float64, disp string) map[string]any {
+		return map[string]any{"status": "AVAILABLE", "value": v, "display": disp}
+	}
+	body := health(t, func(m map[string]any) {
+		v := m["valuation"].(map[string]any)
+		v["status"] = "AVAILABLE"
+		v["historical_pe"] = map[string]any{"status": "AVAILABLE", "sample_count": 26,
+			"required_samples": 20, "summary": "26 筆樣本", "median": num(28.79, "28.79x"),
+			"current_percentile": num(31, "31%"), "quality": lowQuality()}
+		v["model_suitability"] = weakSuitability()
+		m["target_price"] = map[string]any{"status": "AVAILABLE",
+			"rule": "HISTORICAL_PERCENTILE", "sample_count": 26, "required_samples": 20,
+			"current_price": num(50, "50.00 TWD"), "eps": num(1.72, "1.72 TWD"),
+			"margin_of_safety": num(0.1, "0.10%"),
+			"scenarios": []any{map[string]any{"name": "BASE", "status": "AVAILABLE",
+				"pe_multiple":  num(29.09, "29.09x"),
+				"target_price": num(50.05, "50.05 TWD"),
+				"upside_pct":   num(0.1, "0.10%")}}}
+	})
+	out := runPage(t, `
+render(`+body+`);
+var txt = IDS.out.textContent;
+print('TARGET ' + /50\.05 TWD/.test(txt));
+print('SUIT ' + /WEAK/.test(txt));
+`)
+	for _, want := range []string{"TARGET true", "SUIT true"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("%s — a WEAK verdict suppressed the target price:\n%s", want, out)
+		}
+	}
+}
+
+// UNSUITABLE must not be styled as danger. It means "use a different anchor", not bad,
+// overpriced, risky or sell — and the verdict palette would say all four.
+func TestUnsuitableIsNotStyledAsRisk(t *testing.T) {
+	body := health(t, func(m map[string]any) {
+		v := m["valuation"].(map[string]any)
+		v["model_suitability"] = map[string]any{
+			"suitability": "UNSUITABLE", "rule_version": "FU11-v1",
+			"reasons":       []any{"NO_POSITIVE_TRAILING_EARNINGS"},
+			"notes":         []any{"最近一期財報顯示盈餘基準不為正"},
+			"earnings_sign": "NON_POSITIVE", "pe_persistence": "NEVER",
+			"window_sessions": 225, "summary": "UNSUITABLE：目前證據顯示本益比不適合作為主要估值模型",
+		}
+	})
+	out := runPage(t, `
+render(`+body+`);
+var pills = byClass(IDS.out, 'suit');
+print('PILLS ' + pills.length);
+var bad = 0;
+pills.forEach(function (p) {
+  // The verdict palette's classes must never appear on a suitability badge.
+  ['danger', 'risk', 'bad', 'down'].forEach(function (c) {
+    if (p.classList.contains(c)) { bad++; print('RISK-STYLED ' + c); }
+  });
+});
+print('BAD ' + bad);
+print('GRADE ' + /UNSUITABLE/.test(IDS.out.textContent));
+`)
+	if !strings.Contains(out, "BAD 0") || !strings.Contains(out, "GRADE true") {
+		t.Errorf("UNSUITABLE is rendered as a risk verdict:\n%s", out)
+	}
+}

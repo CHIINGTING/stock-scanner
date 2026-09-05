@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -618,5 +619,141 @@ func TestAssessmentIsGivenToTheJudgeAsReadOnly(t *testing.T) {
 	// rather than inventing a plausible one.
 	if h.Assessment.DecidedBy != "" && !strings.Contains(p, h.Assessment.DecidedBy) {
 		t.Errorf("the deciding rule is not in the prompt")
+	}
+}
+
+// ── the model cannot supply a VERDICT either (FU-11) ──────────────────────────────────
+//
+// TestJudgeSchemaHasNoNumericField blocks figures. It does not block a CLASSIFICATION: a
+// string field named "suitability" is neither numeric nor on its denylist, so adding one to
+// the reply — and letting it overwrite the deterministic verdict when the model bothers to
+// send it — passed the entire suite. Every deterministic conclusion this repo computes is now
+// a word rather than a number (entry assessment, data quality, model suitability), so "no
+// numeric field" has stopped being the same thing as "the model decides nothing".
+//
+// The fix is a denylist replaced by an ALLOWLIST. Any new field, of any type, fails these
+// until someone deliberately adds it here — which is the moment to ask whether the model
+// should be able to send it at all.
+
+// replyFields is the complete set the reply may carry. Adding to it is a decision, not a
+// detail: every one of these is prose the model wrote, and nothing else may enter.
+var replyFields = []string{"summary", "bull_points", "bear_points", "risk_notes",
+	"invalidators", "data_gaps", "confidence"}
+
+func TestJudgeSchemaCarriesExactlyTheKnownFields(t *testing.T) {
+	props, ok := judgeSchema()["properties"].(map[string]any)
+	if !ok {
+		t.Fatal("no properties")
+	}
+	allowed := map[string]bool{}
+	for _, f := range replyFields {
+		allowed[f] = true
+		if _, exists := props[f]; !exists {
+			t.Errorf("the schema lost the %q field", f)
+		}
+	}
+	for name := range props {
+		if !allowed[name] {
+			t.Errorf("the reply schema carries an undeclared %q field — the model could "+
+				"supply it, and if it names a deterministic conclusion it could decide it",
+				name)
+		}
+	}
+}
+
+// The same allowlist over the STRUCT, because the schema is what the model is asked for and
+// the struct is what gets decoded. A field added to only one of them is the subtler bug.
+func TestJudgeReplyStructCarriesExactlyTheKnownFields(t *testing.T) {
+	rt := reflect.TypeOf(judgeReply{})
+	allowed := map[string]bool{}
+	for _, f := range replyFields {
+		allowed[f] = true
+	}
+	seen := map[string]bool{}
+	for i := 0; i < rt.NumField(); i++ {
+		tag := strings.Split(rt.Field(i).Tag.Get("json"), ",")[0]
+		seen[tag] = true
+		if !allowed[tag] {
+			t.Errorf("judgeReply carries an undeclared %q field; a model reply could be "+
+				"decoded into it", tag)
+		}
+	}
+	for _, f := range replyFields {
+		if !seen[f] {
+			t.Errorf("judgeReply lost the %q field", f)
+		}
+	}
+}
+
+// And the end-to-end form: a model that ACTIVELY TRIES to set every deterministic conclusion
+// must change none of them.
+//
+// The reply below is valid JSON carrying the seven real fields plus fabricated verdicts. It
+// reaches the real decoder over the real transport, which is the only place the guarantee
+// actually lives — the struct has no field for them, so they are dropped. If someone ever adds
+// one, this fails whether or not the schema was updated to match.
+func TestAModelVerdictCannotOverrideADeterministicOne(t *testing.T) {
+	srv := fakeOpenAI(t, func(w http.ResponseWriter, _ []byte) {
+		inner := map[string]any{
+			"summary": "測試用的模型回覆。", "bull_points": []string{"a"},
+			"bear_points": []string{"b"}, "risk_notes": []string{"c"},
+			"invalidators": []string{"d"}, "data_gaps": []string{"e"},
+			"confidence": ConfidenceMedium,
+			// Everything the model must not be able to decide.
+			"suitability":       "SUITABLE",
+			"model_suitability": "SUITABLE",
+			"quality":           "HIGH",
+			"verdict":           "BUY",
+			"assessment":        "OPPORTUNITY",
+			"target_price":      9999.0,
+			"eps":               123.4,
+		}
+		b, _ := json.Marshal(inner)
+		env := map[string]any{"status": "completed", "output": []map[string]any{{
+			"type": "message", "content": []map[string]any{{
+				"type": "output_text", "text": string(b)}}}},
+			"usage": map[string]any{"total_tokens": 100}}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(env)
+	})
+
+	// A stock whose deterministic verdicts are the OPPOSITE of what the model claims: a
+	// distribution too thin to be SUITABLE, so an override would be visible.
+	s, vdir := valService(t, "2026-09-04")
+	writeSessions(t, vdir, 25, "2026-09-04", 18)
+
+	s.Judge = judgeAt(t, srv.URL)
+	spoke := check(t, s, Request{Symbol: "2330", AsOf: "2026-09-04"})
+	s.Judge = nil
+	silent := check(t, s, Request{Symbol: "2330", AsOf: "2026-09-04"})
+
+	if spoke.AI.Status != StatusAvailable {
+		t.Fatalf("the talking judge failed: %s", spoke.AI.Reason)
+	}
+	// Named individually before the whole-document compare, so a failure says WHICH
+	// conclusion moved rather than printing two large JSON blobs.
+	if spoke.Valuation.ModelSuitability.Suitability != silent.Valuation.ModelSuitability.Suitability {
+		t.Errorf("model suitability moved when the model spoke: %q → %q",
+			silent.Valuation.ModelSuitability.Suitability,
+			spoke.Valuation.ModelSuitability.Suitability)
+	}
+	if spoke.Valuation.Historical.Quality.Quality != silent.Valuation.Historical.Quality.Quality {
+		t.Errorf("data quality moved: %q → %q", silent.Valuation.Historical.Quality.Quality,
+			spoke.Valuation.Historical.Quality.Quality)
+	}
+	if spoke.Assessment.Verdict != silent.Assessment.Verdict {
+		t.Errorf("the entry assessment moved: %q → %q", silent.Assessment.Verdict,
+			spoke.Assessment.Verdict)
+	}
+	if spoke.Target.Status != silent.Target.Status {
+		t.Errorf("the target status moved: %q → %q", silent.Target.Status, spoke.Target.Status)
+	}
+
+	spoke.AI, silent.AI = AIBlock{}, AIBlock{}
+	spoke.GeneratedAt, silent.GeneratedAt = time.Time{}, time.Time{}
+	a, _ := json.Marshal(spoke)
+	b, _ := json.Marshal(silent)
+	if string(a) != string(b) {
+		t.Fatalf("something moved when the model spoke:\n%s\n%s", a, b)
 	}
 }

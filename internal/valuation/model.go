@@ -183,6 +183,43 @@ type HistoricalPEStats struct {
 	// [0,1] — the same convention the rest of this repo uses for a percentile. Ties count as
 	// at-or-below, matching internal/indicator's PercentileRank.
 	CurrentPercentile *float64 `json:"current_percentile,omitempty"`
+
+	// Quality grades the EVIDENCE behind the statistics above — a second axis, never a
+	// replacement for Status. See quality.go: a LOW grade is a caveat printed beside a
+	// number, not the removal of the number.
+	Quality QualityBlock `json:"quality"`
+
+	// Dispersion is how wide the distribution is. Reported, and deliberately not an input to
+	// the grade — see quality.go for why width is a model question rather than a data one.
+	Dispersion Dispersion `json:"dispersion"`
+
+	// Persistence is the SHAPE of P/E availability across the window: unbroken, a single
+	// loss-to-profit transition, interleaved, or never. It is evidence for FU-11's model
+	// suitability and is not part of the FU-9 grade — see suitability.go.
+	Persistence PEPersistence `json:"pe_persistence,omitempty"`
+}
+
+// QualityBlock is a grade together with everything needed to check it: the rule version that
+// produced it, the measured metrics it was produced from, and the two derived ratios a reader
+// would otherwise have to compute by hand.
+//
+// Carrying the metrics beside the grade is the point. "LOW" alone is an assertion; "LOW,
+// because 26 of 225 archived sessions had a P/E and they span 36 days" is evidence, and only
+// the second survives a change of thresholds.
+type QualityBlock struct {
+	Quality Quality `json:"quality"`
+	// RuleVersion is the thresholds this grade was computed under. Persisted with it, so a
+	// stored grade stays interpretable after the rules move.
+	RuleVersion string `json:"rule_version"`
+
+	QualityMetrics
+
+	// CoverageRatio is ValidSamples ÷ WindowSessions, a RATIO in [0,1]. Nil when there is no
+	// window — never 0, which would claim we looked.
+	CoverageRatio *float64 `json:"coverage_ratio,omitempty"`
+	// SampleSpanRatio is SampleSpanSessions ÷ WindowSessions: how much of the archived
+	// window the usable samples actually occupy. Descriptive only.
+	SampleSpanRatio *float64 `json:"sample_span_ratio,omitempty"`
 }
 
 // Valuation is everything this layer can say about one stock.

@@ -102,6 +102,38 @@
   .v.up { color: var(--up); } .v.down { color: var(--down); }
   /* A real number that carries a caveat: shown as a figure, marked as incomplete. */
   .caveat-mark { color: #f59e0b; font-size: 11px; margin-inline-start: 4px; cursor: help; }
+
+  /* ── valuation evidence quality (FU-9) ──
+     A SECOND axis, beside the availability pill and never instead of it. Its colours are
+     deliberately muted and share nothing with the verdict palette: this grades how much
+     history is behind a number, not whether the stock is a good idea, and a reader who sees
+     the risk colours here will read the two as the same judgement. */
+  .qual { display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+    letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--ink-faint); }
+  .qual.high   { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+  .qual.medium { color: #a16207; border-color: #fde68a; background: #fffbeb; }
+  .qual.low    { color: #b45309; border-color: #fed7aa; background: #fff7ed; }
+  .qual.insufficient { color: var(--missing); background: var(--missing-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .qual-caveats { margin: 6px 0 0; padding-inline-start: 18px; color: var(--ink-faint);
+    font-size: 12px; line-height: 1.7; }
+
+  /* ── P/E model suitability (FU-11) ──
+     A FOURTH axis, and the one most easily misread. It says which lens to use, not whether
+     the stock is a good idea, so it shares no colour with the verdict palette either — and
+     UNSUITABLE is deliberately neutral rather than red, because it does not mean danger. */
+  .suit { display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+    letter-spacing: .04em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line);
+    color: var(--ink-faint); }
+  .suit.suitable    { color: #15803d; border-color: #bbf7d0; background: #f0fdf4; }
+  .suit.conditional { color: #a16207; border-color: #fde68a; background: #fffbeb; }
+  .suit.weak        { color: #b45309; border-color: #fed7aa; background: #fff7ed; }
+  .suit.unsuitable  { color: #475569; border-color: #cbd5e1; background: #f1f5f9; }
+  .suit.insufficient_data { color: var(--missing); background: var(--missing-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .suit-codes { color: var(--ink-faint); font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 4px; }
   /* Set in CSS rather than by JS so tightening style-src cannot silently break the layout. */
   td.num > .v { display: inline-block; }
 
@@ -707,8 +739,97 @@
     // hp.summary already names the counts; appending them again produced
     // "INSUFFICIENT_DATA（1 筆，需 20）（樣本 1 / 需 20）".
     reasonLine(c, "歷史本益比：" + hp.summary);
+    qualitySection(c, hp);
+    suitabilitySection(c, v.model_suitability);
     reasonLine(c, v.reason);
     return c;
+  }
+
+  // ── valuation evidence quality ─────────────────────────────────────────────────
+  //
+  // Two things a status pill cannot say at once: whether the distribution could be computed,
+  // and how much history is behind it. 2330 and 2337 are both AVAILABLE; one has a year of
+  // its own trading history and the other five weeks. So the grade is shown WITH the numbers
+  // that produced it — a bare "LOW" tells a reader to distrust a figure without telling them
+  // whether the reason matters to what they are about to do.
+  function qualitySection(parent, hp) {
+    const q = hp && hp.quality;
+    if (!q || !q.quality) return;
+
+    const head = el("div", "note");
+    head.appendChild(document.createTextNode("估值樣本品質 "));
+    const pill = el("span", "qual " + q.quality.toLowerCase(), q.quality);
+    head.appendChild(pill);
+    head.appendChild(document.createTextNode(" 規則 " + q.rule_version));
+    parent.appendChild(head);
+
+    // INSUFFICIENT has no distribution to describe. Printing coverage of 0% and a span of
+    // nothing would dress an absence up as a measurement.
+    if (q.quality === "INSUFFICIENT") {
+      reasonLine(parent, q.summary);
+      return;
+    }
+
+    parent.appendChild(grid([
+      ["有效樣本", label(q.valid_samples + " 筆")],
+      ["已封存 session", label(q.window_sessions + " 個")],
+      ["樣本 coverage", q.coverage],
+      ["最早有效樣本", label(q.oldest_valid_session || "—")],
+      ["最新有效樣本", label(q.newest_valid_session || "—")],
+      ["樣本涵蓋天數", label(q.sample_span_days + " 天（" +
+        q.sample_span_sessions + " 個 session）")],
+      ["四分位距", q.iqr],
+      ["相對四分位距", q.relative_iqr],
+    ]));
+
+    if (q.caveats && q.caveats.length) {
+      const ul = el("ul", "qual-caveats");
+      for (const t of q.caveats) ul.appendChild(el("li", null, t));
+      parent.appendChild(ul);
+    }
+  }
+
+  // ── P/E model suitability ──────────────────────────────────────────────────────
+  //
+  // The fourth axis, and the one that must not be confused with the third. Data quality asks
+  // whether there is enough evidence; this asks whether P/E is the right lens at all. They
+  // move independently — a company can have a flawless archive and still be the wrong shape
+  // for a multiple — so the page shows both, never one translated into the other.
+  //
+  // UNSUITABLE is styled neutrally on purpose. It does not mean bad, overpriced, risky or
+  // sell; it means "use a different anchor", and a red badge would be read as all four.
+  function suitabilitySection(parent, ms) {
+    if (!ms || !ms.suitability) return;
+
+    const head = el("div", "note");
+    head.appendChild(document.createTextNode("本益比模型適用性 "));
+    head.appendChild(el("span", "suit " + ms.suitability.toLowerCase(), ms.suitability));
+    head.appendChild(document.createTextNode(" 規則 " + ms.rule_version));
+    parent.appendChild(head);
+
+    parent.appendChild(grid([
+      ["盈餘基準（最近一期財報）", label(ms.earnings_sign +
+        (ms.earnings_period ? "／" + ms.earnings_period : ""))],
+      ["本益比出現形態", label(ms.pe_persistence)],
+      ["觀察 session 數", label(ms.window_sessions + " 個")],
+    ]));
+
+    if (ms.notes && ms.notes.length) {
+      const ul = el("ul", "qual-caveats");
+      for (const t of ms.notes) ul.appendChild(el("li", null, t));
+      parent.appendChild(ul);
+    }
+    // The canonical codes, shown verbatim. The prose above is a rendering of these, and a
+    // reader comparing two stocks — or this page against a stored check — needs the codes.
+    if (ms.reasons && ms.reasons.length) {
+      parent.appendChild(el("div", "suit-codes", ms.reasons.join("  ")));
+    }
+  }
+
+  // label wraps plain text as an AVAILABLE display value, so counts render through the same
+  // valueNode path as everything else and cannot accidentally acquire the missing treatment.
+  function label(text) {
+    return { status: AVAILABLE, display: String(text) };
   }
 
   function targetCard(t) {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/deep-huang/stock-scanner/internal/store"
+	"github.com/deep-huang/stock-scanner/internal/valuation"
 )
 
 func openTestHistory(t *testing.T) *History {
@@ -106,13 +107,70 @@ func TestMissingFiguresProduceNoEvidenceRow(t *testing.T) {
 		}
 	}
 	// And no row anywhere carries a status word as though it were a value.
+	//
+	// The distinction is between a key that names a FIGURE and one that names a
+	// CLASSIFICATION. "valuation/trailing_pe" holding INSUFFICIENT_DATA would be a missing
+	// number dressed as a measurement — the whole point of this check. But a verdict key's
+	// entire vocabulary is words, and INSUFFICIENT_DATA is a legitimate member of two of
+	// them, so those keys are named here explicitly rather than the rule being loosened.
+	// The exception is justified by the key's TYPE SEMANTICS, not by its name: each of these
+	// keys carries a value drawn from a CLOSED VOCABULARY, and the vocabulary is listed here.
+	// So a key cannot be added to escape the check — adding it means declaring the complete
+	// set of words it may hold, and the loop below verifies the stored value is one of them.
+	// A figure key has no vocabulary to declare and therefore cannot be admitted.
+	classificationVocab := map[string][]string{
+		"target_price/status": {string(StatusAvailable), string(StatusInsufficientData),
+			string(StatusUnavailable), string(StatusNotImplemented), string(StatusPartial),
+			string(StatusDisabled)},
+		"valuation/model_suitability": {string(valuation.SuitabilitySuitable),
+			string(valuation.SuitabilityConditional), string(valuation.SuitabilityWeak),
+			string(valuation.SuitabilityUnsuitable),
+			string(valuation.SuitabilityInsufficientData)},
+		"valuation/quality": {string(valuation.QualityHigh), string(valuation.QualityMedium),
+			string(valuation.QualityLow), string(valuation.QualityInsufficient)},
+		"valuation/pe_persistence": {string(valuation.PEPersistent),
+			string(valuation.PERecentOnly), string(valuation.PEIntermittent),
+			string(valuation.PENever), string(valuation.PEUnknown)},
+		"valuation/earnings_sign": {string(valuation.EarningsPositive),
+			string(valuation.EarningsNonPositive), string(valuation.EarningsUnknown)},
+	}
+	classificationKeys := map[string]bool{}
+	for k := range classificationVocab {
+		classificationKeys[k] = true
+	}
+	// Every classification row must hold a member of its own vocabulary. This is what makes
+	// the exception safe: a figure smuggled onto one of these keys, or a status word landing
+	// on a key whose vocabulary does not contain it, fails here.
+	for k, vocab := range classificationVocab {
+		r, ok := byKey[k]
+		if !ok {
+			continue // not every check produces every row
+		}
+		if r.NumValue != nil {
+			t.Errorf("%s is a classification key but stores a number: %v", k, *r.NumValue)
+			continue
+		}
+		if r.TextValue == nil {
+			t.Errorf("%s stores neither text nor a number", k)
+			continue
+		}
+		found := false
+		for _, w := range vocab {
+			if *r.TextValue == w {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("%s = %q, which is not in its declared vocabulary %v",
+				k, *r.TextValue, vocab)
+		}
+	}
 	for k, r := range byKey {
 		if r.TextValue != nil {
 			switch *r.TextValue {
 			case "INSUFFICIENT_DATA", "UNAVAILABLE", "NOT_IMPLEMENTED":
-				// A status is a legitimate TEXT value for a status key, but never for a
-				// key that names a figure.
-				if k != "target_price/status" {
+				if !classificationKeys[k] {
 					t.Errorf("%s stores a status word as its value: %q", k, *r.TextValue)
 				}
 			}
