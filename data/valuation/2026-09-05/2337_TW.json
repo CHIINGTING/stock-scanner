@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "symbol": "2337.TW",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-05T20:21:14.092541+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "2337.TW",
+    "date": "2026-09-04",
+    "pe_ratio": 28.79,
+    "pb_ratio": 3.88,
+    "fetched_at": "0001-01-01T00:00:00Z"
+  },
+  "history": [
+    {
+      "symbol": "2337",
+      "date": "2026-09-01",
+      "pe_ratio": 29.03,
+      "pb_ratio": 3.92,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-02",
+      "pe_ratio": 29.15,
+      "pb_ratio": 3.93,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-03",
+      "pe_ratio": 27.73,
+      "pb_ratio": 3.74,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-04",
+      "pe_ratio": 28.79,
+      "pb_ratio": 3.88,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    }
+  ]
+}

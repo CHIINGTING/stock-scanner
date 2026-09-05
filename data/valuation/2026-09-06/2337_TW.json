@@ -1,0 +1,1842 @@
+{
+  "schema_version": 1,
+  "symbol": "2337.TW",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-06T05:32:23.097399+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "2337.TW",
+    "date": "2026-09-04",
+    "pe_ratio": 28.79,
+    "pb_ratio": 3.88,
+    "fetched_at": "0001-01-01T00:00:00Z"
+  },
+  "history": [
+    {
+      "symbol": "2337",
+      "date": "2025-10-01",
+      "pb_ratio": 1.11,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-02",
+      "pb_ratio": 1.1,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-03",
+      "pb_ratio": 1.1,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-07",
+      "pb_ratio": 1.18,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-08",
+      "pb_ratio": 1.17,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-09",
+      "pb_ratio": 1.2,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-13",
+      "pb_ratio": 1.17,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-14",
+      "pb_ratio": 1.12,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-15",
+      "pb_ratio": 1.13,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-16",
+      "pb_ratio": 1.18,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-17",
+      "pb_ratio": 1.17,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-20",
+      "pb_ratio": 1.28,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-21",
+      "pb_ratio": 1.23,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-22",
+      "pb_ratio": 1.22,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-23",
+      "pb_ratio": 1.32,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-27",
+      "pb_ratio": 1.45,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-28",
+      "pb_ratio": 1.59,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-29",
+      "pb_ratio": 1.68,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-30",
+      "pb_ratio": 1.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-10-31",
+      "pb_ratio": 1.36,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-03",
+      "pb_ratio": 1.35,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-04",
+      "pb_ratio": 1.3,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-05",
+      "pb_ratio": 1.37,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-06",
+      "pb_ratio": 1.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-07",
+      "pb_ratio": 1.54,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-10",
+      "pb_ratio": 1.66,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-11",
+      "pb_ratio": 1.76,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-12",
+      "pb_ratio": 1.78,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-13",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-14",
+      "pb_ratio": 1.66,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-17",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-18",
+      "pb_ratio": 1.65,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-19",
+      "pb_ratio": 1.59,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-20",
+      "pb_ratio": 1.64,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-21",
+      "pb_ratio": 1.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-24",
+      "pb_ratio": 1.48,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-25",
+      "pb_ratio": 1.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-26",
+      "pb_ratio": 1.44,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-27",
+      "pb_ratio": 1.47,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-11-28",
+      "pb_ratio": 1.49,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-01",
+      "pb_ratio": 1.48,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-02",
+      "pb_ratio": 1.47,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-03",
+      "pb_ratio": 1.43,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-04",
+      "pb_ratio": 1.44,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-05",
+      "pb_ratio": 1.48,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-08",
+      "pb_ratio": 1.63,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-09",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-10",
+      "pb_ratio": 1.62,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-11",
+      "pb_ratio": 1.59,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-12",
+      "pb_ratio": 1.67,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-15",
+      "pb_ratio": 1.66,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-16",
+      "pb_ratio": 1.63,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-17",
+      "pb_ratio": 1.65,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-18",
+      "pb_ratio": 1.66,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-19",
+      "pb_ratio": 1.63,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-22",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-23",
+      "pb_ratio": 1.68,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-24",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-26",
+      "pb_ratio": 1.71,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-29",
+      "pb_ratio": 1.67,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-30",
+      "pb_ratio": 1.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2025-12-31",
+      "pb_ratio": 1.73,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-02",
+      "pb_ratio": 1.9,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-05",
+      "pb_ratio": 2.08,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-06",
+      "pb_ratio": 2.29,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-07",
+      "pb_ratio": 2.52,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-08",
+      "pb_ratio": 2.77,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-09",
+      "pb_ratio": 2.55,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-12",
+      "pb_ratio": 2.68,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-13",
+      "pb_ratio": 2.66,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-14",
+      "pb_ratio": 2.63,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-15",
+      "pb_ratio": 2.71,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-16",
+      "pb_ratio": 2.93,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-19",
+      "pb_ratio": 3.22,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-20",
+      "pb_ratio": 3.36,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-21",
+      "pb_ratio": 3.21,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-22",
+      "pb_ratio": 3.21,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-23",
+      "pb_ratio": 3.03,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-26",
+      "pb_ratio": 3.33,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-27",
+      "pb_ratio": 3.33,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-28",
+      "pb_ratio": 3.67,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-29",
+      "pb_ratio": 4.03,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-01-30",
+      "pb_ratio": 4.06,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-02",
+      "pb_ratio": 3.71,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-03",
+      "pb_ratio": 3.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-04",
+      "pb_ratio": 3.92,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-05",
+      "pb_ratio": 3.85,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-06",
+      "pb_ratio": 3.53,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-09",
+      "pb_ratio": 3.88,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-10",
+      "pb_ratio": 3.92,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-11",
+      "pb_ratio": 4.31,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-23",
+      "pb_ratio": 4.53,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-24",
+      "pb_ratio": 4.97,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-25",
+      "pb_ratio": 4.72,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-02-26",
+      "pb_ratio": 4.81,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-02",
+      "pb_ratio": 5.07,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-03",
+      "pb_ratio": 4.57,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-04",
+      "pb_ratio": 4.29,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-05",
+      "pb_ratio": 4.7,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-06",
+      "pb_ratio": 4.48,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-09",
+      "pb_ratio": 3.89,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-10",
+      "pb_ratio": 3.82,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-11",
+      "pb_ratio": 4.2,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-12",
+      "pb_ratio": 4.17,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-13",
+      "pb_ratio": 4.57,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-16",
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-17",
+      "pb_ratio": 5.5,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-18",
+      "pb_ratio": 6.04,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-19",
+      "pb_ratio": 6.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-20",
+      "pb_ratio": 6.74,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-23",
+      "pb_ratio": 6.26,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-24",
+      "pb_ratio": 5.75,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-25",
+      "pb_ratio": 5.98,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-26",
+      "pb_ratio": 5.39,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-27",
+      "pb_ratio": 5.27,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-30",
+      "pb_ratio": 5.39,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-03-31",
+      "pb_ratio": 4.87,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-01",
+      "pb_ratio": 5.35,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-02",
+      "pb_ratio": 5.43,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-07",
+      "pb_ratio": 5.75,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-08",
+      "pb_ratio": 6.32,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-09",
+      "pb_ratio": 5.98,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-10",
+      "pb_ratio": 6.15,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-13",
+      "pb_ratio": 6.21,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-14",
+      "pb_ratio": 6.55,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-15",
+      "pb_ratio": 5.98,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-16",
+      "pb_ratio": 5.86,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-17",
+      "pb_ratio": 5.52,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-20",
+      "pb_ratio": 5.08,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-21",
+      "pb_ratio": 5.58,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-22",
+      "pb_ratio": 5.67,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-23",
+      "pb_ratio": 5.31,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-24",
+      "pb_ratio": 5.56,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-27",
+      "pb_ratio": 6.11,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-28",
+      "pb_ratio": 6.72,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-29",
+      "pb_ratio": 7.03,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-04-30",
+      "pb_ratio": 6.49,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-04",
+      "pb_ratio": 6.04,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-05",
+      "pb_ratio": 6.27,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-06",
+      "pb_ratio": 6.72,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-07",
+      "pb_ratio": 6.43,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-08",
+      "pb_ratio": 5.98,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-11",
+      "pb_ratio": 6.24,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-12",
+      "pb_ratio": 5.98,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-13",
+      "pb_ratio": 6.57,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-14",
+      "pb_ratio": 6.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-15",
+      "pb_ratio": 6.35,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-18",
+      "pb_ratio": 6.25,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-19",
+      "pb_ratio": 5.63,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-20",
+      "pb_ratio": 5.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-21",
+      "pb_ratio": 5.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-22",
+      "pb_ratio": 5.84,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-25",
+      "pb_ratio": 5.96,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-26",
+      "pb_ratio": 6.27,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-27",
+      "pb_ratio": 6.08,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-28",
+      "pb_ratio": 6.25,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-05-29",
+      "pb_ratio": 6.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-01",
+      "pb_ratio": 6.55,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-02",
+      "pb_ratio": 6.86,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-03",
+      "pb_ratio": 6.33,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-04",
+      "pb_ratio": 6.12,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-05",
+      "pb_ratio": 5.86,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-08",
+      "pb_ratio": 5.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-09",
+      "pb_ratio": 5.69,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-10",
+      "pb_ratio": 5.28,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-11",
+      "pb_ratio": 5.47,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-12",
+      "pb_ratio": 5.73,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-15",
+      "pb_ratio": 6.22,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-16",
+      "pb_ratio": 6.51,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-17",
+      "pb_ratio": 6.31,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-18",
+      "pb_ratio": 6.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-22",
+      "pb_ratio": 7.25,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-23",
+      "pb_ratio": 6.72,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-24",
+      "pb_ratio": 6.72,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-25",
+      "pb_ratio": 6.31,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-26",
+      "pb_ratio": 6.35,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-29",
+      "pb_ratio": 6.2,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-06-30",
+      "pb_ratio": 6.08,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-01",
+      "pb_ratio": 5.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-02",
+      "pb_ratio": 5.69,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-03",
+      "pb_ratio": 5.57,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-06",
+      "pb_ratio": 5.65,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-07",
+      "pb_ratio": 5.43,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-08",
+      "pb_ratio": 5.41,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-09",
+      "pb_ratio": 5.61,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-13",
+      "pb_ratio": 5.39,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-14",
+      "pb_ratio": 5.45,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-15",
+      "pb_ratio": 5.81,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-16",
+      "pb_ratio": 5.34,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-17",
+      "pb_ratio": 4.89,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-20",
+      "pb_ratio": 4.59,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-21",
+      "pb_ratio": 4.81,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-22",
+      "pb_ratio": 5.28,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-23",
+      "pb_ratio": 5.06,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-24",
+      "pb_ratio": 4.85,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-27",
+      "pb_ratio": 4.91,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-28",
+      "pb_ratio": 4.42,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-29",
+      "pb_ratio": 3.99,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-30",
+      "pb_ratio": 3.59,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-07-31",
+      "pe_ratio": 23.82,
+      "pb_ratio": 3.21,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-03",
+      "pe_ratio": 26.18,
+      "pb_ratio": 3.53,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-04",
+      "pe_ratio": 28.44,
+      "pb_ratio": 3.84,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-05",
+      "pe_ratio": 27.84,
+      "pb_ratio": 3.76,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-06",
+      "pe_ratio": 30.57,
+      "pb_ratio": 4.12,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-07",
+      "pe_ratio": 28.79,
+      "pb_ratio": 3.88,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-10",
+      "pe_ratio": 31.64,
+      "pb_ratio": 4.27,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-11",
+      "pe_ratio": 31.4,
+      "pb_ratio": 4.24,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-12",
+      "pe_ratio": 32.35,
+      "pb_ratio": 4.36,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-13",
+      "pe_ratio": 32.35,
+      "pb_ratio": 4.36,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-14",
+      "pe_ratio": 32.46,
+      "pb_ratio": 4.38,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-17",
+      "pe_ratio": 30.69,
+      "pb_ratio": 4.14,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-18",
+      "pe_ratio": 28.91,
+      "pb_ratio": 3.9,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-19",
+      "pe_ratio": 28.2,
+      "pb_ratio": 3.8,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-20",
+      "pe_ratio": 28.91,
+      "pb_ratio": 3.9,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-21",
+      "pe_ratio": 29.03,
+      "pb_ratio": 3.92,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-24",
+      "pe_ratio": 29.38,
+      "pb_ratio": 3.96,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-25",
+      "pe_ratio": 28.91,
+      "pb_ratio": 3.9,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-26",
+      "pe_ratio": 29.74,
+      "pb_ratio": 4.01,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-27",
+      "pe_ratio": 30.21,
+      "pb_ratio": 4.08,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-28",
+      "pe_ratio": 29.98,
+      "pb_ratio": 4.04,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-08-31",
+      "pe_ratio": 29.86,
+      "pb_ratio": 4.03,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-01",
+      "pe_ratio": 29.03,
+      "pb_ratio": 3.92,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-02",
+      "pe_ratio": 29.15,
+      "pb_ratio": 3.93,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-03",
+      "pe_ratio": 27.73,
+      "pb_ratio": 3.74,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "2337",
+      "date": "2026-09-04",
+      "pe_ratio": 28.79,
+      "pb_ratio": 3.88,
+      "backfilled": true,
+      "source": "TWSE_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    }
+  ]
+}

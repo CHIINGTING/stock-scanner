@@ -1,0 +1,2267 @@
+{
+  "schema_version": 1,
+  "symbol": "6274.TWO",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-05T20:21:14.092541+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "6274.TWO",
+    "date": "2026-09-04",
+    "pe_ratio": 69.32,
+    "pb_ratio": 16.92,
+    "dividend_yield": 0.55,
+    "fetched_at": "0001-01-01T00:00:00Z"
+  },
+  "history": [
+    {
+      "symbol": "6274",
+      "date": "2025-10-01",
+      "pe_ratio": 31.43,
+      "pb_ratio": 6.81,
+      "dividend_yield": 2.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-02",
+      "pe_ratio": 32.62,
+      "pb_ratio": 7.07,
+      "dividend_yield": 1.98,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-03",
+      "pe_ratio": 33.37,
+      "pb_ratio": 7.23,
+      "dividend_yield": 1.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-07",
+      "pe_ratio": 33.12,
+      "pb_ratio": 7.18,
+      "dividend_yield": 1.95,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-08",
+      "pe_ratio": 33.27,
+      "pb_ratio": 7.21,
+      "dividend_yield": 1.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-09",
+      "pe_ratio": 34.11,
+      "pb_ratio": 7.39,
+      "dividend_yield": 1.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-13",
+      "pe_ratio": 33.22,
+      "pb_ratio": 7.2,
+      "dividend_yield": 1.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-14",
+      "pe_ratio": 30.73,
+      "pb_ratio": 6.66,
+      "dividend_yield": 2.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-15",
+      "pe_ratio": 32.47,
+      "pb_ratio": 7.04,
+      "dividend_yield": 1.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-16",
+      "pe_ratio": 32.42,
+      "pb_ratio": 7.03,
+      "dividend_yield": 1.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-17",
+      "pe_ratio": 31.78,
+      "pb_ratio": 6.89,
+      "dividend_yield": 2.03,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-20",
+      "pe_ratio": 32.87,
+      "pb_ratio": 7.12,
+      "dividend_yield": 1.96,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-21",
+      "pe_ratio": 32.32,
+      "pb_ratio": 7.01,
+      "dividend_yield": 2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-22",
+      "pe_ratio": 32.03,
+      "pb_ratio": 6.94,
+      "dividend_yield": 2.02,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-23",
+      "pe_ratio": 32.37,
+      "pb_ratio": 7.02,
+      "dividend_yield": 2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-27",
+      "pe_ratio": 33.61,
+      "pb_ratio": 7.29,
+      "dividend_yield": 1.92,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-28",
+      "pe_ratio": 34.11,
+      "pb_ratio": 7.39,
+      "dividend_yield": 1.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-29",
+      "pe_ratio": 35.4,
+      "pb_ratio": 7.67,
+      "dividend_yield": 1.82,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-30",
+      "pe_ratio": 36.35,
+      "pb_ratio": 7.88,
+      "dividend_yield": 1.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-10-31",
+      "pe_ratio": 38.28,
+      "pb_ratio": 8.3,
+      "dividend_yield": 1.69,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-03",
+      "pe_ratio": 38.58,
+      "pb_ratio": 8.36,
+      "dividend_yield": 1.67,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-04",
+      "pe_ratio": 39.23,
+      "pb_ratio": 8.5,
+      "dividend_yield": 1.65,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-05",
+      "pe_ratio": 39.42,
+      "pb_ratio": 8.54,
+      "dividend_yield": 1.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-06",
+      "pe_ratio": 39.47,
+      "pb_ratio": 8.56,
+      "dividend_yield": 1.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-07",
+      "pe_ratio": 37.74,
+      "pb_ratio": 8.18,
+      "dividend_yield": 1.71,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-10",
+      "pe_ratio": 38.13,
+      "pb_ratio": 8.27,
+      "dividend_yield": 1.69,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-11",
+      "pe_ratio": 37.49,
+      "pb_ratio": 8.13,
+      "dividend_yield": 1.72,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-12",
+      "pe_ratio": 40.42,
+      "pb_ratio": 8.76,
+      "dividend_yield": 1.6,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-13",
+      "pe_ratio": 37.45,
+      "pb_ratio": 7.14,
+      "dividend_yield": 1.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-14",
+      "pe_ratio": 37.08,
+      "pb_ratio": 7.06,
+      "dividend_yield": 1.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-17",
+      "pe_ratio": 38.39,
+      "pb_ratio": 7.31,
+      "dividend_yield": 1.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-18",
+      "pe_ratio": 36.1,
+      "pb_ratio": 6.88,
+      "dividend_yield": 1.68,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-19",
+      "pe_ratio": 36.19,
+      "pb_ratio": 6.9,
+      "dividend_yield": 1.68,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-20",
+      "pe_ratio": 38.81,
+      "pb_ratio": 7.39,
+      "dividend_yield": 1.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-21",
+      "pe_ratio": 36.61,
+      "pb_ratio": 6.98,
+      "dividend_yield": 1.66,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-24",
+      "pe_ratio": 36.99,
+      "pb_ratio": 7.05,
+      "dividend_yield": 1.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-25",
+      "pe_ratio": 39.09,
+      "pb_ratio": 7.45,
+      "dividend_yield": 1.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-26",
+      "pe_ratio": 40.11,
+      "pb_ratio": 7.64,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-27",
+      "pe_ratio": 40.3,
+      "pb_ratio": 7.68,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-11-28",
+      "pe_ratio": 41.04,
+      "pb_ratio": 7.82,
+      "dividend_yield": 1.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-01",
+      "pe_ratio": 38.71,
+      "pb_ratio": 7.38,
+      "dividend_yield": 1.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-02",
+      "pe_ratio": 38.43,
+      "pb_ratio": 7.32,
+      "dividend_yield": 1.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-03",
+      "pe_ratio": 38.57,
+      "pb_ratio": 7.35,
+      "dividend_yield": 1.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-04",
+      "pe_ratio": 38.34,
+      "pb_ratio": 7.3,
+      "dividend_yield": 1.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-05",
+      "pe_ratio": 39.18,
+      "pb_ratio": 7.46,
+      "dividend_yield": 1.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-08",
+      "pe_ratio": 39.27,
+      "pb_ratio": 7.48,
+      "dividend_yield": 1.54,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-09",
+      "pe_ratio": 39.65,
+      "pb_ratio": 7.55,
+      "dividend_yield": 1.53,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-10",
+      "pe_ratio": 40.3,
+      "pb_ratio": 7.68,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-11",
+      "pe_ratio": 40.11,
+      "pb_ratio": 7.64,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-12",
+      "pe_ratio": 41.32,
+      "pb_ratio": 7.87,
+      "dividend_yield": 1.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-15",
+      "pe_ratio": 40.49,
+      "pb_ratio": 7.71,
+      "dividend_yield": 1.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-16",
+      "pe_ratio": 37.78,
+      "pb_ratio": 7.2,
+      "dividend_yield": 1.61,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-17",
+      "pe_ratio": 38.62,
+      "pb_ratio": 7.36,
+      "dividend_yield": 1.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-18",
+      "pe_ratio": 38.48,
+      "pb_ratio": 7.33,
+      "dividend_yield": 1.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-19",
+      "pe_ratio": 39.83,
+      "pb_ratio": 7.59,
+      "dividend_yield": 1.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-22",
+      "pe_ratio": 42.35,
+      "pb_ratio": 8.07,
+      "dividend_yield": 1.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-23",
+      "pe_ratio": 43.42,
+      "pb_ratio": 8.27,
+      "dividend_yield": 1.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-24",
+      "pe_ratio": 46.46,
+      "pb_ratio": 8.85,
+      "dividend_yield": 1.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-26",
+      "pe_ratio": 46.46,
+      "pb_ratio": 8.85,
+      "dividend_yield": 1.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-29",
+      "pe_ratio": 46.83,
+      "pb_ratio": 8.92,
+      "dividend_yield": 1.3,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-30",
+      "pe_ratio": 45.06,
+      "pb_ratio": 8.58,
+      "dividend_yield": 1.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2025-12-31",
+      "pe_ratio": 46.08,
+      "pb_ratio": 8.78,
+      "dividend_yield": 1.32,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-02",
+      "pe_ratio": 44.92,
+      "pb_ratio": 8.56,
+      "dividend_yield": 1.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-05",
+      "pe_ratio": 44.31,
+      "pb_ratio": 8.44,
+      "dividend_yield": 1.37,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-06",
+      "pe_ratio": 44.4,
+      "pb_ratio": 8.46,
+      "dividend_yield": 1.37,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-07",
+      "pe_ratio": 43.38,
+      "pb_ratio": 8.26,
+      "dividend_yield": 1.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-08",
+      "pe_ratio": 43.56,
+      "pb_ratio": 8.3,
+      "dividend_yield": 1.39,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-09",
+      "pe_ratio": 43.47,
+      "pb_ratio": 8.28,
+      "dividend_yield": 1.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-12",
+      "pe_ratio": 44.36,
+      "pb_ratio": 8.45,
+      "dividend_yield": 1.37,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-13",
+      "pe_ratio": 44.68,
+      "pb_ratio": 8.51,
+      "dividend_yield": 1.36,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-14",
+      "pe_ratio": 45.24,
+      "pb_ratio": 8.62,
+      "dividend_yield": 1.34,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-15",
+      "pe_ratio": 44.87,
+      "pb_ratio": 8.55,
+      "dividend_yield": 1.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-16",
+      "pe_ratio": 45.9,
+      "pb_ratio": 8.74,
+      "dividend_yield": 1.32,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-19",
+      "pe_ratio": 43.89,
+      "pb_ratio": 8.36,
+      "dividend_yield": 1.38,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-20",
+      "pe_ratio": 44.31,
+      "pb_ratio": 8.44,
+      "dividend_yield": 1.37,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-21",
+      "pe_ratio": 43.19,
+      "pb_ratio": 8.23,
+      "dividend_yield": 1.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-22",
+      "pe_ratio": 45.34,
+      "pb_ratio": 8.64,
+      "dividend_yield": 1.34,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-23",
+      "pe_ratio": 47.01,
+      "pb_ratio": 8.96,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-26",
+      "pe_ratio": 47.76,
+      "pb_ratio": 9.1,
+      "dividend_yield": 1.27,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-27",
+      "pe_ratio": 49.44,
+      "pb_ratio": 9.42,
+      "dividend_yield": 1.23,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-28",
+      "pe_ratio": 50.28,
+      "pb_ratio": 9.58,
+      "dividend_yield": 1.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-29",
+      "pe_ratio": 47.57,
+      "pb_ratio": 9.06,
+      "dividend_yield": 1.28,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-01-30",
+      "pe_ratio": 46.92,
+      "pb_ratio": 8.94,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-02",
+      "pe_ratio": 46.18,
+      "pb_ratio": 8.8,
+      "dividend_yield": 1.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-03",
+      "pe_ratio": 47.11,
+      "pb_ratio": 8.97,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-04",
+      "pe_ratio": 50.09,
+      "pb_ratio": 9.54,
+      "dividend_yield": 1.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-05",
+      "pe_ratio": 48.51,
+      "pb_ratio": 9.24,
+      "dividend_yield": 1.25,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-06",
+      "pe_ratio": 48.41,
+      "pb_ratio": 9.22,
+      "dividend_yield": 1.25,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-09",
+      "pe_ratio": 49.25,
+      "pb_ratio": 9.38,
+      "dividend_yield": 1.23,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-10",
+      "pe_ratio": 49.63,
+      "pb_ratio": 9.45,
+      "dividend_yield": 1.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-11",
+      "pe_ratio": 49.63,
+      "pb_ratio": 9.45,
+      "dividend_yield": 1.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-23",
+      "pe_ratio": 50.28,
+      "pb_ratio": 9.58,
+      "dividend_yield": 1.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-24",
+      "pe_ratio": 52.43,
+      "pb_ratio": 9.99,
+      "dividend_yield": 1.16,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-25",
+      "pe_ratio": 53.82,
+      "pb_ratio": 10.25,
+      "dividend_yield": 1.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-02-26",
+      "pe_ratio": 50.84,
+      "pb_ratio": 9.69,
+      "dividend_yield": 1.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-02",
+      "pe_ratio": 50.37,
+      "pb_ratio": 9.6,
+      "dividend_yield": 1.2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-03",
+      "pe_ratio": 50.19,
+      "pb_ratio": 9.56,
+      "dividend_yield": 1.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-04",
+      "pe_ratio": 45.76,
+      "pb_ratio": 8.72,
+      "dividend_yield": 1.33,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-05",
+      "pe_ratio": 47.2,
+      "pb_ratio": 8.99,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-06",
+      "pe_ratio": 47.01,
+      "pb_ratio": 8.96,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-09",
+      "pe_ratio": 42.35,
+      "pb_ratio": 8.07,
+      "dividend_yield": 1.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-10",
+      "pe_ratio": 43.56,
+      "pb_ratio": 8.3,
+      "dividend_yield": 1.39,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-11",
+      "pe_ratio": 40.27,
+      "pb_ratio": 7.58,
+      "dividend_yield": 1.33,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-12",
+      "pe_ratio": 37.3,
+      "pb_ratio": 7.02,
+      "dividend_yield": 1.66,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-13",
+      "pe_ratio": 41.01,
+      "pb_ratio": 7.72,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-16",
+      "pe_ratio": 41.47,
+      "pb_ratio": 7.8,
+      "dividend_yield": 1.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-17",
+      "pe_ratio": 41.63,
+      "pb_ratio": 7.83,
+      "dividend_yield": 1.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-18",
+      "pe_ratio": 43.78,
+      "pb_ratio": 8.24,
+      "dividend_yield": 1.41,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-19",
+      "pe_ratio": 48.15,
+      "pb_ratio": 9.06,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-20",
+      "pe_ratio": 45.67,
+      "pb_ratio": 8.59,
+      "dividend_yield": 1.36,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-23",
+      "pe_ratio": 44.35,
+      "pb_ratio": 8.34,
+      "dividend_yield": 1.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-24",
+      "pe_ratio": 44.6,
+      "pb_ratio": 8.39,
+      "dividend_yield": 1.39,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-25",
+      "pe_ratio": 47.82,
+      "pb_ratio": 9,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-26",
+      "pe_ratio": 49.96,
+      "pb_ratio": 9.4,
+      "dividend_yield": 1.24,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-27",
+      "pe_ratio": 51.61,
+      "pb_ratio": 9.71,
+      "dividend_yield": 1.2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-30",
+      "pe_ratio": 49.63,
+      "pb_ratio": 9.34,
+      "dividend_yield": 1.25,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-03-31",
+      "pe_ratio": 46.91,
+      "pb_ratio": 8.83,
+      "dividend_yield": 1.32,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-01",
+      "pe_ratio": 51.36,
+      "pb_ratio": 9.66,
+      "dividend_yield": 1.2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-02",
+      "pe_ratio": 51.2,
+      "pb_ratio": 9.63,
+      "dividend_yield": 1.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-07",
+      "pe_ratio": 56.31,
+      "pb_ratio": 10.59,
+      "dividend_yield": 1.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-08",
+      "pe_ratio": 59.77,
+      "pb_ratio": 11.25,
+      "dividend_yield": 1.04,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-09",
+      "pe_ratio": 65.7,
+      "pb_ratio": 12.36,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-10",
+      "pe_ratio": 66.61,
+      "pb_ratio": 12.53,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-13",
+      "pe_ratio": 66.03,
+      "pb_ratio": 12.42,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-14",
+      "pe_ratio": 70.9,
+      "pb_ratio": 13.34,
+      "dividend_yield": 0.87,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-15",
+      "pe_ratio": 77.99,
+      "pb_ratio": 14.67,
+      "dividend_yield": 0.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-16",
+      "pe_ratio": 79.14,
+      "pb_ratio": 14.89,
+      "dividend_yield": 0.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-17",
+      "pe_ratio": 77.99,
+      "pb_ratio": 14.67,
+      "dividend_yield": 0.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-20",
+      "pe_ratio": 78.32,
+      "pb_ratio": 14.74,
+      "dividend_yield": 0.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-21",
+      "pe_ratio": 79.39,
+      "pb_ratio": 14.94,
+      "dividend_yield": 0.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-22",
+      "pe_ratio": 80.21,
+      "pb_ratio": 15.09,
+      "dividend_yield": 0.77,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-23",
+      "pe_ratio": 78.32,
+      "pb_ratio": 14.74,
+      "dividend_yield": 0.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-24",
+      "pe_ratio": 86.15,
+      "pb_ratio": 16.21,
+      "dividend_yield": 0.72,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-27",
+      "pe_ratio": 81.62,
+      "pb_ratio": 15.36,
+      "dividend_yield": 0.76,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-28",
+      "pe_ratio": 79.64,
+      "pb_ratio": 14.98,
+      "dividend_yield": 0.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-29",
+      "pe_ratio": 80.38,
+      "pb_ratio": 15.12,
+      "dividend_yield": 0.77,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-04-30",
+      "pe_ratio": 83.26,
+      "pb_ratio": 15.67,
+      "dividend_yield": 0.74,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-04",
+      "pe_ratio": 91.51,
+      "pb_ratio": 17.22,
+      "dividend_yield": 0.68,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-05",
+      "pe_ratio": 100.58,
+      "pb_ratio": 18.92,
+      "dividend_yield": 0.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-06",
+      "pe_ratio": 95.01,
+      "pb_ratio": 21.03,
+      "dividend_yield": 0.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-07",
+      "pe_ratio": 104.41,
+      "pb_ratio": 23.11,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-08",
+      "pe_ratio": 98.99,
+      "pb_ratio": 21.91,
+      "dividend_yield": 0.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-11",
+      "pe_ratio": 105.13,
+      "pb_ratio": 23.27,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-12",
+      "pe_ratio": 104.77,
+      "pb_ratio": 23.19,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-13",
+      "pe_ratio": 104.77,
+      "pb_ratio": 23.19,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-14",
+      "pe_ratio": 104.77,
+      "pb_ratio": 23.19,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-15",
+      "pe_ratio": 94.29,
+      "pb_ratio": 20.87,
+      "dividend_yield": 0.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-18",
+      "pe_ratio": 91.04,
+      "pb_ratio": 20.15,
+      "dividend_yield": 0.6,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-19",
+      "pe_ratio": 88.51,
+      "pb_ratio": 19.59,
+      "dividend_yield": 0.61,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-20",
+      "pe_ratio": 87.07,
+      "pb_ratio": 19.27,
+      "dividend_yield": 0.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-21",
+      "pe_ratio": 95.74,
+      "pb_ratio": 21.19,
+      "dividend_yield": 0.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-22",
+      "pe_ratio": 105.13,
+      "pb_ratio": 23.27,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-25",
+      "pe_ratio": 115.61,
+      "pb_ratio": 25.58,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-26",
+      "pe_ratio": 114.16,
+      "pb_ratio": 25.26,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-27",
+      "pe_ratio": 117.77,
+      "pb_ratio": 26.06,
+      "dividend_yield": 0.46,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-28",
+      "pe_ratio": 111.27,
+      "pb_ratio": 24.62,
+      "dividend_yield": 0.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-05-29",
+      "pe_ratio": 122.11,
+      "pb_ratio": 27.02,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-01",
+      "pe_ratio": 123.19,
+      "pb_ratio": 27.26,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-02",
+      "pe_ratio": 114.88,
+      "pb_ratio": 25.42,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-03",
+      "pe_ratio": 122.47,
+      "pb_ratio": 27.1,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-04",
+      "pe_ratio": 122.47,
+      "pb_ratio": 27.1,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-05",
+      "pe_ratio": 116.33,
+      "pb_ratio": 25.74,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-08",
+      "pe_ratio": 110.91,
+      "pb_ratio": 24.54,
+      "dividend_yield": 0.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-09",
+      "pe_ratio": 116.69,
+      "pb_ratio": 25.82,
+      "dividend_yield": 0.46,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-10",
+      "pe_ratio": 108.38,
+      "pb_ratio": 23.98,
+      "dividend_yield": 0.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-11",
+      "pe_ratio": 106.58,
+      "pb_ratio": 23.58,
+      "dividend_yield": 0.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-12",
+      "pe_ratio": 103.32,
+      "pb_ratio": 22.87,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-15",
+      "pe_ratio": 113.44,
+      "pb_ratio": 25.1,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-16",
+      "pe_ratio": 116.33,
+      "pb_ratio": 25.74,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-17",
+      "pe_ratio": 120.66,
+      "pb_ratio": 26.7,
+      "dividend_yield": 0.45,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-18",
+      "pe_ratio": 132.59,
+      "pb_ratio": 29.34,
+      "dividend_yield": 0.41,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-22",
+      "pe_ratio": 137.28,
+      "pb_ratio": 30.38,
+      "dividend_yield": 0.4,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-23",
+      "pe_ratio": 125.36,
+      "pb_ratio": 27.74,
+      "dividend_yield": 0.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-24",
+      "pe_ratio": 127.53,
+      "pb_ratio": 28.22,
+      "dividend_yield": 0.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-25",
+      "pe_ratio": 122.83,
+      "pb_ratio": 27.18,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-26",
+      "pe_ratio": 114.16,
+      "pb_ratio": 25.26,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-29",
+      "pe_ratio": 112.36,
+      "pb_ratio": 24.86,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-06-30",
+      "pe_ratio": 121.39,
+      "pb_ratio": 26.86,
+      "dividend_yield": 0.45,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-01",
+      "pe_ratio": 122.11,
+      "pb_ratio": 27.02,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-02",
+      "pe_ratio": 122.11,
+      "pb_ratio": 27.02,
+      "dividend_yield": 0.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-03",
+      "pe_ratio": 129.34,
+      "pb_ratio": 28.62,
+      "dividend_yield": 0.42,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-06",
+      "pe_ratio": 117.77,
+      "pb_ratio": 26.06,
+      "dividend_yield": 0.46,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-07",
+      "pe_ratio": 113.8,
+      "pb_ratio": 25.18,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-08",
+      "pe_ratio": 118.86,
+      "pb_ratio": 26.3,
+      "dividend_yield": 0.46,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-09",
+      "pe_ratio": 113.44,
+      "pb_ratio": 25.1,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-13",
+      "pe_ratio": 111.99,
+      "pb_ratio": 24.78,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-14",
+      "pe_ratio": 100.79,
+      "pb_ratio": 22.31,
+      "dividend_yield": 0.54,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-15",
+      "pe_ratio": 103.68,
+      "pb_ratio": 22.95,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-16",
+      "pe_ratio": 93.57,
+      "pb_ratio": 20.71,
+      "dividend_yield": 0.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-17",
+      "pe_ratio": 84.54,
+      "pb_ratio": 18.71,
+      "dividend_yield": 0.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-20",
+      "pe_ratio": 81.29,
+      "pb_ratio": 17.99,
+      "dividend_yield": 0.67,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-21",
+      "pe_ratio": 89.23,
+      "pb_ratio": 19.75,
+      "dividend_yield": 0.61,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-22",
+      "pe_ratio": 97.9,
+      "pb_ratio": 21.67,
+      "dividend_yield": 0.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-23",
+      "pe_ratio": 96.46,
+      "pb_ratio": 21.35,
+      "dividend_yield": 0.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-24",
+      "pe_ratio": 90.32,
+      "pb_ratio": 19.99,
+      "dividend_yield": 0.6,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-27",
+      "pe_ratio": 90.68,
+      "pb_ratio": 20.07,
+      "dividend_yield": 0.6,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-28",
+      "pe_ratio": 81.65,
+      "pb_ratio": 18.07,
+      "dividend_yield": 0.66,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-29",
+      "pe_ratio": 51.8,
+      "pb_ratio": 12.64,
+      "dividend_yield": 0.74,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-30",
+      "pe_ratio": 51.3,
+      "pb_ratio": 12.52,
+      "dividend_yield": 0.74,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-07-31",
+      "pe_ratio": 56.37,
+      "pb_ratio": 13.76,
+      "dividend_yield": 0.68,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-03",
+      "pe_ratio": 61.96,
+      "pb_ratio": 15.12,
+      "dividend_yield": 0.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-04",
+      "pe_ratio": 68.05,
+      "pb_ratio": 16.61,
+      "dividend_yield": 0.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-05",
+      "pe_ratio": 74.66,
+      "pb_ratio": 18.22,
+      "dividend_yield": 0.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-06",
+      "pe_ratio": 77.7,
+      "pb_ratio": 18.96,
+      "dividend_yield": 0.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-07",
+      "pe_ratio": 73.13,
+      "pb_ratio": 17.85,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-10",
+      "pe_ratio": 74.15,
+      "pb_ratio": 18.09,
+      "dividend_yield": 0.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-11",
+      "pe_ratio": 81.51,
+      "pb_ratio": 19.89,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-12",
+      "pe_ratio": 81.26,
+      "pb_ratio": 19.83,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-13",
+      "pe_ratio": 81.26,
+      "pb_ratio": 19.83,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-14",
+      "pe_ratio": 85.07,
+      "pb_ratio": 20.76,
+      "dividend_yield": 0.45,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-17",
+      "pe_ratio": 81.26,
+      "pb_ratio": 19.83,
+      "dividend_yield": 0.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-18",
+      "pe_ratio": 78.47,
+      "pb_ratio": 19.15,
+      "dividend_yield": 0.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-19",
+      "pe_ratio": 76.18,
+      "pb_ratio": 18.59,
+      "dividend_yield": 0.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-20",
+      "pe_ratio": 79.99,
+      "pb_ratio": 19.52,
+      "dividend_yield": 0.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-21",
+      "pe_ratio": 75.93,
+      "pb_ratio": 18.53,
+      "dividend_yield": 0.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-24",
+      "pe_ratio": 73.9,
+      "pb_ratio": 18.03,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-25",
+      "pe_ratio": 75.42,
+      "pb_ratio": 18.4,
+      "dividend_yield": 0.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-26",
+      "pe_ratio": 77.7,
+      "pb_ratio": 18.96,
+      "dividend_yield": 0.49,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-27",
+      "pe_ratio": 73.39,
+      "pb_ratio": 17.91,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-28",
+      "pe_ratio": 75.67,
+      "pb_ratio": 18.47,
+      "dividend_yield": 0.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-08-31",
+      "pe_ratio": 72.88,
+      "pb_ratio": 17.78,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-09-01",
+      "pe_ratio": 73.64,
+      "pb_ratio": 17.97,
+      "dividend_yield": 0.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-09-02",
+      "pe_ratio": 71.61,
+      "pb_ratio": 17.47,
+      "dividend_yield": 0.53,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-09-03",
+      "pe_ratio": 68.31,
+      "pb_ratio": 16.67,
+      "dividend_yield": 0.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    },
+    {
+      "symbol": "6274",
+      "date": "2026-09-04",
+      "pe_ratio": 69.32,
+      "pb_ratio": 16.92,
+      "dividend_yield": 0.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-05T20:50:30.158168+08:00"
+    }
+  ]
+}

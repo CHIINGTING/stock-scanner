@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "symbol": "3055.TW",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-05T20:21:14.092541+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "3055.TW",
+    "date": "2026-09-04",
+    "pb_ratio": 9.21,
+    "dividend_yield": 0.38
+  }
+}

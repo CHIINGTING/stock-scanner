@@ -8,12 +8,22 @@ import (
 	"time"
 )
 
+// DefaultCacheDir is where price data is cached when Config.CacheDir is blank.
+//
+// It is EXPORTED because a second process now has to be able to refuse it. cmd/health-dashboard
+// keeps a separate cache on purpose — this package writes what it fetches, so a dashboard
+// sharing this directory would put an intraday, half-formed daily bar into the series the next
+// scan reads — and its startup guard compares against this value. Two independent string
+// literals would make that guard fail silently the day this default changed, on exactly the
+// path where cache_dir is absent from the config.
+const DefaultCacheDir = ".cache"
+
 type Config struct {
 	RequestDelayMs int    `yaml:"request_delay_ms"`
 	TimeoutSec     int    `yaml:"timeout_sec"`
 	Concurrency    int    `yaml:"concurrency"`      // default 3
 	CacheTTLMin    int    `yaml:"cache_ttl_min"`    // default 15
-	CacheDir       string `yaml:"cache_dir"`        // default ".cache"
+	CacheDir       string `yaml:"cache_dir"`        // default DefaultCacheDir
 	EOFCooldownMin int    `yaml:"eof_cooldown_min"` // default 5
 	HistoryRange   string `yaml:"history_range"`    // default "2y" (Yahoo range, e.g. 6mo/1y/2y)
 }
@@ -41,7 +51,7 @@ func New(cfg Config) *Fetcher {
 		cfg.CacheTTLMin = 15
 	}
 	if cfg.CacheDir == "" {
-		cfg.CacheDir = ".cache"
+		cfg.CacheDir = DefaultCacheDir
 	}
 	if cfg.EOFCooldownMin == 0 {
 		cfg.EOFCooldownMin = 5

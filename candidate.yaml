@@ -23,3 +23,37 @@ candidates:
 
   - symbol: "6488.TWO"
     note: "上櫃研究對象"
+
+  # ── 持股（來自 stocks.yaml positions，2026-09-05 加入）──
+  - symbol: "3026.TW"
+    note: "持股：禾伸堂"
+
+  - symbol: "6274.TWO"
+    note: "持股：台燿"
+
+  - symbol: "1815.TWO"
+    note: "持股：富喬"
+
+  - symbol: "6789.TW"
+    note: "持股：采鈺"
+
+  - symbol: "1560.TW"
+    note: "持股：中砂"
+
+  - symbol: "3094.TW"
+    note: "持股：聯傑"
+
+  - symbol: "2337.TW"
+    note: "持股：旺宏"
+
+  - symbol: "3037.TW"
+    note: "持股：欣興"
+
+  - symbol: "1503.TW"
+    note: "持股：士電"
+
+  - symbol: "2449.TW"
+    note: "持股：京元電子"
+
+  - symbol: "3055.TW"
+    note: "持股：韋華科"

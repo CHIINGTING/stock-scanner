@@ -664,3 +664,97 @@ func TestLoadHistoryStampsTheArchiveDate(t *testing.T) {
 		t.Errorf("SampleCount = %d, want 2 sessions from 3 files", v.HistoricalPE.SampleCount)
 	}
 }
+
+// A writer that does not know History exists must not be able to delete it.
+//
+// One archive path holds one day's file and two writers target it: the daily live fetch,
+// which builds a Snapshot from scratch with History nil, and the backfill, which fills
+// History with hundreds of older sessions. Writing the live snapshot wholesale erased the
+// backfill — a single valuation-fetch run destroyed ~3,000 sessions across fourteen stocks,
+// and the daily pipeline calls the same code, so it would have repeated every day.
+func TestSaveSnapshotNeverDropsExistingHistory(t *testing.T) {
+	dir := t.TempDir()
+	obs := time.Date(2026, 9, 6, 10, 0, 0, 0, time.UTC)
+	pe := 20.0
+
+	// A backfill writes history.
+	back := &Snapshot{
+		SchemaVersion: SchemaVersion, Symbol: "2330.TW", Source: SourceTWSEHistorical,
+		ObservedAt: obs, Status: Available,
+		History: []Ratios{
+			{Symbol: "2330", Date: "2025-10-01", PERatio: &pe, Backfilled: true},
+			{Symbol: "2330", Date: "2025-10-02", PERatio: &pe, Backfilled: true},
+		},
+	}
+	if _, err := SaveSnapshot(dir, back); err != nil {
+		t.Fatal(err)
+	}
+
+	// The daily live fetch then writes the same path, knowing nothing about History.
+	live := &Snapshot{
+		SchemaVersion: SchemaVersion, Symbol: "2330.TW", Source: SourceName,
+		ObservedAt: obs, Status: Available,
+		Ratios: &Ratios{Symbol: "2330", Date: "2026-09-04", PERatio: &pe},
+	}
+	if _, err := SaveSnapshot(dir, live); err != nil {
+		t.Fatal(err)
+	}
+
+	history, latest, err := LoadHistory(dir, "2026-09-06", "2330.TW")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back1, back2, liveSeen bool
+	for _, r := range history {
+		switch r.Date {
+		case "2025-10-01":
+			back1 = true
+		case "2025-10-02":
+			back2 = true
+		case "2026-09-04":
+			liveSeen = true
+		}
+	}
+	if !back1 || !back2 {
+		t.Fatalf("the live fetch destroyed backfilled history: %d rows survived", len(history))
+	}
+	if !liveSeen {
+		t.Fatal("the live observation was not stored")
+	}
+	// The live reading is still the current one — merged history must not become `latest`.
+	if latest == nil || latest.Date != "2026-09-04" {
+		t.Fatalf("latest = %+v, want the live 2026-09-04 reading", latest)
+	}
+}
+
+// Repeating either write is idempotent: no duplicate sessions.
+func TestSaveSnapshotMergeIsIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	obs := time.Date(2026, 9, 6, 10, 0, 0, 0, time.UTC)
+	pe := 20.0
+	snap := func() *Snapshot {
+		return &Snapshot{
+			SchemaVersion: SchemaVersion, Symbol: "2330.TW", Source: SourceTWSEHistorical,
+			ObservedAt: obs, Status: Available,
+			History: []Ratios{{Symbol: "2330", Date: "2025-10-01", PERatio: &pe, Backfilled: true}},
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := SaveSnapshot(dir, snap()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	history, _, err := LoadHistory(dir, "2026-09-06", "2330.TW")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, r := range history {
+		if r.Date == "2025-10-01" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("session appears %d times after three saves, want 1", n)
+	}
+}
