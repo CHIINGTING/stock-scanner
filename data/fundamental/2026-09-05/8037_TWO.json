@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "symbol": "8037.TWO",
+  "source": "TWSE/TPEx MOPS OpenAPI",
+  "observed_at": "2026-09-05T20:21:05.572532+08:00",
+  "status": "UNAVAILABLE",
+  "revenue_status": "UNAVAILABLE",
+  "financial_status": "UNAVAILABLE",
+  "reason": "8037 appears in neither dataset"
+}

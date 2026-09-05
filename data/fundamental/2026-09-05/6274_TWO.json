@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "symbol": "6274.TWO",
+  "source": "TWSE/TPEx MOPS OpenAPI",
+  "observed_at": "2026-09-05T20:21:05.572532+08:00",
+  "status": "AVAILABLE",
+  "revenue_status": "AVAILABLE",
+  "financial_status": "AVAILABLE",
+  "monthly_revenue": {
+    "symbol": "6274.TWO",
+    "period": {
+      "year": 2026,
+      "month": 7,
+      "cumulative": false
+    },
+    "revenue": 5908074000,
+    "prior_month_revenue": 4895221000,
+    "prior_year_month_revenue": 2667033000,
+    "ytd_revenue": 30263704000,
+    "prior_year_ytd_revenue": 15819612000,
+    "published_at": "2026-08-17T00:00:00+08:00"
+  },
+  "financials": {
+    "symbol": "6274.TWO",
+    "period": {
+      "year": 2026,
+      "quarter": 2,
+      "cumulative": true
+    },
+    "revenue": 24355008000,
+    "gross_profit": 6778129000,
+    "operating_income": 5185472000,
+    "net_income": 3601714000,
+    "cumulative_eps": 12.4,
+    "published_at": "2026-09-05T00:00:00+08:00"
+  }
+}

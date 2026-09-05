@@ -1,0 +1,150 @@
+{
+  "date": "2026-09-05",
+  "generated_at": "2026-09-05T20:21:26.415509+08:00",
+  "schema_version": 1,
+  "score": 70,
+  "confidence": 0.13,
+  "regime": "UNKNOWN",
+  "rule_id": "R0",
+  "structure": {
+    "benchmark": "0050",
+    "structure": "UPTREND",
+    "breadth_quality": "UNKNOWN",
+    "institutional_posture": "UNKNOWN",
+    "trend_intact": true,
+    "price_resilient": true,
+    "orderly_correction": true,
+    "failed_highs": 0,
+    "metrics": {
+      "close": 106.25,
+      "dd_from_high60": 4.41,
+      "ma120": 96.22,
+      "ma20": 104.7,
+      "ma200": 84.97,
+      "ma60": 104.33,
+      "realized_vol20": 18.07,
+      "realized_vol20_percentile": 28.17,
+      "ret20": 4.17,
+      "ret60": 2.02
+    }
+  },
+  "flags": {
+    "high_volatility": false,
+    "crash_event": false,
+    "recovery_event": false
+  },
+  "evidence": [
+    {
+      "source": "Price",
+      "direction": "BULLISH",
+      "strength": "MODERATE",
+      "confidence": 1,
+      "summary": "多頭：收盤 106.25，20日 +4.2%、60日 +2.0%，距 60 日高 -4.4%",
+      "metrics": {
+        "close": 106.25,
+        "dd_from_high60": 4.41,
+        "ma120": 96.22,
+        "ma20": 104.7,
+        "ma200": 84.97,
+        "ma60": 104.33,
+        "realized_vol20": 18.07,
+        "realized_vol20_percentile": 28.17,
+        "ret20": 4.17,
+        "ret60": 2.02
+      },
+      "available": true
+    },
+    {
+      "source": "Breadth",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "breadth panel 無此日期"
+    },
+    {
+      "source": "ForeignCash",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TWSE 三大法人買賣金額缺漏"
+    },
+    {
+      "source": "ForeignFutures",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TAIFEX 未平倉資料缺漏"
+    },
+    {
+      "source": "Margin",
+      "direction": "UNKNOWN",
+      "strength": "UNKNOWN",
+      "confidence": 0,
+      "summary": "",
+      "available": false,
+      "reason": "TWSE 信用交易統計缺漏"
+    }
+  ],
+  "raw": {
+    "date": "2026-09-05",
+    "fetched_at": "2026-09-05T20:21:27.757565+08:00",
+    "sources": [
+      {
+        "name": "cache/0050",
+        "status": "OK",
+        "fetched_at": "2026-09-05T20:21:27.75756+08:00",
+        "as_of_date": "2026-08-31"
+      },
+      {
+        "name": "TWSE/BFI82U",
+        "url": "https://www.twse.com.tw/rwd/zh/fund/BFI82U?dayDate=20260905\u0026type=day\u0026response=json",
+        "status": "NO_DATA",
+        "fetched_at": "2026-09-05T20:21:27.757588+08:00",
+        "err": "BFI82U: market: no trading data for date: stat=\"很抱歉，沒有符合條件的資料!\""
+      },
+      {
+        "name": "TWSE/MI_MARGN",
+        "url": "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date=20260905\u0026selectType=MS\u0026response=json",
+        "status": "NO_DATA",
+        "fetched_at": "2026-09-05T20:21:27.757588+08:00",
+        "err": "MI_MARGN: market: no trading data for date: stat=\"很抱歉，沒有符合條件的資料\""
+      },
+      {
+        "name": "TWSE/MI_INDEX",
+        "url": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260905\u0026type=MS\u0026response=json",
+        "status": "NO_DATA",
+        "fetched_at": "2026-09-05T20:21:27.757588+08:00",
+        "err": "MI_INDEX: market: no trading data for date: stat=\"很抱歉，沒有符合條件的資料!\""
+      },
+      {
+        "name": "TAIFEX/MajorInstitutionalTraders",
+        "url": "https://openapi.taifex.com.tw/v1/MarketDataOfMajorInstitutionalTradersDetailsOfFuturesContractsBytheDate",
+        "status": "ERROR",
+        "fetched_at": "2026-09-05T20:21:28.750191+08:00",
+        "err": "market: response date does not match request: requested 2026-09-05, feed carries 2026-09-04 (this endpoint has no date parameter)",
+        "as_of_date": "2026-09-04"
+      }
+    ]
+  },
+  "reasons": [
+    "可計算家數不足，廣度無法判定",
+    "Score 70（可用權重 20/100）",
+    "Confidence 0.13 = 完整度 0.20 × 一致性 1.00 × 強度 0.70",
+    "  Price 貢獻 +400（子分 70 × 有效權重 20.0）"
+  ],
+  "caveats": [
+    "資料不足，本日不做 regime 判斷",
+    "僅 20% 的證據權重可用，信心上限壓在 0.5",
+    "缺漏證據 Breadth：breadth panel 無此日期",
+    "缺漏證據 ForeignCash：TWSE 三大法人買賣金額缺漏",
+    "缺漏證據 ForeignFutures：TAIFEX 未平倉資料缺漏",
+    "缺漏證據 Margin：TWSE 信用交易統計缺漏",
+    "universe 有 60 個低覆蓋日期被排除在日期軸外"
+  ]
+}

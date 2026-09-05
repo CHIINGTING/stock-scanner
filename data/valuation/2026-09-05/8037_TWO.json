@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "symbol": "8037.TWO",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-05T20:21:14.092541+08:00",
+  "status": "UNAVAILABLE",
+  "reason": "8037 is not in the TWO ratio dataset"
+}
