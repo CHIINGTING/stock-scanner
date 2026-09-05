@@ -108,28 +108,17 @@ func main() {
 	}
 
 	monthList := valuation.MonthsBack(now, *months)
+	if len(tpex) > 0 {
+		log.Printf("TPEx: 最多 %d 個日期 × 1 次請求（每次回傳全市場，取本 universe 的 %d 檔）",
+			len(sessionDays(monthList, now)), len(tpex))
+	}
 
-	// Resume: whatever a previous run already archived TODAY is loaded first, so an
-	// interrupted or rate-limited run can be repeated without re-fetching what it already
-	// has. TWSE's CDN refuses bursts, so the realistic way to finish a large backfill is
-	// several passes — and a pass that started from zero every time would never get further
-	// than the first one did.
-	if !*refetch {
-		resumed := 0
-		for _, t := range targets {
-			if ex := readExisting(*dir, archiveDate, t); ex != nil && len(ex.History) > 0 {
-				results[t.key()].add(ex.History)
-				results[t.key()].resumed = len(ex.History)
-				resumed++
-			}
-		}
-		if resumed > 0 {
-			log.Printf("resume: %d 檔已有今日封存，只補缺少的月份（-refetch 可強制重抓）", resumed)
-		}
+	if resumed := loadResume(*dir, archiveDate, targets, results, *refetch); resumed > 0 {
+		log.Printf("resume: %d 檔已有今日封存，只補缺少的月份（-refetch 可強制重抓）", resumed)
 	}
 
 	fetchTWSE(ctx, p, twse, monthList, results)
-	fetchTPEX(ctx, p, tpex, monthList, now, results)
+	fetchTPEX(ctx, p, tpex, monthList, now, results, *refetch)
 
 	if !*dryRun {
 		writeArchives(*dir, archiveDate, now, targets, results)
@@ -185,6 +174,19 @@ type result struct {
 	limited bool
 }
 
+// hasSession reports whether this stock already holds a row for that exact session.
+//
+// Presence of the ROW is the question, never presence of a P/E: an archived row with no ratio
+// is a complete answer about a company the exchange publishes no ratio for.
+func (r *result) hasSession(date string) bool {
+	for _, x := range r.rows {
+		if x.Date == date {
+			return true
+		}
+	}
+	return false
+}
+
 // has reports whether the month is already covered, so a resumed run skips it.
 //
 // "Covered" is at least one session in that calendar month. A month with a genuine handful of
@@ -203,6 +205,35 @@ func (r *result) has(month time.Time) bool {
 func (r *result) add(rows []valuation.Ratios) { r.rows = append(r.rows, rows...) }
 
 // ── fetching ──────────────────────────────────────────────────────────────────────────
+
+// loadResume seeds the results with whatever a previous run already archived TODAY, so an
+// interrupted or rate-limited run can be repeated without re-fetching what it already has.
+// TWSE's CDN refuses bursts, so the realistic way to finish a large backfill is several
+// passes — and a pass that started from zero every time would never get further than the
+// first one did.
+//
+// refetch turns the whole thing off. That is the ONLY thing standing between -refetch and a
+// resume that silently swallows it: every skip downstream — the per-symbol-month `res.has`
+// in fetchTWSE, the per-session allHaveSession in fetchTPEX — decides against rows this
+// function put there, so loading them under -refetch would make the flag a no-op for TWSE
+// while still looking like it worked.
+//
+// Returns how many targets were seeded.
+func loadResume(dir, archiveDate string, ts []target, results map[string]*result,
+	refetch bool) int {
+	if refetch {
+		return 0
+	}
+	resumed := 0
+	for _, t := range ts {
+		if ex := readExisting(dir, archiveDate, t); ex != nil && len(ex.History) > 0 {
+			results[t.key()].add(ex.History)
+			results[t.key()].resumed = len(ex.History)
+			resumed++
+		}
+	}
+	return resumed
+}
 
 func fetchTWSE(ctx context.Context, p *valuation.HistoricalProvider, ts []target,
 	months []time.Time, results map[string]*result) {
@@ -236,25 +267,49 @@ func fetchTWSE(ctx context.Context, p *valuation.HistoricalProvider, ts []target
 	}
 }
 
-func fetchTPEX(ctx context.Context, p *valuation.HistoricalProvider, ts []target,
-	months []time.Time, now time.Time, results map[string]*result) {
+// sessionFetcher is the one call fetchTPEX makes to the outside world.
+//
+// An interface rather than the concrete provider so a test can COUNT the requests the loop
+// issues. Counting is the only way to hold the skip: a test that re-implemented the condition
+// would prove the predicate and not the saving, and would keep passing after the skip was
+// deleted from the loop it is supposed to guard.
+type sessionFetcher interface {
+	TPEXSession(ctx context.Context, day time.Time) (map[string]valuation.Ratios, error)
+}
+
+func fetchTPEX(ctx context.Context, p sessionFetcher, ts []target,
+	months []time.Time, now time.Time, results map[string]*result, refetch bool) {
 	if len(ts) == 0 {
 		return
 	}
 	days := sessionDays(months, now)
-	log.Printf("TPEx: %d 個日期 × 1 次請求（每次回傳全市場，再取本 universe 的 %d 檔）",
-		len(days), len(ts))
 
-	var fetched, empty int
+	var fetched, empty, skipped int
 	for i, d := range days {
 		if ctx.Err() != nil {
 			break
 		}
+		date := d.Format("2006-01-02")
+
+		// Skip the whole-market request when every target already holds this session.
+		//
+		// TPEx is fetched per DATE for the entire market, so the per-symbol-month resume that
+		// covers TWSE does nothing here: a rerun re-requested all ~243 dates even when three
+		// of four stocks were already complete. Correctness was never at risk — MergeHistory
+		// dedupes by session — but six minutes of requests were.
+		if !refetch && allHaveSession(ts, results, date) {
+			skipped++
+			continue
+		}
+
 		byCode, err := p.TPEXSession(ctx, d)
 		if err != nil {
 			for _, t := range ts {
 				results[t.key()].errs = append(results[t.key()].errs,
-					fmt.Sprintf("%s: %v", d.Format("2006-01-02"), err))
+					fmt.Sprintf("%s: %v", date, err))
+				if valuation.IsRateLimited(err) {
+					results[t.key()].limited = true
+				}
 			}
 			continue
 		}
@@ -271,10 +326,29 @@ func fetchTPEX(ctx context.Context, p *valuation.HistoricalProvider, ts []target
 			}
 		}
 		if (i+1)%20 == 0 {
-			log.Printf("  ... %d/%d 個日期（%d 個交易日）", i+1, len(days), fetched)
+			log.Printf("  ... %d/%d 個日期（已抓 %d，跳過 %d）", i+1, len(days), fetched, skipped)
 		}
 	}
-	log.Printf("  TPEx 完成：%d 個交易日，%d 個非交易日", fetched, empty)
+	log.Printf("  TPEx 完成：抓取 %d 個交易日，跳過 %d 個已有的，%d 個非交易日",
+		fetched, skipped, empty)
+}
+
+// allHaveSession reports whether every target already holds a row for that session.
+//
+// SESSION EXISTENCE, not P/E availability. A row whose P/E is absent — a loss-making company,
+// which the exchange simply does not publish a ratio for — is a COMPLETE record of that
+// session: it says "we asked, and there was no ratio". Re-fetching it would re-request the
+// same missing value every run, forever, and would treat a fact about the company as a gap in
+// our data. 3055 蔚華科 has 225 such sessions and not one usable P/E; under a
+// P/E-availability test it would be re-fetched in full on every single run.
+func allHaveSession(ts []target, results map[string]*result, date string) bool {
+	for _, t := range ts {
+		res := results[t.key()]
+		if res == nil || !res.hasSession(date) {
+			return false
+		}
+	}
+	return true
 }
 
 // sessionDays lists every weekday in the covered months, up to and including now.

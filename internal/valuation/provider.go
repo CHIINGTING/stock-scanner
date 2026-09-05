@@ -95,6 +95,15 @@ func (p *Provider) FetchMarket(ctx context.Context, market string) (map[string]R
 //
 // TWSE and TPEx publish the same data under different key names, so the parser accepts both
 // rather than existing twice.
+//
+// A row whose P/E KEY is absent is skipped rather than archived with a nil P/E. Under FU-11 an
+// absent P/E is a financial fact — the exchanges withhold the ratio exactly when trailing
+// earnings are non-positive — so a renamed field would write "this company is not profitable"
+// for every stock in the market at once, out of nothing but a schema change.
+//
+// The distinction is between the KEY being missing (we cannot see the column: a parse problem)
+// and the VALUE being empty or "-" (the exchange published no ratio: the financial fact). The
+// first is skipped; the second is archived as nil, which is what it means.
 func parseRatioRows(rows []map[string]string) map[string]Ratios {
 	out := make(map[string]Ratios, len(rows))
 	for _, r := range rows {
@@ -106,6 +115,9 @@ func parseRatioRows(rows []map[string]string) map[string]Ratios {
 		if date == "" {
 			continue
 		}
+		if !hasKey(r, "PEratio", "PriceEarningRatio") {
+			continue
+		}
 		out[code] = Ratios{
 			Symbol:        code,
 			Date:          date,
@@ -115,6 +127,16 @@ func parseRatioRows(rows []map[string]string) map[string]Ratios {
 		}
 	}
 	return out
+}
+
+// hasKey reports whether the row carries any of these columns at all, however empty.
+func hasKey(row map[string]string, names ...string) bool {
+	for _, n := range names {
+		if _, ok := row[n]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func first(row map[string]string, names ...string) string {
@@ -190,6 +212,25 @@ func SaveSnapshot(dir string, s *Snapshot) (string, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return "", err
 	}
+
+	// Never drop history a previous writer put here.
+	//
+	// One archive path holds one day's file, and two different writers target it: the daily
+	// live fetch, which knows only about the session it just observed, and the backfill,
+	// which fills History with hundreds of older sessions. The live fetch builds its Snapshot
+	// from scratch — History nil — so writing it wholesale ERASED the backfill.
+	//
+	// That is not hypothetical: a single valuation-fetch run destroyed roughly 3,000
+	// backfilled sessions across fourteen stocks, and because the daily pipeline calls the
+	// same FetchAndStore, it would have done so again every day.
+	//
+	// Merging here rather than in each caller is deliberate. A writer that does not know
+	// History exists must not be able to delete it, and the next writer to be added will not
+	// know either.
+	if existing := readSnapshot(path); existing != nil && len(existing.History) > 0 {
+		s.History = MergeHistory(existing.History, s.History)
+	}
+
 	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return "", err
@@ -203,6 +244,22 @@ func SaveSnapshot(dir string, s *Snapshot) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// readSnapshot reads one archive file, or nil when there is nothing usable there.
+//
+// A missing or corrupt file means "nothing to merge with" — never a reason to fail the write
+// that is about to happen, and never a reason to lose what the caller is holding.
+func readSnapshot(path string) *Snapshot {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var s Snapshot
+	if err := json.Unmarshal(b, &s); err != nil {
+		return nil
+	}
+	return &s
 }
 
 // LoadHistory reads every archived observation for one stock, on or before asOfDate.

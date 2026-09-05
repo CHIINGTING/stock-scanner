@@ -118,6 +118,27 @@ func (p *HistoricalProvider) TWSEMonth(ctx context.Context, code string, month t
 	idx := fieldIndex(env.Fields, map[string]string{
 		"date": "日期", "pe": "本益比", "pb": "股價淨值比", "yield": "殖利率",
 	})
+	// An unresolvable P/E column is a PARSE FAILURE, not a month of companies with no
+	// earnings.
+	//
+	// This distinction did not exist before FU-11. A nil P/E used to mean only "no sample",
+	// and a row carrying one was harmless — it was dropped from the distribution and nothing
+	// else read it. FU-11 made an absent P/E a FINANCIAL FACT: the exchange withholds the
+	// ratio precisely when trailing earnings are non-positive, so a nil now says "this
+	// company was not profitable that session".
+	//
+	// A renamed header would therefore manufacture that fact out of a schema change. One bad
+	// month inside a good series reads as P P [renamed month] P P → INTERMITTENT →
+	// "the earnings denominator crossed zero", about a company that never did.
+	//
+	// So it fails loudly. Losing a month to an error a human will see is recoverable; writing
+	// a false earnings history into the archive is not, because nothing downstream can tell
+	// afterwards which nils were real.
+	if idx["pe"] < 0 {
+		return nil, fmt.Errorf("twse %s %s: no 本益比 column in %v — refusing to archive rows "+
+			"whose missing P/E would read as non-positive earnings", code,
+			month.Format("2006-01"), env.Fields)
+	}
 	out := make([]Ratios, 0, len(env.Data))
 	for _, row := range env.Data {
 		date, err := rocRowDate(pick(row, idx["date"]))
@@ -179,6 +200,23 @@ func (p *HistoricalProvider) TPEXSession(ctx context.Context, day time.Time) (ma
 	idx := fieldIndex(t.Fields, map[string]string{
 		"code": "股票代號", "pe": "本益比", "pb": "股價淨值比", "yield": "殖利率",
 	})
+	// Same refusal as TWSEMonth, and it matters more here: this response is the WHOLE MARKET,
+	// so an unresolved column would archive a false "no earnings" for every listed stock at
+	// once. See the comment there.
+	if idx["pe"] < 0 {
+		return nil, fmt.Errorf("tpex %s: no 本益比 column in %v — refusing to archive rows "+
+			"whose missing P/E would read as non-positive earnings", got, t.Fields)
+	}
+	// The code column gets the same treatment, for a different false fact.
+	//
+	// Without it, an unmatched header makes every row's code empty, every row is skipped, and
+	// the caller receives an empty map — which it reads as a non-trading day. A renamed column
+	// would quietly report the entire backfill window as holidays: no error, no rows, and a
+	// summary that looks like the exchange simply was not open all year.
+	if idx["code"] < 0 {
+		return nil, fmt.Errorf("tpex %s: no 股票代號 column in %v — refusing to report a "+
+			"parse failure as a non-trading day", got, t.Fields)
+	}
 	out := make(map[string]Ratios, len(t.Data))
 	for _, row := range t.Data {
 		code := strings.TrimSpace(pick(row, idx["code"]))
@@ -278,6 +316,14 @@ func rateLimited(code int) bool {
 	}
 	return false
 }
+
+// RateLimitedError builds the refusal the exchanges produce.
+//
+// It exists because IsRateLimited is exported and callers branch on it — cmd/valuation-backfill
+// decides from it whether to tell the reader "come back later" — and without a way to construct
+// one, that branch is untestable from outside this package. The RECOGNITION itself is tested
+// here against real HTTP responses; this is only for exercising what callers do with it.
+func RateLimitedError(code int) error { return &rateLimitError{code: code} }
 
 // IsRateLimited reports whether an error came from an exchange refusing the request rate.
 func IsRateLimited(err error) bool {
