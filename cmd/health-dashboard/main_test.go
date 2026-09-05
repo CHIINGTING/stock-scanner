@@ -200,8 +200,8 @@ func TestResolveCacheDirRejectsTheScannerCache(t *testing.T) {
 		if got.Dir == "" {
 			t.Errorf("%s: no directory resolved", tc.name)
 		}
-		if sameDir(got.Dir, got.ScanDir) {
-			t.Errorf("%s: resolved %q which IS the scanner's %q", tc.name, got.Dir, got.ScanDir)
+		if sameDir(got.Dir, got.Reserved) {
+			t.Errorf("%s: resolved %q which IS the scanner's %q", tc.name, got.Dir, got.Reserved)
 		}
 	}
 }
@@ -219,8 +219,8 @@ func TestBlankRequestNeverResolvesToTheScannerCache(t *testing.T) {
 	if got.Dir != defaultCacheDir {
 		t.Fatalf("resolved %q, want the dashboard default %q", got.Dir, defaultCacheDir)
 	}
-	if got.ScanDir != defaultScannerCacheDir {
-		t.Fatalf("the scanner default was not applied: %q", got.ScanDir)
+	if got.Reserved != defaultScannerCacheDir {
+		t.Fatalf("the scanner default was not applied: %q", got.Reserved)
 	}
 }
 

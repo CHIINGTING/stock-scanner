@@ -65,3 +65,10 @@ clean:
 
 test:
 	go test ./...
+
+# 每日交易日資料流程（FU-8）。收盤後執行；非交易日是安全的 no-op。
+# 使用獨立的 research 價格快取，指到掃描器的 .cache 會直接啟動失敗。
+daily-data:
+	go run ./cmd/daily-data -report-dir reports
+
+.PHONY: daily-data

@@ -38,7 +38,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -113,7 +112,7 @@ func main() {
 		log.Fatalf("%v", err)
 	}
 	cfg.Fetcher.CacheDir = choice.Dir
-	log.Printf("price cache: %s (the scanner's %s is never written)", choice.Dir, choice.ScanDir)
+	log.Printf("price cache: %s (the scanner's %s is never written)", choice.Dir, choice.Reserved)
 
 	aiCfg := cfg.Dashboard.AI
 	if *noAI {
@@ -219,52 +218,26 @@ func main() {
 	}
 }
 
-// cacheChoice is the resolved price-cache decision: where this binary will write, and the
-// scanner directory it was checked against.
-type cacheChoice struct {
-	Dir     string
-	ScanDir string
+// cacheChoice / resolveCacheDir / sameDir delegate to internal/fetcher.
+//
+// The guard moved there when cmd/daily-data needed the same one: the package that WRITES the
+// cache is where the rule about which directory may be written belongs, and two copies of it
+// would be two things to keep in step. These wrappers stay so this binary's own tests keep
+// exercising the path main() actually calls.
+type cacheChoice = fetcher.CacheChoice
+
+func resolveCacheDir(requested, scanCache string) (cacheChoice, error) {
+	c, err := fetcher.ResolveCacheDir(requested, scanCache, defaultCacheDir)
+	if err != nil {
+		// internal/fetcher knows the directory is reserved; it cannot know WHOSE it is.
+		// Naming the scanner is what makes the message actionable to whoever hit it.
+		return c, fmt.Errorf("%w\n(that directory is the scanner's price cache — "+
+			"use a different -cache-dir)", err)
+	}
+	return c, nil
 }
 
-// resolveCacheDir decides where the dashboard's price cache goes, and REFUSES the scanner's.
-//
-// This is the production invariant, extracted into a function precisely so it can be killed
-// by a test:
-//
-//	health-dashboard wiring MUST NOT resolve to the scanner cache directory.
-//
-// It was previously inline in main(), where deleting the whole check left the suite green —
-// the isolation tests in internal/healthcheck prove that internal/fetcher does not write
-// across two directories a test hands it, which is a different statement entirely. Nothing
-// tested the step that CHOOSES those directories.
-//
-// Both defaults matter and both are applied here rather than by the caller:
-//
-//	requested == ""   this binary's own directory, never the fetcher's default
-//	scanCache == ""   the FETCHER's default, because that is what a blank cache_dir in the
-//	                  scan's config actually resolves to — treating blank as "no collision
-//	                  possible" would reopen the hole for every config that omits the key
-//
-// A collision is an error rather than a warning. internal/fetcher writes what it fetches, so
-// sharing the directory lets an intraday check put a half-formed daily bar into the series
-// the next scan reads; a warning in a log nobody reads is not a guarantee.
-func resolveCacheDir(requested, scanCache string) (cacheChoice, error) {
-	if requested == "" {
-		requested = defaultCacheDir
-	}
-	if scanCache == "" {
-		scanCache = defaultScannerCacheDir
-	}
-	if sameDir(requested, scanCache) {
-		return cacheChoice{}, fmt.Errorf(
-			"cache-dir %q is the scanner's price cache (%q).\n"+
-				"A health check fetches live prices and internal/fetcher writes what it "+
-				"fetches, so sharing this directory would let an intraday check put a "+
-				"half-formed daily bar into the series the next scan reads. "+
-				"Use a different -cache-dir.", requested, scanCache)
-	}
-	return cacheChoice{Dir: requested, ScanDir: scanCache}, nil
-}
+func sameDir(a, b string) bool { return fetcher.SameDir(a, b) }
 
 // defaultCacheDir is this binary's own price cache, deliberately NOT the scanner's.
 const defaultCacheDir = ".cache-health-dashboard"
@@ -276,46 +249,6 @@ const defaultCacheDir = ".cache-health-dashboard"
 // literal would make this hard stop fail silently the day the fetcher's default changed;
 // referencing the constant makes that a compile-time concern instead.
 const defaultScannerCacheDir = fetcher.DefaultCacheDir
-
-// sameDir reports whether two paths name the same directory.
-//
-// Three tests, widest last:
-//
-//	text    cleaned, then made absolute — catches ".cache", "./.cache", "foo/../.cache"
-//	link    EvalSymlinks — catches a symlink pointing at the other directory
-//	identity os.SameFile on the stat results — catches everything the string comparison
-//	         cannot see
-//
-// The identity check is the one that matters, and string comparison alone is a bypass rather
-// than a hypothetical: APFS is case-insensitive by default, so on macOS "-cache-dir .CACHE"
-// resolves to the scanner's cache while comparing unequal as text. EvalSymlinks does not
-// help — it succeeds for both and returns each spelling unchanged. os.SameFile compares
-// device and inode, so it closes that along with hard links and bind mounts in one move.
-//
-// A path that does not exist yet cannot be stat'd, which is normal on a first run; the string
-// tests still apply, and a directory that does not exist cannot be the one being written to
-// anyway.
-func sameDir(a, b string) bool {
-	ca, cb := filepath.Clean(a), filepath.Clean(b)
-	if ca == cb {
-		return true
-	}
-	aa, errA := filepath.Abs(ca)
-	ab, errB := filepath.Abs(cb)
-	if errA == nil && errB == nil {
-		if aa == ab {
-			return true
-		}
-		if ra, err1 := filepath.EvalSymlinks(aa); err1 == nil {
-			if rb, err2 := filepath.EvalSymlinks(ab); err2 == nil && ra == rb {
-				return true
-			}
-		}
-	}
-	sa, err1 := os.Stat(ca)
-	sb, err2 := os.Stat(cb)
-	return err1 == nil && err2 == nil && os.SameFile(sa, sb)
-}
 
 // newGrader wires the batch grader.
 //
