@@ -61,8 +61,22 @@ const (
 	NotImplemented Availability = "NOT_IMPLEMENTED"
 )
 
-// SourceName identifies the exchange datasets.
+// SourceName identifies the LIVE exchange datasets — the parameterless endpoints that serve
+// only the current session.
 const SourceName = "TWSE BWIBBU_ALL / TPEx peratio_analysis"
+
+// Historical sources. These are the exchanges' OWN per-date endpoints, which the live
+// datasets above do not expose:
+//
+//	TWSE  /rwd/zh/afterTrading/BWIBBU?date=&stockNo=   one stock, one month of sessions
+//	TPEx  peratio_analysis/pera_result.php?d=          one session, the whole market
+//
+// A record carrying one of these was retrieved LONG AFTER the session it describes. That is
+// not a defect and it is not hidden: see Ratios.Backfilled.
+const (
+	SourceTWSEHistorical = "TWSE_HISTORICAL"
+	SourceTPEXHistorical = "TPEX_HISTORICAL"
+)
 
 // Ratios is one stock's published price ratios for one session.
 //
@@ -89,6 +103,37 @@ type Ratios struct {
 	// session is archived repeatedly. Deduplication needs to know which copy is the most
 	// recent one the caller is allowed to see.
 	ArchiveDate string `json:"-"`
+
+	// ── provenance ──
+	//
+	// Three dates are in play and conflating any two of them corrupts every point-in-time
+	// answer built on this record:
+	//
+	//	Date        the session the EXCHANGE computed these ratios for
+	//	FetchedAt   when THIS REPOSITORY actually retrieved them
+	//	ArchiveDate which archive directory the copy was read from
+	//
+	// For a live fetch, FetchedAt is a day or two after Date. For a backfill it can be a
+	// year after. Writing the session date into FetchedAt would claim this repo knew
+	// something it did not, and every look-ahead guard downstream trusts that claim.
+
+	// Backfilled is true when the record came from an exchange's HISTORICAL endpoint rather
+	// than from observing the session as it happened.
+	//
+	// It does NOT make the record less true — the exchange published these figures on Date
+	// either way. It records that this repository did not have them then, which is what a
+	// point-in-time consumer has to know. It is never inferred from the dates: a caller must
+	// set it.
+	Backfilled bool `json:"backfilled,omitempty"`
+
+	// Source names the endpoint this record came from — SourceName for a live fetch, or one
+	// of the historical constants. Empty means the enclosing Snapshot's Source applies,
+	// which is how every archive written before backfill existed reads.
+	Source string `json:"source,omitempty"`
+
+	// FetchedAt is when this repository retrieved the record. Zero in archives written
+	// before this field existed; the enclosing Snapshot's ObservedAt applies then.
+	FetchedAt time.Time `json:"fetched_at,omitempty"`
 }
 
 // Snapshot is one stock's ratios at one observation.
@@ -101,7 +146,20 @@ type Snapshot struct {
 	Status Availability `json:"status"`
 	Reason string       `json:"reason,omitempty"`
 
+	// Ratios is the session this snapshot was fetched FOR — the live observation.
 	Ratios *Ratios `json:"ratios,omitempty"`
+
+	// History holds additional sessions stored in the same file, which is how a backfill
+	// lands: one archive directory (the day the backfill RAN) holding many sessions (the
+	// days the exchange computed them for).
+	//
+	// Keeping them here rather than in fabricated per-session archive directories is what
+	// preserves the point-in-time contract. An archive directory means "what this repo had
+	// on that date"; writing a 2026-08-03 session into a 2026-08-03 directory today would
+	// make every historical query believe the data was available then. It was not.
+	//
+	// Nil in every archive written before backfill existed, so old files are unaffected.
+	History []Ratios `json:"history,omitempty"`
 }
 
 // HistoricalPEStats describes a P/E distribution.

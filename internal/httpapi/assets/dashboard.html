@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>個股健檢</title>
+<style>
+  /* One file, no external anything: no CDN, no web font, no analytics. The page's only
+     outbound requests are to this server's own /api/v1/*. */
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel-2: #1d212a; --line: #2a2f3a;
+    --ink: #e6e8ec; --ink-dim: #9aa3b2; --ink-faint: #6b7484;
+    --up: #ef4d56; --down: #22c55e;           /* 台股慣例：紅漲綠跌 */
+    --missing: #8b93a3; --missing-bg: #23262e;
+    --accent: #6ea8fe;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --panel: #fff; --panel-2: #f0f2f5; --line: #dde1e7;
+      --ink: #1a1d23; --ink-dim: #5b6472; --ink-faint: #8a93a1;
+      --missing: #6b7484; --missing-bg: #eceef2; --accent: #2563eb;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 system-ui, -apple-system, "Noto Sans TC", "PingFang TC",
+          "Microsoft JhengHei", sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 96px; }
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: .02em; }
+  .sub { color: var(--ink-faint); font-size: 13px; margin-bottom: 20px; }
+
+  /* ── search ── */
+  .search { position: relative; margin-bottom: 20px; }
+  #q {
+    width: 100%; padding: 13px 15px; font-size: 16px; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  }
+  #q:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  #results {
+    position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    max-height: 340px; overflow-y: auto; display: none;
+    box-shadow: 0 12px 32px rgba(0,0,0,.34);
+  }
+  #results.open { display: block; }
+  .row {
+    display: flex; gap: 10px; align-items: baseline; width: 100%; text-align: start;
+    padding: 10px 14px; background: none; border: 0; border-bottom: 1px solid var(--line);
+    color: var(--ink); font: inherit; cursor: pointer;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row:hover, .row[aria-selected="true"] { background: var(--panel-2); }
+  .row .code { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5em; }
+  .row .mkt { color: var(--ink-faint); font-size: 12px; margin-inline-start: auto; }
+  .row .why { color: var(--ink-faint); font-size: 12px; }
+
+  /* ── controls ── */
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 22px; }
+  label.f { color: var(--ink-dim); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  #cost { width: 7.5em; }
+  input[type=number],
+  input[type=date] {
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px;
+  }
+  button.go {
+    background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+    padding: 9px 20px; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button.go:disabled { opacity: .5; cursor: default; }
+
+  /* ── panels ── */
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 14px;
+  }
+  .card > h2 {
+    font-size: 14px; margin: 0 0 12px; color: var(--ink-dim);
+    text-transform: uppercase; letter-spacing: .08em; font-weight: 600;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 20px; }
+  .metric { min-width: 0; }
+  .metric .k { color: var(--ink-faint); font-size: 12px; }
+  .metric .v { font-size: 16px; font-variant-numeric: tabular-nums; word-break: break-word; }
+  .metric .n { color: var(--ink-faint); font-size: 11px; }
+
+  /* ── the missing-value treatment (§21) ──
+     A value with no number behind it must never look like one. It is rendered in a
+     monospace pill, in a muted colour, at a smaller size — visually a LABEL, not a figure —
+     so no reader mistakes it for data, and no screenshot of it reads as "zero". */
+  .v.missing {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; letter-spacing: .04em;
+    color: var(--missing); background: var(--missing-bg);
+    border: 1px dashed var(--line); border-radius: 5px;
+    padding: 2px 7px; display: inline-block;
+  }
+  .v.up { color: var(--up); } .v.down { color: var(--down); }
+  /* A real number that carries a caveat: shown as a figure, marked as incomplete. */
+  .caveat-mark { color: #f59e0b; font-size: 11px; margin-inline-start: 4px; cursor: help; }
+  /* Set in CSS rather than by JS so tightening style-src cannot silently break the layout. */
+  td.num > .v { display: inline-block; }
+
+  /* ── the verdict, which is the point of the page ──
+     Deliberately NOT the up/down palette: 紅漲綠跌 is about price direction, and a reader
+     who sees the price colours on a RISK verdict will read "red = up = good". Danger is red
+     here in the universal sense, so the two scales must not share hues. */
+  .verdict { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .verdict .badge {
+    font-size: 20px; font-weight: 700; letter-spacing: .04em;
+    padding: 8px 18px; border-radius: 10px; border: 1px solid;
+  }
+  .verdict .say { font-size: 15px; color: var(--ink); flex: 1 1 260px; min-width: 0; }
+  .v-attractive  { color:#0ea5e9; border-color:#0ea5e955; background:#0ea5e918; }
+  .v-acceptable  { color:#38bdf8; border-color:#38bdf855; background:#38bdf814; }
+  .v-wait        { color:#f59e0b; border-color:#f59e0b55; background:#f59e0b18; }
+  .v-overvalued  { color:#fb923c; border-color:#fb923c55; background:#fb923c18; }
+  .v-highrisk    { color:#ef4444; border-color:#ef444455; background:#ef444418; }
+  .v-unknown     { color:var(--missing); border-color:var(--line); background:var(--missing-bg);
+                   font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+  details.trace { margin-top: 12px; }
+  details.trace > summary {
+    cursor: pointer; color: var(--ink-faint); font-size: 12px; list-style: revert;
+  }
+  details.trace table { margin-top: 8px; }
+  td.fired { color: var(--ink); font-weight: 600; }
+  td.notfired { color: var(--ink-faint); }
+
+  .pill {
+    font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 600;
+    border: 1px solid var(--line); color: var(--ink-dim); background: var(--panel-2);
+    letter-spacing: .04em;
+  }
+  .pill.ok { color: #10b981; border-color: #10b98155; background: #10b98118; }
+  .pill.warn { color: #f59e0b; border-color: #f59e0b55; background: #f59e0b18; }
+  .pill.bad { color: var(--missing); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: start; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--ink-faint); font-size: 12px; font-weight: 600; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+
+  ul.pts { margin: 6px 0 0; padding-inline-start: 20px; }
+  ul.pts li { margin-bottom: 5px; }
+  .note { color: var(--ink-faint); font-size: 12px; margin-top: 10px; line-height: 1.5; }
+  .why-row { color: var(--ink-faint); font-size: 11px; margin-top: 3px; }
+  .banner {
+    border-radius: 10px; padding: 11px 14px; margin-bottom: 14px; font-size: 13px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim);
+  }
+  .banner.err { border-color: #ef444455; background: #ef444414; color: #f87171; }
+  .hidden { display: none !important; }
+  .spin { color: var(--ink-faint); font-size: 14px; padding: 28px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>個股健檢</h1>
+  <div class="sub">
+    輸入代號、名稱或別名，選一檔股票後執行健檢。所有數值由伺服器端程式計算；
+    AI 只負責文字判讀，不產生任何數字。
+  </div>
+
+  <div class="search">
+    <input id="q" type="text" autocomplete="off" spellcheck="false"
+           placeholder="例如：2330、台積電、TSMC" aria-label="股票搜尋"
+           role="combobox" aria-expanded="false" aria-controls="results">
+    <div id="results" role="listbox" aria-label="搜尋結果"></div>
+  </div>
+
+  <div class="controls">
+    <label class="f">分析日 <input id="asof" type="date"></label>
+    <label class="f" title="留空或 0 = 空手，只看該不該進場；填入數字 = 你目前的每股持有成本">
+      持有成本 <input id="cost" type="number" step="0.01" min="0" placeholder="空手" inputmode="decimal">
+    </label>
+    <label class="f"><input id="skipai" type="checkbox"> 不呼叫 AI</label>
+    <button class="go" id="run" disabled>執行健檢</button>
+    <span id="picked" class="pill hidden"></span>
+  </div>
+
+  <div id="banner" class="banner hidden"></div>
+  <div id="out"></div>
+</div>
+
+<script>
+"use strict";
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const qEl = $("q"), resEl = $("results"), runEl = $("run"),
+        asofEl = $("asof"), costEl = $("cost"), skipEl = $("skipai"),
+        pickedEl = $("picked"), bannerEl = $("banner"), outEl = $("out");
+
+  let selected = null, items = [], cursor = -1, seq = 0;
+
+  // ── text ────────────────────────────────────────────────────────────────────────
+  // Everything from the server is inserted as TEXT, never as markup. A stock name, an
+  // AI sentence and a failure reason are all data; building HTML strings out of them is
+  // how a name containing a bracket becomes a script tag.
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = String(text);
+    return n;
+  };
+
+  // ── values ──────────────────────────────────────────────────────────────────────
+  // A Value from the API is {status, value, display, unit, reason, source, as_of}.
+  // display is ALWAYS safe to print: the server never puts a bare 0 or "-" in it for a
+  // missing figure, it puts the status word. The only job here is to make sure a status
+  // word never LOOKS like a number.
+  const AVAILABLE = "AVAILABLE";
+
+  function valueNode(v, opts) {
+    opts = opts || {};
+    const n = el("div", "v");
+    if (!v) {
+      n.classList.add("missing");
+      n.textContent = "UNAVAILABLE";
+      return n;
+    }
+    // Three states, not two. The server's Qualified() keeps a REAL number while downgrading
+    // its status — a 5-day institutional cumulative that spans a missing session is a genuine
+    // sum of what was observed. Rendering that as an absent-value label would throw away a
+    // figure that exists; rendering it as clean would claim a completeness it does not have.
+    // So: a number with a caveat marker, distinct from both.
+    const hasNumber = v.value !== null && v.value !== undefined;
+    if (v.status !== AVAILABLE) {
+      if (v.reason) n.title = v.reason;
+      if (!hasNumber) {
+        n.classList.add("missing");
+        n.textContent = v.display || "UNAVAILABLE";
+        return n;
+      }
+      n.classList.add("caveat");
+      n.textContent = v.display;
+      const mark = el("span", "caveat-mark", "△");
+      mark.title = v.reason || v.status;
+      n.appendChild(mark);
+      if (opts.signed && v.value > 0) n.classList.add("up");
+      else if (opts.signed && v.value < 0) n.classList.add("down");
+      return n;
+    }
+    n.textContent = v.display;
+    if (opts.signed && typeof v.value === "number") {
+      if (v.value > 0) n.classList.add("up");
+      else if (v.value < 0) n.classList.add("down");
+    }
+    if (v.source) n.title = v.source + (v.as_of ? "（" + v.as_of + "）" : "");
+    return n;
+  }
+
+  // isLabel reports whether a string carries content a reader should be shown as a label.
+  // Punctuation-only values (an em dash, a hyphen) are placeholders, not labels.
+  function isLabel(s) {
+    return typeof s === "string" && s.replace(/[\s—–-]/g, "") !== "";
+  }
+
+  function metric(label, v, opts) {
+    const m = el("div", "metric");
+    m.appendChild(el("div", "k", label));
+    m.appendChild(valueNode(v, opts));
+    if (v && v.as_of) m.appendChild(el("div", "n", v.as_of));
+    return m;
+  }
+
+  function statusPill(status) {
+    const p = el("span", "pill", status);
+    if (status === AVAILABLE) p.classList.add("ok");
+    else if (status === "PARTIAL") p.classList.add("warn");
+    else p.classList.add("bad");
+    return p;
+  }
+
+  function card(title, status) {
+    const c = el("div", "card");
+    const h = el("h2", null, title);
+    if (status) h.appendChild(statusPill(status));
+    c.appendChild(h);
+    return c;
+  }
+
+  function grid(pairs) {
+    const g = el("div", "grid");
+    for (const [label, v, opts] of pairs) g.appendChild(metric(label, v, opts));
+    return g;
+  }
+
+  function reasonLine(parent, text) {
+    if (text) parent.appendChild(el("div", "note", text));
+  }
+
+  // ── search ──────────────────────────────────────────────────────────────────────
+  let timer = null;
+  qEl.addEventListener("input", () => {
+    clearTimeout(timer);
+    const q = qEl.value.trim();
+    selected = null; runEl.disabled = true; pickedEl.classList.add("hidden");
+    if (!q) { closeList(); return; }
+    timer = setTimeout(() => search(q), 140);
+  });
+
+  async function search(q) {
+    const mine = ++seq;
+    try {
+      const r = await fetch("/api/v1/stocks?q=" + encodeURIComponent(q) + "&limit=12");
+      const body = await r.json();
+      if (mine !== seq) return;            // a later keystroke already won
+      if (!r.ok) { closeList(); return; }
+      items = body.results || [];
+      renderList();
+    } catch (e) {
+      if (mine === seq) closeList();
+    }
+  }
+
+  function renderList() {
+    resEl.textContent = "";
+    cursor = -1;
+    if (!items.length) { closeList(); return; }
+    items.forEach((s, i) => {
+      const b = el("button", "row");
+      b.type = "button";
+      b.setAttribute("role", "option");
+      b.appendChild(el("span", "code", s.symbol));
+      b.appendChild(el("span", "name", s.name));
+      if (s.match && s.match.indexOf("ALIAS") === 0) {
+        b.appendChild(el("span", "why", "別名"));
+      }
+      b.appendChild(el("span", "mkt", s.market));
+      b.addEventListener("click", () => pick(i));
+      resEl.appendChild(b);
+    });
+    resEl.classList.add("open");
+    qEl.setAttribute("aria-expanded", "true");
+  }
+
+  function closeList() {
+    resEl.classList.remove("open");
+    resEl.textContent = "";
+    qEl.setAttribute("aria-expanded", "false");
+    items = []; cursor = -1;
+  }
+
+  // Remembering the cost per symbol is a per-viewer convenience, so localStorage is the
+  // right home for it: it never leaves this browser, and losing it costs one retype.
+  // Every access is guarded — a private window or blocked site data makes these throw.
+  function rememberCost(symbol, value) {
+    try { localStorage.setItem("cost:" + symbol, String(value)); } catch (e) { /* ignore */ }
+  }
+  function recallCost(symbol) {
+    try { return localStorage.getItem("cost:" + symbol) || ""; } catch (e) { return ""; }
+  }
+
+  costEl.addEventListener("change", () => {
+    if (selected) rememberCost(selected.symbol, costEl.value);
+  });
+
+  function pick(i) {
+    const s = items[i];
+    if (!s) return;
+    selected = s;
+    costEl.value = recallCost(s.symbol);
+    qEl.value = s.symbol + " " + s.name;
+    pickedEl.textContent = s.symbol + " · " + s.name + " · " + s.market;
+    pickedEl.classList.remove("hidden");
+    runEl.disabled = false;
+    closeList();
+    runEl.focus();
+  }
+
+  qEl.addEventListener("keydown", (e) => {
+    if (!items.length) {
+      if (e.key === "Enter" && selected) run();
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      cursor += (e.key === "ArrowDown" ? 1 : -1);
+      if (cursor < 0) cursor = items.length - 1;
+      if (cursor >= items.length) cursor = 0;
+      [...resEl.children].forEach((c, i) =>
+        c.setAttribute("aria-selected", String(i === cursor)));
+      resEl.children[cursor].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      pick(cursor >= 0 ? cursor : 0);
+    } else if (e.key === "Escape") {
+      closeList();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".search")) closeList();
+  });
+
+  // ── run ─────────────────────────────────────────────────────────────────────────
+  runEl.addEventListener("click", run);
+
+  async function run() {
+    if (!selected) return;
+    runEl.disabled = true;
+    bannerEl.classList.add("hidden");
+    outEl.textContent = "";
+    outEl.appendChild(el("div", "spin", "健檢執行中……（會抓取價格與讀取封存，可能需要數秒）"));
+
+    const params = new URLSearchParams();
+    if (asofEl.value) params.set("as_of", asofEl.value);
+    if (skipEl.checked) params.set("skip_ai", "true");
+    const qs = params.toString();
+
+    try {
+      const r = await fetch("/api/v1/stocks/" + encodeURIComponent(selected.symbol) +
+                            "/health" + (qs ? "?" + qs : ""));
+      const body = await r.json();
+      if (!r.ok) {
+        outEl.textContent = "";
+        showError((body.error && body.error.message) || ("HTTP " + r.status));
+        return;
+      }
+      render(body);
+    } catch (e) {
+      outEl.textContent = "";
+      showError("無法連線到伺服器");
+    } finally {
+      runEl.disabled = false;
+    }
+  }
+
+  function showError(msg) {
+    bannerEl.textContent = msg;
+    bannerEl.className = "banner err";
+  }
+
+  // ── render ──────────────────────────────────────────────────────────────────────
+  // costBasis is the ONE number on this page the user supplies rather than the evidence.
+  //
+  // Empty, 0 or anything unparseable means "no position" — the page then answers only the
+  // entry question, which is what it was built for. A positive number means the reader
+  // already owns the stock, and a different set of facts becomes relevant.
+  //
+  // It is deliberately NOT sent to the server and never persisted to the database: it is the
+  // reader's own position, it is not evidence, and it must not end up in an archive that
+  // outlives the session or in a table someone later aggregates.
+  function costBasis() {
+    const v = parseFloat(costEl.value);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  // A Value-shaped object for a figure computed HERE, from the reader's own input.
+  // Source says so plainly, so nothing on the page claims exchange provenance it lacks.
+  function calc(v, unit, decimals, source) {
+    if (!Number.isFinite(v)) return { status: "UNAVAILABLE", display: "UNAVAILABLE" };
+    const shown = v.toLocaleString("en-US", {
+      minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+    });
+    // Mirrors the server's formatNumber exactly: "%" and "x" are suffixes with no space,
+    // everything else is separated. Two spellings of the same figure on one page is the kind
+    // of small inconsistency that makes a reader doubt the rest of it.
+    let display = shown;
+    if (unit === "%" || unit === "x") display = shown + unit;
+    else if (unit) display = shown + " " + unit;
+    return { status: AVAILABLE, value: v, unit: unit, source: source, display: display };
+  }
+
+  function render(h) {
+    outEl.textContent = "";
+
+    // identity + data quality
+    const head = card(h.identity.symbol + " " + h.identity.name, h.data_quality.level);
+    head.appendChild(grid([
+      ["市場", { status: AVAILABLE, display: h.identity.market }],
+      ["產業", { status: AVAILABLE, display: h.identity.industry || "—" }],
+      ["分析日", { status: AVAILABLE, display: h.as_of }],
+    ]));
+    outEl.appendChild(head);
+    outEl.appendChild(assessmentCard(h.assessment, h.target_price));
+    const cost = costBasis();
+    if (cost > 0) outEl.appendChild(positionCard(h, cost));
+
+    outEl.appendChild(priceCard(h));
+    outEl.appendChild(fundamentalCard(h.fundamental));
+    outEl.appendChild(valuationCard(h.valuation));
+    outEl.appendChild(targetCard(h.target_price));
+    outEl.appendChild(institutionCard(h.institution));
+    outEl.appendChild(newsCard(h.news));
+    outEl.appendChild(aiCard(h.ai));
+    outEl.appendChild(qualityCard(h.data_quality));
+  }
+
+  // The assessment is the page's conclusion, so it is rendered FIRST and largest. Everything
+  // below it is the evidence it was computed from — a reader who stops after one card should
+  // still have the answer, not the raw material.
+  const VERDICT = {
+    ATTRACTIVE:        ["v-attractive", "可考慮進場", "價值與型態同時支持"],
+    ACCEPTABLE:        ["v-acceptable", "可以進場",   "沒有明顯阻礙，但也沒有突出的安全邊際"],
+    WAIT:              ["v-wait",       "再等",       "現在不是進場點"],
+    OVERVALUED:        ["v-overvalued", "太貴",       "價格已高於證據支持的水準"],
+    HIGH_RISK:         ["v-highrisk",   "不要碰",     "有明確風險，價值判斷不足以抵銷"],
+    INSUFFICIENT_DATA: ["v-unknown",    "資料不足",   "無法判斷"],
+  };
+
+  function assessmentCard(a, t) {
+    const c = el("div", "card");
+    c.appendChild(el("h2", null, "結論：現在該不該進場"));
+    if (!a || !a.verdict) {
+      reasonLine(c, "沒有進場評估。");
+      return c;
+    }
+    const [cls, label, gloss] = VERDICT[a.verdict] || ["v-unknown", a.verdict, ""];
+
+    const row = el("div", "verdict");
+    const badge = el("span", "badge " + cls, label);
+    badge.title = a.verdict;
+    row.appendChild(badge);
+    const say = el("div", "say");
+    say.appendChild(el("div", null, a.reason || gloss));
+    row.appendChild(say);
+    c.appendChild(row);
+
+    // The one number a reader acts on, when there is one.
+    if (t && t.margin_of_safety) {
+      const g = el("div", "grid");
+      g.appendChild(metric("安全邊際（BASE 情境）", t.margin_of_safety, { signed: true }));
+      if (t.current_price) g.appendChild(metric("現價", t.current_price));
+      const base = (t.scenarios || []).find((s) => s.name === "BASE");
+      if (base) g.appendChild(metric("BASE 目標價", base.target_price));
+      c.appendChild(g);
+    }
+
+    // The trace, collapsed. It is what makes the verdict checkable rather than oracular,
+    // but it is not what a reader needs first.
+    const det = el("details", "trace");
+    det.appendChild(el("summary", null,
+      "依據規則 " + (a.decided_by || "—") + "　·　展開看完整判斷過程"));
+    const table = el("table");
+    const thead = el("tr");
+    ["規則", "條件", "是否成立", "依據"].forEach((x) => thead.appendChild(el("th", null, x)));
+    table.appendChild(thead);
+    (a.rules || []).forEach((r) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", r.fired ? "fired" : "notfired", r.id));
+      tr.appendChild(el("td", r.fired ? "fired" : "notfired", r.description));
+      tr.appendChild(el("td", null, r.fired ? "✔ 成立" : "—"));
+      tr.appendChild(el("td", "notfired", r.detail || ""));
+      table.appendChild(tr);
+    });
+    det.appendChild(table);
+    if (a.inputs) {
+      const ul = el("ul", "pts");
+      Object.keys(a.inputs).forEach((k) =>
+        ul.appendChild(el("li", null, k + "：" + a.inputs[k])));
+      det.appendChild(el("div", "note", "規則讀到的輸入"));
+      det.appendChild(ul);
+    }
+    c.appendChild(det);
+    reasonLine(c, a.note);
+    return c;
+  }
+
+  // The holder's view. Rendered only when a cost basis is supplied.
+  //
+  // The verdict above is unchanged and stays an ENTRY judgement — that is what the server's
+  // deterministic rules answer, and re-labelling it for a holder would be inventing a second
+  // verdict system out of the same evidence. What this card adds is the set of facts that
+  // become relevant once you already own the stock, and one genuinely useful derivation:
+  // the multiple YOU paid, placed in the same distribution the targets came from.
+  function positionCard(h, cost) {
+    const c = card("你的部位", null);
+    const t = h.target_price || {};
+    const price = t.current_price && t.current_price.status === AVAILABLE
+      ? t.current_price.value : null;
+
+    const pairs = [["持有成本", calc(cost, "TWD", 2, "由你輸入")]];
+    if (price !== null) {
+      pairs.push(["現價", t.current_price]);
+      pairs.push(["未實現損益", calc((price - cost) / cost * 100, "%", 2,
+        "（現價 − 成本）÷ 成本"), { signed: true }]);
+      pairs.push(["每股損益", calc(price - cost, "TWD", 2, "現價 − 成本"), { signed: true }]);
+    } else {
+      pairs.push(["現價", { status: "UNAVAILABLE", display: "UNAVAILABLE",
+        reason: "沒有可用的收盤價" }]);
+    }
+    c.appendChild(grid(pairs));
+
+    // The multiple you paid, against this stock's own distribution. EPS comes from the
+    // server's implied trailing figure — if it is unavailable, so is this, rather than being
+    // approximated from something else.
+    const hp = (h.valuation && h.valuation.historical_pe) || {};
+    const eps = t.eps && t.eps.status === AVAILABLE ? t.eps.value : null;
+    if (eps !== null && eps > 0) {
+      const paid = cost / eps;
+      const row = [["你買在的本益比", calc(paid, "x", 2, "成本 ÷ 每股盈餘基準")]];
+      const med = hp.median && hp.median.status === AVAILABLE ? hp.median.value : null;
+      if (med !== null) {
+        row.push(["相對歷史中位數", calc((paid / med - 1) * 100, "%", 1,
+          "（你付的倍數 ÷ 歷史中位數 − 1）"), { signed: true }]);
+      }
+      c.appendChild(grid(row));
+      if (med !== null) {
+        reasonLine(c, paid <= med
+          ? "你的成本落在這檔自己歷史中位數之下 —— 以估值而言是相對便宜的進場點。"
+          : "你的成本高於這檔自己的歷史中位數 —— 當初付的是偏貴的倍數。");
+      }
+    } else {
+      reasonLine(c, "沒有可用的每股盈餘基準，無法回推你買在幾倍本益比。");
+    }
+
+    // Where the cost sits against the three targets. Distances are FROM YOUR COST, which is
+    // the number that decides your outcome — not from the current price.
+    if (t.scenarios && t.scenarios.length) {
+      const table = el("table");
+      const thead = el("tr");
+      ["情境", "目標價", "距你的成本"].forEach((x) => thead.appendChild(el("th", null, x)));
+      table.appendChild(thead);
+      t.scenarios.forEach((s) => {
+        const tr = el("tr");
+        tr.appendChild(el("td", null, s.name));
+        const td1 = el("td", "num");
+        td1.appendChild(valueNode(s.target_price));
+        tr.appendChild(td1);
+        const td2 = el("td", "num");
+        if (s.target_price && s.target_price.status === AVAILABLE) {
+          td2.appendChild(valueNode(
+            calc((s.target_price.value - cost) / cost * 100, "%", 1, "（目標價 − 成本）÷ 成本"),
+            { signed: true }));
+        } else {
+          td2.appendChild(valueNode(s.target_price));
+        }
+        tr.appendChild(td2);
+        table.appendChild(tr);
+      });
+      c.appendChild(table);
+    }
+
+    reasonLine(c, "持有成本由你輸入，不會送到伺服器、不會寫入資料庫。" +
+      "上方結論仍是「該不該進場」的判定，不因你已持有而改變。");
+    return c;
+  }
+
+  function priceCard(h) {
+    const c = card("價格與技術面", h.price.status);
+    c.appendChild(grid([
+      ["收盤", h.price.close],
+      ["漲跌幅", h.price.change_pct, { signed: true }],
+      ["量能倍數", h.price.volume_ratio],
+      ["月線", h.technical.ma20],
+      ["月線乖離", h.technical.ma20_distance_pct, { signed: true }],
+      ["RSI", h.technical.rsi],
+      ["ATR", h.technical.atr],
+      ["掃描器判定", { status: AVAILABLE, display: h.technical.scanner_action || "—" }],
+    ]));
+    const bits = [];
+    if (h.price.bar_date) bits.push("最後一根 K 棒：" + h.price.bar_date);
+    bits.push("K 棒數：" + h.price.bar_count);
+    if (h.market && h.market.regime) bits.push("大盤：" + h.market.regime);
+    // The server omits risk_label entirely when a stock has none, so a plain truthiness test
+    // would already be right. The extra check is defence in depth for one specific mistake:
+    // the scanner writes "—" for "no risk", that string is truthy in JS, and printing
+    // 「風險：—」 ASSERTS a risk this stock does not have. A label made only of dashes is not
+    // a label — that is a display rule, not a copy of the server's semantics.
+    if (isLabel(h.technical.risk_label)) bits.push("風險：" + h.technical.risk_label);
+    reasonLine(c, bits.join("　·　"));
+    reasonLine(c, h.price.reason);
+    return c;
+  }
+
+  function fundamentalCard(f) {
+    const c = card("基本面", f.status);
+    c.appendChild(grid([
+      ["月營收", f.revenue],
+      ["營收年增", f.revenue_yoy, { signed: true }],
+      ["營收月增", f.revenue_mom, { signed: true }],
+      ["毛利率", f.gross_margin],
+      ["營益率", f.operating_margin],
+      ["淨利率", f.net_margin],
+    ]));
+    const e = f.eps || {};
+    const h3 = el("div", "note", "每股盈餘" + (e.period ? "（" + e.period + "）" : ""));
+    c.appendChild(h3);
+    c.appendChild(grid([
+      ["累計 EPS", e.cumulative],
+      ["單季 EPS", e.quarter],
+      ["TTM EPS", e.ttm],
+      ["預估 EPS", e.forward],
+    ]));
+    reasonLine(c, e.note);
+    reasonLine(c, f.reason);
+    return c;
+  }
+
+  function valuationCard(v) {
+    const c = card("評價", v.status);
+    c.appendChild(grid([
+      ["本益比", v.trailing_pe],
+      ["股價淨值比", v.pb_ratio],
+      ["殖利率", v.dividend_yield],
+      ["歷史中位數", v.historical_pe.median],
+      ["目前百分位", v.historical_pe.current_percentile],
+      ["預估本益比", v.forward_pe],
+    ]));
+    const hp = v.historical_pe;
+    // hp.summary already names the counts; appending them again produced
+    // "INSUFFICIENT_DATA（1 筆，需 20）（樣本 1 / 需 20）".
+    reasonLine(c, "歷史本益比：" + hp.summary);
+    reasonLine(c, v.reason);
+    return c;
+  }
+
+  function targetCard(t) {
+    const c = card("目標價與安全邊際", t.status);
+    c.appendChild(grid([
+      ["現價", t.current_price],
+      ["每股盈餘基準", t.eps],
+      ["安全邊際（BASE）", t.margin_of_safety, { signed: true }],
+    ]));
+
+    const table = el("table");
+    const thead = el("tr");
+    ["情境", "本益比倍數", "目標價", "上檔空間"].forEach((x) =>
+      thead.appendChild(el("th", null, x)));
+    table.appendChild(thead);
+    (t.scenarios || []).forEach((s) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", null, s.name));
+      for (const v of [s.pe_multiple, s.target_price, s.upside_pct]) {
+        const td = el("td", "num");
+        td.appendChild(valueNode(v, { signed: v === s.upside_pct }));
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    });
+    c.appendChild(table);
+
+    // Provenance is not an appendix. A target price without the rule that produced it is
+    // an opinion with a decimal point.
+    const prov = [];
+    if (t.rule) prov.push("倍數規則：" + t.rule);
+    if (t.rule_detail) prov.push(t.rule_detail);
+    if (t.eps_basis) prov.push("EPS 類型：" + t.eps_basis);
+    if (t.eps_source) prov.push("EPS 來源：" + t.eps_source);
+    if (t.eps_base_date) prov.push("EPS 基準日：" + t.eps_base_date);
+    if (t.current_date) prov.push("現價交易日：" + t.current_date);
+    if (t.margin_of_safety_basis) prov.push(t.margin_of_safety_basis);
+    reasonLine(c, prov.join("　·　"));
+    reasonLine(c, t.reason);
+    return c;
+  }
+
+  function institutionCard(i) {
+    const c = card("法人買賣超", i.status);
+    if (i.legs && i.legs.length) {
+      const table = el("table");
+      const thead = el("tr");
+      ["法人", "當日", "5 日", "10 日", "20 日", "連續"].forEach((x) =>
+        thead.appendChild(el("th", null, x)));
+      table.appendChild(thead);
+      i.legs.forEach((leg) => {
+        const tr = el("tr");
+        tr.appendChild(el("td", null, leg.name));
+        for (const v of [leg.today_net, leg.sum_5d, leg.sum_10d, leg.sum_20d]) {
+          const td = el("td", "num");
+          td.appendChild(valueNode(v, { signed: true }));
+          tr.appendChild(td);
+        }
+        const streak = leg.consecutive_buy_days > 0 ? "買 " + leg.consecutive_buy_days
+                     : leg.consecutive_sell_days > 0 ? "賣 " + leg.consecutive_sell_days : "—";
+        const td = el("td", null, streak + (leg.streak_complete ? "" : "（含缺口）"));
+        tr.appendChild(td);
+        table.appendChild(tr);
+      });
+      c.appendChild(table);
+    }
+    const bits = [];
+    if (i.as_of_date) bits.push("資料日：" + i.as_of_date);
+    if (i.expected_days) {
+      // observed_days is omitempty, so a genuine zero is absent from the JSON entirely.
+      // "觀察 undefined / 20" is the exact shape of bug this page exists to avoid.
+      bits.push("觀察 " + (i.observed_days || 0) + " / " + i.expected_days + " 個交易日");
+    }
+    if (i.today_complete === false) bits.push("當日無此股紀錄");
+    if (i.missing_dates && i.missing_dates.length) {
+      bits.push("缺漏：" + i.missing_dates.slice(0, 5).join("、") +
+        (i.missing_dates.length > 5 ? " 等 " + i.missing_dates.length + " 日" : ""));
+    }
+    reasonLine(c, bits.join("　·　"));
+    reasonLine(c, i.reason);
+    return c;
+  }
+
+  function newsCard(n) {
+    const c = card("新聞", n.status);
+    if (n.items && n.items.length) {
+      const ul = el("ul", "pts");
+      n.items.forEach((it) => {
+        const li = el("li");
+        li.appendChild(el("span", "pill", it.level === "SECTOR" ? "族群" : "個股"));
+        li.appendChild(document.createTextNode(" " + it.signal + "　"));
+        li.appendChild(document.createTextNode(it.title || it.summary || ""));
+        ul.appendChild(li);
+      });
+      c.appendChild(ul);
+      if (n.divergence) reasonLine(c, "個股與族群訊號方向相反。");
+    } else {
+      reasonLine(c, "沒有這一天的新聞訊號。");
+    }
+    reasonLine(c, n.reason);
+    return c;
+  }
+
+  function aiCard(a) {
+    const c = card("AI 判讀", a.status);
+    if (a.status !== AVAILABLE) {
+      // Degraded, and said so plainly. Everything above this card was produced without
+      // the model and is unaffected by its absence.
+      reasonLine(c, a.reason || "AI 判讀不可用。");
+      reasonLine(c, "以上所有數值皆由程式計算，不受 AI 是否可用影響。");
+      return c;
+    }
+    if (a.summary) c.appendChild(el("div", null, a.summary));
+    const sections = [
+      ["支持買進", a.bull_points], ["不支持買進", a.bear_points],
+      ["風險", a.risk_notes], ["什麼會推翻這個判讀", a.invalidators],
+      ["資料缺口", a.data_gaps],
+    ];
+    for (const [label, list] of sections) {
+      if (!list || !list.length) continue;
+      c.appendChild(el("div", "note", label));
+      const ul = el("ul", "pts");
+      list.forEach((x) => ul.appendChild(el("li", null, x)));
+      c.appendChild(ul);
+    }
+    const foot = [];
+    if (a.confidence) foot.push("證據完整度信心：" + a.confidence);
+    if (a.model) foot.push("模型：" + a.model);
+    reasonLine(c, foot.join("　·　"));
+    reasonLine(c, a.disclaimer);
+    return c;
+  }
+
+  function qualityCard(q) {
+    const c = card("資料品質與時點", q.level);
+    const table = el("table");
+    const thead = el("tr");
+    ["區塊", "狀態", "說明"].forEach((x) => thead.appendChild(el("th", null, x)));
+    table.appendChild(thead);
+    (q.blocks || []).forEach((b) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", null, b.name));
+      const td = el("td");
+      td.appendChild(statusPill(b.status));
+      tr.appendChild(td);
+      tr.appendChild(el("td", null, b.detail || ""));
+      table.appendChild(tr);
+    });
+    c.appendChild(table);
+
+    if (q.point_in_time && q.point_in_time.length) {
+      c.appendChild(el("div", "note", "時點語意（各來源如何處理分析日）"));
+      const ul = el("ul", "pts");
+      q.point_in_time.forEach((p) =>
+        ul.appendChild(el("li", null, p.source + "（" + p.mode + "）：" + p.detail)));
+      c.appendChild(ul);
+    }
+    if (q.limitations && q.limitations.length) {
+      c.appendChild(el("div", "note", "已知限制"));
+      const ul = el("ul", "pts");
+      q.limitations.forEach((l) => ul.appendChild(el("li", null, l.area + "：" + l.detail)));
+      c.appendChild(ul);
+    }
+    return c;
+  }
+
+  qEl.focus();
+})();
+</script>
+</body>
+</html>

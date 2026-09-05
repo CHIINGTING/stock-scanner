@@ -1,0 +1,60 @@
+# ============================================================
+# Stock Catalog Overlay（R14 Health Dashboard）
+# ============================================================
+#
+# 這個檔案「不是」股票清單。可搜尋的股票universe 來自 repo 既有的檔案：
+#
+#   data/stock_names_zh.yaml   1,980 檔 代號 → 官方中文名（TWSE + TPEx ISIN 產出）
+#   configs/sectors.yaml       族群歸屬，以及人工填過的 market
+#   configs/news_aliases.yaml  既有的別名字典（新聞模組維護，這裡共用，不另建一份）
+#
+# 這裡只補「上面三個來源記不下來」的欄位。刻意不重抄股名 —— 兩份會互相矛盾的清單，
+# 正是 internal/stockcatalog 要防的東西。
+#
+# 欄位（除 symbol 外全部選填）：
+#   symbol    必填。"2330" 或 "2330.TW" 皆可；後者同時把 market 講清楚
+#   name      只在 data/stock_names_zh.yaml 還沒有這檔時才需要。與官方名不一致會直接報錯
+#   market    TWSE / TW / 上市，或 TPEX / TWO / OTC / 上櫃。留空 = 未知（不會用猜的）
+#   industry  主要族群，覆寫 sectors.yaml 推得的值
+#   enabled   false → 不出現在搜尋結果（但直接查代號仍查得到）。預設 true
+#   aliases   別名。ASCII 大小寫不敏感。一個別名只能指向一檔，指向兩檔會報錯
+#   tags      自由標籤，不參與任何計算
+#
+# ⚠️ market 為什麼重要：財報 / 本益比封存的檔名是 <code>_<market>.json。市場填錯，
+#    查到的會是「查無資料」，而不是錯誤訊息。所以寧可留空讓 fetcher 自動偵測，
+#    也不要猜。
+
+stocks:
+  # 財報 / 估值封存已存在的三檔（data/fundamental、data/valuation）
+  - symbol: "2330.TW"
+    aliases: [TSMC, 台積]
+    tags: [ai, foundry, 權值]
+
+  - symbol: "2327.TW"
+    aliases: [Yageo]
+    tags: [被動元件]
+
+  - symbol: "6488.TWO"
+    aliases: [GlobalWafers, 環球晶圓]
+    tags: [矽晶圓]
+
+  # 常被輸入的大型股，先把 market 記下來
+  - symbol: "2317.TW"
+    aliases: [Foxconn, Hon Hai, 富士康]
+    tags: [ai, 代工, 權值]
+
+  - symbol: "2454.TW"
+    aliases: [MediaTek, 聯發科技]
+    tags: [ic設計, 權值]
+
+  - symbol: "3661.TW"
+    aliases: [Alchip]
+    tags: [asic]
+
+  - symbol: "2308.TW"
+    aliases: [Delta]
+    tags: [電源, 散熱]
+
+  - symbol: "2412.TW"
+    aliases: [Chunghwa Telecom, 中華電信]
+    tags: [電信, 防禦]

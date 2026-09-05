@@ -249,7 +249,7 @@ scanner:
   #
   # RSI 與 ATR 直接沿用 internal/indicator 既有的 Wilder 實作，不另建第二套。
   enable_technical_indicators: true                # 總開關，預設 false
-  show_technical_indicators: false                 # 顯示開關，預設 false
+  show_technical_indicators: true                 # 顯示開關，預設 false
   technical:
     adx_period: 14                                 # Wilder ADX
     rsi_period: 14                                 # 沿用 indicator.RSI
@@ -270,7 +270,7 @@ scanner:
   # API token 只從環境變數 OPENAI_API_KEY 取得，絕不寫在此檔或任何 repo 檔案內。
   # 沒有 key、逾時、429、5xx、回應非合法 JSON 時一律 fail-open：該檔標記為分析不可用，
   # 掃描與報表照常完成。
-  enable_ai: true                                 # 總開關，預設 false
+  enable_ai: false                                # 總開關，預設 false
   show_ai: true                                   # 顯示開關，預設 false
   ai:
     model: "gpt-5.6-luna"                          # OpenAI model id
@@ -311,6 +311,55 @@ research:
   store:
     path: "data/research/r13.db"                   # SQLite 檔（已在 .gitignore）
     busy_timeout_ms: 5000                          # 等鎖上限（毫秒）
+
+# ── 個股健檢儀表板 (R14) — SIDECAR，與掃描完全分離 ────────────────────────────
+# 與 scanner: 平行的頂層區塊。cmd/health-dashboard 是一個獨立的 HTTP 服務：搜尋個股、
+# 對單一檔執行即時健檢，答案全部來自掃描器與各 fetch 指令「已經算完 / 已經封存」的證據。
+#
+# 它不寫任何掃描器讀的東西，產出也不會回饋到 Score / Action / RocketScore / WatchAction /
+# 排序 / 停損 / 候選過濾 / Market Regime。internal/scanner 與 internal/report 對這個
+# package 零依賴（go list -deps 可驗）。
+#
+# 整個區塊缺席時所有選項皆為 false —— 服務照常啟動，只是 AI 與歷史紀錄不啟用。
+#
+# ⚠ 價格快取刻意與掃描器分開，這是正確性要求不是效能考量：internal/fetcher 會把抓到的
+#   資料寫回快取，共用目錄會讓盤中的健檢把「當天還沒收盤的半根 K 棒」寫進掃描器下一次讀
+#   的序列，MA / RSI / ATR 全部跟著偏。啟動時若 -cache-dir 指到掃描器的目錄會直接 fatal。
+#   預設 .cache-health-dashboard/（已在 .gitignore）。
+health_dashboard:
+  # ── AI 文字判讀 ──────────────────────────────────────────────────────────
+  # 與 scanner.ai 同樣是 SHADOW ONLY，但更嚴格：回應 schema 沒有任何數值欄位，
+  # confidence 是列舉不是分數，且 AI 區塊在所有數字定案之後才合併 —— 沒有任何 code path
+  # 能讓模型輸出變成頁面上的數字。文字中出現阿拉伯數字的回應會整段捨棄。
+  #
+  # API token 只從環境變數 OPENAI_API_KEY 取得，絕不寫在此檔或任何 repo 檔案內。
+  # 沒有 key、逾時、429、5xx、回應非合法 JSON 時一律 fail-open：AI 區塊標記為不可用，
+  # 其餘每一個區塊照常產生。指令加 -no-ai 可在不改設定的情況下單次關閉。
+  ai:
+    enabled: true                                  # 總開關，預設 false
+    model: "gpt-5.6-luna"                          # OpenAI model id；與 scanner.ai 一致
+    timeout_sec: 30                                # 單一請求逾時（秒）
+    # 0 = 完全不送 temperature 參數（internal/ai 的 Temperature 是 pointer，0 會被 omitempty
+    # 丟掉）。gpt-5.6-luna 這類模型會直接拒絕這個參數並回 HTTP 400，所以這裡刻意是 0 而不是
+    # 抄 scanner.ai 的 0.2 —— 那個值在同一個模型上每次呼叫都失敗。
+    # 換成接受 temperature 的模型時再調高，越低越貼近證據。
+    temperature: 0
+
+  # ── 健檢歷史紀錄 ────────────────────────────────────────────────────────
+  # 重用 R13 既有 schema（scan_runs → stock_snapshots → evidence / analysis_runs →
+  # agent_analysis → outcomes），沒有新表也沒有 migration。每一列都標記
+  # source_tab="health_check" 與 scanner_version="r14-health-dashboard"，與掃描器自己的
+  # 快照區分。不寫入 decisions 表 —— 那是 R13-M7 用來互評的 population，健檢兩者都不是。
+  #
+  # path 刻意獨立於 research.store.path：健檢是互動式的，每按一次就多一個 scan_run，
+  # 混進正式研究庫會讓 RunsByDate 之類的查詢被灌水（scan_runs 沒有 source_tab 欄位，
+  # 無法像 snapshot 那樣過濾）。啟用但未指定 path 會直接 fatal，不會落到 r13.db。
+  #
+  # 開啟後可用 `go run ./cmd/health-dashboard -outcomes` 事後評分：以健檢當下的收盤價為
+  # 基準計算 1/3/5/10/20 日報酬。同一檔同一天按多次只評最後一次（有價格的那次）。
+  history:
+    enabled: true                                  # 總開關，預設 false
+    path: "data/research/r14_health.db"            # SQLite 檔（data/research/*.db 已在 .gitignore）
 
 stocks_file: stocks.yaml           # portfolio / watchlist 清單
 sectors_file: configs/sectors.yaml # 族群輪動清單（Rotation）

@@ -1,6 +1,12 @@
 bin/
+# `go build ./cmd/...` with no -o drops the binary in the repo root. 16 MB each, and
+# `git add -A` would take them.
+/health-dashboard
 .cache/
 .cache_fresh_r6_5/
+# R14 健檢儀表板的獨立價格快取。它與 .cache 分開是刻意的：fetcher 會回寫抓到的
+# 資料，共用目錄會讓盤中的健檢把當天未收盤的半根 K 棒寫進掃描器讀的序列。
+.cache-health-dashboard/
 *.log
 .DS_Store
 .claude/settings.local.json

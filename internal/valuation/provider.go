@@ -256,6 +256,17 @@ func LoadHistory(dir, asOfDate, symbol string) ([]Ratios, *Ratios, error) {
 			return history, latest, fmt.Errorf("valuation: %s snapshot for %s is unreadable: %w",
 				d, symbol, err)
 		}
+		// Backfilled sessions stored in this same file. They join the DISTRIBUTION but never
+		// become `latest`: the trailing P/E must stay the live current reading, and a
+		// year-old session is not that however recently it was retrieved.
+		for _, h := range s.History {
+			hr := h
+			hr.ArchiveDate = d
+			if hr.Source == "" {
+				hr.Source = s.Source
+			}
+			history = append(history, hr)
+		}
 		if s.Ratios == nil {
 			continue
 		}
@@ -264,6 +275,9 @@ func LoadHistory(dir, asOfDate, symbol string) ([]Ratios, *Ratios, error) {
 		// session appears in several archives; the calculator needs the archive date to keep
 		// exactly one of them — the most recent the caller may see.
 		r.ArchiveDate = d
+		if r.Source == "" {
+			r.Source = s.Source
+		}
 		history = append(history, r)
 		rc := r
 		latest = &rc

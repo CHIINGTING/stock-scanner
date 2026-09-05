@@ -158,9 +158,29 @@ type completion struct {
 //
 // Error strings deliberately never include the request body or the key.
 func (c *Client) Complete(ctx context.Context, model, system, user string, temperature float64) (completion, error) {
+	text, tokens, err := c.CompleteSchema(ctx, model, system, user, temperature,
+		"stock_evidence_reading", analysisSchema())
+	if err != nil {
+		return completion{}, err
+	}
+	return completion{content: text, tokens: tokens}, nil
+}
+
+// CompleteSchema is Complete with a caller-supplied strict schema.
+//
+// It exists so a second consumer can get a DIFFERENT structured shape back without building a
+// second HTTP client — and therefore without a second place where the key is read, the
+// Authorization header is set, or a non-2xx body might be logged. Every security and
+// error-taxonomy property documented on Complete holds here because Complete is now a thin
+// call to this.
+//
+// schema must satisfy the strict-mode rules: every property listed in required, and
+// additionalProperties false.
+func (c *Client) CompleteSchema(ctx context.Context, model, system, user string,
+	temperature float64, schemaName string, schema map[string]any) (string, int, error) {
 	key := strings.TrimSpace(os.Getenv(apiKeyEnv))
 	if key == "" {
-		return completion{}, fmt.Errorf("ai: %s is not set", apiKeyEnv)
+		return "", 0, fmt.Errorf("ai: %s is not set", apiKeyEnv)
 	}
 
 	reqBody := responsesRequest{
@@ -169,8 +189,8 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 		Input:        []inputMessage{{Role: "user", Content: user}},
 		Text: textConfig{Format: textFormat{
 			Type:   "json_schema",
-			Name:   "stock_evidence_reading",
-			Schema: analysisSchema(),
+			Name:   schemaName,
+			Schema: schema,
 			Strict: true,
 		}},
 	}
@@ -180,12 +200,12 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 
 	buf, err := json.Marshal(reqBody)
 	if err != nil {
-		return completion{}, fmt.Errorf("ai: encode request: %w", err)
+		return "", 0, fmt.Errorf("ai: encode request: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.base()+responsesPath, bytes.NewReader(buf))
 	if err != nil {
-		return completion{}, fmt.Errorf("ai: build request: %w", err)
+		return "", 0, fmt.Errorf("ai: build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+key)
@@ -194,13 +214,13 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 	if err != nil {
 		// Includes context cancellation and client timeout. The URL is safe to include; the
 		// header is not, and is not part of this value.
-		return completion{}, fmt.Errorf("ai: request failed: %w", err)
+		return "", 0, fmt.Errorf("ai: request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes))
 	if err != nil {
-		return completion{}, fmt.Errorf("ai: read response: %w", err)
+		return "", 0, fmt.Errorf("ai: read response: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -208,18 +228,18 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 		// (rate limit, bad key, model not found) far better than the status alone.
 		var errEnv responsesResponse
 		if json.Unmarshal(body, &errEnv) == nil && errEnv.Error != nil {
-			return completion{}, fmt.Errorf("ai: HTTP %d: %s (%s)",
+			return "", 0, fmt.Errorf("ai: HTTP %d: %s (%s)",
 				resp.StatusCode, errEnv.Error.Message, errEnv.Error.Type)
 		}
-		return completion{}, fmt.Errorf("ai: HTTP %d", resp.StatusCode)
+		return "", 0, fmt.Errorf("ai: HTTP %d", resp.StatusCode)
 	}
 
 	var out responsesResponse
 	if err := json.Unmarshal(body, &out); err != nil {
-		return completion{}, fmt.Errorf("ai: decode response: %w", err)
+		return "", 0, fmt.Errorf("ai: decode response: %w", err)
 	}
 	if out.Error != nil {
-		return completion{}, fmt.Errorf("ai: %s (%s)", out.Error.Message, out.Error.Type)
+		return "", 0, fmt.Errorf("ai: %s (%s)", out.Error.Message, out.Error.Type)
 	}
 	// A truncated reply can be valid JSON that is missing half the reading, so an incomplete
 	// status is a failure rather than something to salvage.
@@ -228,14 +248,14 @@ func (c *Client) Complete(ctx context.Context, model, system, user string, tempe
 		if out.IncompleteDetails != nil && out.IncompleteDetails.Reason != "" {
 			reason = out.IncompleteDetails.Reason
 		}
-		return completion{}, fmt.Errorf("ai: response incomplete (%s)", reason)
+		return "", 0, fmt.Errorf("ai: response incomplete (%s)", reason)
 	}
 
 	content, err := outputText(out.Output)
 	if err != nil {
-		return completion{}, err
+		return "", 0, err
 	}
-	return completion{content: content, tokens: out.Usage.TotalTokens}, nil
+	return content, out.Usage.TotalTokens, nil
 }
 
 // outputText walks the typed output array and returns the assistant's text.
