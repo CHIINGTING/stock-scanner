@@ -1,0 +1,2129 @@
+{
+  "schema_version": 1,
+  "symbol": "1815.TWO",
+  "source": "TWSE BWIBBU_ALL / TPEx peratio_analysis",
+  "observed_at": "2026-09-06T05:32:23.097399+08:00",
+  "status": "AVAILABLE",
+  "ratios": {
+    "symbol": "1815.TWO",
+    "date": "2026-09-04",
+    "pe_ratio": 34.35,
+    "pb_ratio": 5.06,
+    "dividend_yield": 0.84,
+    "fetched_at": "0001-01-01T00:00:00Z"
+  },
+  "history": [
+    {
+      "symbol": "1815",
+      "date": "2025-10-01",
+      "pe_ratio": 132.94,
+      "pb_ratio": 4.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-02",
+      "pe_ratio": 131.57,
+      "pb_ratio": 4.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-03",
+      "pe_ratio": 133.14,
+      "pb_ratio": 4.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-07",
+      "pe_ratio": 146.27,
+      "pb_ratio": 5.08,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-08",
+      "pe_ratio": 142.94,
+      "pb_ratio": 4.96,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-09",
+      "pe_ratio": 139.61,
+      "pb_ratio": 4.85,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-13",
+      "pe_ratio": 137.06,
+      "pb_ratio": 4.76,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-14",
+      "pe_ratio": 125.29,
+      "pb_ratio": 4.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-15",
+      "pe_ratio": 131.57,
+      "pb_ratio": 4.57,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-16",
+      "pe_ratio": 133.33,
+      "pb_ratio": 4.63,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-17",
+      "pe_ratio": 129.02,
+      "pb_ratio": 4.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-20",
+      "pe_ratio": 129.02,
+      "pb_ratio": 4.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-21",
+      "pe_ratio": 130,
+      "pb_ratio": 4.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-22",
+      "pe_ratio": 130.78,
+      "pb_ratio": 4.54,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-23",
+      "pe_ratio": 128.63,
+      "pb_ratio": 4.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-27",
+      "pe_ratio": 131.18,
+      "pb_ratio": 4.55,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-28",
+      "pe_ratio": 140.98,
+      "pb_ratio": 4.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-29",
+      "pe_ratio": 138.24,
+      "pb_ratio": 4.8,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-30",
+      "pe_ratio": 133.92,
+      "pb_ratio": 4.65,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-10-31",
+      "pe_ratio": 141.57,
+      "pb_ratio": 4.91,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-03",
+      "pe_ratio": 149.02,
+      "pb_ratio": 5.17,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-04",
+      "pe_ratio": 143.53,
+      "pb_ratio": 4.98,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-05",
+      "pe_ratio": 150,
+      "pb_ratio": 5.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-06",
+      "pe_ratio": 156.86,
+      "pb_ratio": 5.45,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-07",
+      "pe_ratio": 147.06,
+      "pb_ratio": 5.11,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-10",
+      "pe_ratio": 148.04,
+      "pb_ratio": 5.14,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-11",
+      "pe_ratio": 162.75,
+      "pb_ratio": 5.65,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-12",
+      "pe_ratio": 179.02,
+      "pb_ratio": 6.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-13",
+      "pe_ratio": 85.46,
+      "pb_ratio": 6,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-14",
+      "pe_ratio": 82.41,
+      "pb_ratio": 5.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-17",
+      "pe_ratio": 79.26,
+      "pb_ratio": 5.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-18",
+      "pe_ratio": 77.41,
+      "pb_ratio": 5.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-19",
+      "pe_ratio": 72.96,
+      "pb_ratio": 5.12,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-20",
+      "pe_ratio": 80.19,
+      "pb_ratio": 5.63,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-21",
+      "pe_ratio": 75.83,
+      "pb_ratio": 5.32,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-24",
+      "pe_ratio": 74.72,
+      "pb_ratio": 5.24,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-25",
+      "pe_ratio": 72.69,
+      "pb_ratio": 5.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-26",
+      "pe_ratio": 71.39,
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-27",
+      "pe_ratio": 73.89,
+      "pb_ratio": 5.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-11-28",
+      "pe_ratio": 75.65,
+      "pb_ratio": 5.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-01",
+      "pe_ratio": 73.06,
+      "pb_ratio": 5.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-02",
+      "pe_ratio": 76.85,
+      "pb_ratio": 5.39,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-03",
+      "pe_ratio": 76.11,
+      "pb_ratio": 5.34,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-04",
+      "pe_ratio": 76.3,
+      "pb_ratio": 5.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-05",
+      "pe_ratio": 77.22,
+      "pb_ratio": 5.42,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-08",
+      "pe_ratio": 78.7,
+      "pb_ratio": 5.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-09",
+      "pe_ratio": 80.65,
+      "pb_ratio": 5.66,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-10",
+      "pe_ratio": 78.8,
+      "pb_ratio": 5.53,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-11",
+      "pe_ratio": 79.17,
+      "pb_ratio": 5.56,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-12",
+      "pe_ratio": 78.15,
+      "pb_ratio": 5.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-15",
+      "pe_ratio": 77.31,
+      "pb_ratio": 5.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-16",
+      "pe_ratio": 75.46,
+      "pb_ratio": 5.3,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-17",
+      "pe_ratio": 75,
+      "pb_ratio": 5.26,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-18",
+      "pe_ratio": 74.07,
+      "pb_ratio": 5.2,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-19",
+      "pe_ratio": 74.81,
+      "pb_ratio": 5.25,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-22",
+      "pe_ratio": 80.09,
+      "pb_ratio": 5.62,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-23",
+      "pe_ratio": 81.3,
+      "pb_ratio": 5.71,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-24",
+      "pe_ratio": 84.54,
+      "pb_ratio": 5.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-26",
+      "pe_ratio": 85.74,
+      "pb_ratio": 6.02,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-29",
+      "pe_ratio": 91.48,
+      "pb_ratio": 6.42,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-30",
+      "pe_ratio": 89.72,
+      "pb_ratio": 6.3,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2025-12-31",
+      "pe_ratio": 87.41,
+      "pb_ratio": 6.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-02",
+      "pe_ratio": 83.98,
+      "pb_ratio": 5.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-05",
+      "pe_ratio": 81.48,
+      "pb_ratio": 5.72,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-06",
+      "pe_ratio": 81.48,
+      "pb_ratio": 5.72,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-07",
+      "pe_ratio": 81.02,
+      "pb_ratio": 5.69,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-08",
+      "pe_ratio": 81.67,
+      "pb_ratio": 5.73,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-09",
+      "pe_ratio": 81.76,
+      "pb_ratio": 5.74,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-12",
+      "pe_ratio": 80.74,
+      "pb_ratio": 5.67,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-13",
+      "pe_ratio": 79.63,
+      "pb_ratio": 5.59,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-14",
+      "pe_ratio": 81.48,
+      "pb_ratio": 5.72,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-15",
+      "pe_ratio": 86.3,
+      "pb_ratio": 6.06,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-16",
+      "pe_ratio": 91.48,
+      "pb_ratio": 6.42,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-19",
+      "pe_ratio": 100.46,
+      "pb_ratio": 7.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-20",
+      "pe_ratio": 100.93,
+      "pb_ratio": 7.08,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-21",
+      "pe_ratio": 96.76,
+      "pb_ratio": 6.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-22",
+      "pe_ratio": 91.67,
+      "pb_ratio": 6.43,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-23",
+      "pe_ratio": 86.76,
+      "pb_ratio": 6.09,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-26",
+      "pe_ratio": 88.7,
+      "pb_ratio": 6.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-27",
+      "pe_ratio": 88.52,
+      "pb_ratio": 6.21,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-28",
+      "pe_ratio": 87.78,
+      "pb_ratio": 6.16,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-29",
+      "pe_ratio": 84.81,
+      "pb_ratio": 5.95,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-01-30",
+      "pe_ratio": 85,
+      "pb_ratio": 5.96,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-02",
+      "pe_ratio": 80.56,
+      "pb_ratio": 5.65,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-03",
+      "pe_ratio": 88.61,
+      "pb_ratio": 6.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-04",
+      "pe_ratio": 89.81,
+      "pb_ratio": 6.3,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-05",
+      "pe_ratio": 88.24,
+      "pb_ratio": 6.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-06",
+      "pe_ratio": 81.11,
+      "pb_ratio": 5.69,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-09",
+      "pe_ratio": 82.41,
+      "pb_ratio": 5.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-10",
+      "pe_ratio": 81.39,
+      "pb_ratio": 5.71,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-11",
+      "pe_ratio": 89.44,
+      "pb_ratio": 6.28,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-23",
+      "pe_ratio": 98.15,
+      "pb_ratio": 6.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-24",
+      "pe_ratio": 106.94,
+      "pb_ratio": 7.5,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-25",
+      "pe_ratio": 104.63,
+      "pb_ratio": 7.34,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-02-26",
+      "pe_ratio": 102.31,
+      "pb_ratio": 7.18,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-02",
+      "pe_ratio": 99.54,
+      "pb_ratio": 6.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-03",
+      "pe_ratio": 104.17,
+      "pb_ratio": 7.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-04",
+      "pe_ratio": 95.83,
+      "pb_ratio": 6.73,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-05",
+      "pe_ratio": 100,
+      "pb_ratio": 7.02,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-06",
+      "pe_ratio": 98.15,
+      "pb_ratio": 6.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-09",
+      "pe_ratio": 89.91,
+      "pb_ratio": 6.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-10",
+      "pe_ratio": 93.06,
+      "pb_ratio": 6.53,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-11",
+      "pe_ratio": 97.69,
+      "pb_ratio": 6.86,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-12",
+      "pe_ratio": 96.3,
+      "pb_ratio": 6.76,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-13",
+      "pe_ratio": 99.54,
+      "pb_ratio": 6.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-16",
+      "pe_ratio": 67.07,
+      "pb_ratio": 5.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-17",
+      "pe_ratio": 65.85,
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-18",
+      "pe_ratio": 68.6,
+      "pb_ratio": 5.22,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-19",
+      "pe_ratio": 67.99,
+      "pb_ratio": 5.17,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-20",
+      "pe_ratio": 62.2,
+      "pb_ratio": 4.73,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-23",
+      "pe_ratio": 63.11,
+      "pb_ratio": 4.8,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-24",
+      "pe_ratio": 60.24,
+      "pb_ratio": 4.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-25",
+      "pe_ratio": 65.85,
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-26",
+      "pe_ratio": 63.72,
+      "pb_ratio": 4.85,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-27",
+      "pe_ratio": 64.94,
+      "pb_ratio": 4.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-30",
+      "pe_ratio": 63.11,
+      "pb_ratio": 4.8,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-03-31",
+      "pe_ratio": 58.41,
+      "pb_ratio": 4.44,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-01",
+      "pe_ratio": 60.18,
+      "pb_ratio": 4.58,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-02",
+      "pe_ratio": 58.9,
+      "pb_ratio": 4.48,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-07",
+      "pe_ratio": 62.2,
+      "pb_ratio": 4.73,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-08",
+      "pe_ratio": 68.29,
+      "pb_ratio": 5.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-09",
+      "pe_ratio": 74.09,
+      "pb_ratio": 5.64,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-10",
+      "pe_ratio": 67.07,
+      "pb_ratio": 5.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-13",
+      "pe_ratio": 68.9,
+      "pb_ratio": 5.24,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-14",
+      "pe_ratio": 69.82,
+      "pb_ratio": 5.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-15",
+      "pe_ratio": 68.29,
+      "pb_ratio": 5.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-16",
+      "pe_ratio": 70.43,
+      "pb_ratio": 5.36,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-17",
+      "pe_ratio": 77.44,
+      "pb_ratio": 5.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-20",
+      "pe_ratio": 71.95,
+      "pb_ratio": 5.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-21",
+      "pe_ratio": 72.56,
+      "pb_ratio": 5.52,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-22",
+      "pe_ratio": 69.82,
+      "pb_ratio": 5.31,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-23",
+      "pe_ratio": 65.85,
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-24",
+      "pe_ratio": 66.16,
+      "pb_ratio": 5.03,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-27",
+      "pe_ratio": 65.85,
+      "pb_ratio": 5.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-28",
+      "pe_ratio": 69.21,
+      "pb_ratio": 5.26,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-29",
+      "pe_ratio": 67.38,
+      "pb_ratio": 5.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-04-30",
+      "pe_ratio": 66.16,
+      "pb_ratio": 5.03,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-04",
+      "pe_ratio": 66.46,
+      "pb_ratio": 5.06,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-05",
+      "pe_ratio": 70.73,
+      "pb_ratio": 5.38,
+      "dividend_yield": 0.86,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-06",
+      "pe_ratio": 69.21,
+      "pb_ratio": 5.26,
+      "dividend_yield": 0.88,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-07",
+      "pe_ratio": 67.07,
+      "pb_ratio": 5.1,
+      "dividend_yield": 0.91,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-08",
+      "pe_ratio": 65.24,
+      "pb_ratio": 4.96,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-11",
+      "pe_ratio": 67.38,
+      "pb_ratio": 5.13,
+      "dividend_yield": 0.9,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-12",
+      "pe_ratio": 65.85,
+      "pb_ratio": 5.01,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-13",
+      "pe_ratio": 54.1,
+      "pb_ratio": 4.68,
+      "dividend_yield": 0.95,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-14",
+      "pe_ratio": 54.62,
+      "pb_ratio": 4.73,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-15",
+      "pe_ratio": 52.56,
+      "pb_ratio": 4.55,
+      "dividend_yield": 0.98,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-18",
+      "pe_ratio": 53.08,
+      "pb_ratio": 4.59,
+      "dividend_yield": 0.97,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-19",
+      "pe_ratio": 52.31,
+      "pb_ratio": 4.53,
+      "dividend_yield": 0.98,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-20",
+      "pe_ratio": 51.03,
+      "pb_ratio": 4.42,
+      "dividend_yield": 1.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-21",
+      "pe_ratio": 52.05,
+      "pb_ratio": 4.51,
+      "dividend_yield": 0.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-22",
+      "pe_ratio": 54.87,
+      "pb_ratio": 4.75,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-25",
+      "pe_ratio": 55.9,
+      "pb_ratio": 4.84,
+      "dividend_yield": 0.92,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-26",
+      "pe_ratio": 55.38,
+      "pb_ratio": 4.79,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-27",
+      "pe_ratio": 53.08,
+      "pb_ratio": 4.59,
+      "dividend_yield": 0.97,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-28",
+      "pe_ratio": 53.08,
+      "pb_ratio": 4.59,
+      "dividend_yield": 0.97,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-05-29",
+      "pe_ratio": 54.36,
+      "pb_ratio": 4.7,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-01",
+      "pe_ratio": 55.9,
+      "pb_ratio": 4.84,
+      "dividend_yield": 0.92,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-02",
+      "pe_ratio": 56.15,
+      "pb_ratio": 4.86,
+      "dividend_yield": 0.91,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-03",
+      "pe_ratio": 54.62,
+      "pb_ratio": 4.73,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-04",
+      "pe_ratio": 53.33,
+      "pb_ratio": 4.62,
+      "dividend_yield": 0.96,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-05",
+      "pe_ratio": 52.31,
+      "pb_ratio": 4.53,
+      "dividend_yield": 0.98,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-08",
+      "pe_ratio": 49.69,
+      "pb_ratio": 4.3,
+      "dividend_yield": 1.03,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-09",
+      "pe_ratio": 50.72,
+      "pb_ratio": 4.39,
+      "dividend_yield": 1.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-10",
+      "pe_ratio": 46.87,
+      "pb_ratio": 4.06,
+      "dividend_yield": 1.09,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-11",
+      "pe_ratio": 46.21,
+      "pb_ratio": 4,
+      "dividend_yield": 1.11,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-12",
+      "pe_ratio": 49.33,
+      "pb_ratio": 4.27,
+      "dividend_yield": 1.04,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-15",
+      "pe_ratio": 48.77,
+      "pb_ratio": 4.22,
+      "dividend_yield": 1.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-16",
+      "pe_ratio": 48.62,
+      "pb_ratio": 4.21,
+      "dividend_yield": 1.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-17",
+      "pe_ratio": 48.72,
+      "pb_ratio": 4.22,
+      "dividend_yield": 1.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-18",
+      "pe_ratio": 50.31,
+      "pb_ratio": 4.35,
+      "dividend_yield": 1.02,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-22",
+      "pe_ratio": 54.62,
+      "pb_ratio": 4.73,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-23",
+      "pe_ratio": 51.54,
+      "pb_ratio": 4.46,
+      "dividend_yield": 1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-24",
+      "pe_ratio": 54.62,
+      "pb_ratio": 4.73,
+      "dividend_yield": 0.94,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-25",
+      "pe_ratio": 54.87,
+      "pb_ratio": 4.75,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-26",
+      "pe_ratio": 49.59,
+      "pb_ratio": 4.29,
+      "dividend_yield": 1.03,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-29",
+      "pe_ratio": 51.79,
+      "pb_ratio": 4.48,
+      "dividend_yield": 0.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-06-30",
+      "pe_ratio": 56.92,
+      "pb_ratio": 4.93,
+      "dividend_yield": 0.9,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-01",
+      "pe_ratio": 53.33,
+      "pb_ratio": 4.62,
+      "dividend_yield": 0.96,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-02",
+      "pe_ratio": 52.05,
+      "pb_ratio": 4.51,
+      "dividend_yield": 0.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-03",
+      "pe_ratio": 52.05,
+      "pb_ratio": 4.51,
+      "dividend_yield": 0.99,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-06",
+      "pe_ratio": 51.03,
+      "pb_ratio": 4.42,
+      "dividend_yield": 1.01,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-07",
+      "pe_ratio": 49.49,
+      "pb_ratio": 4.28,
+      "dividend_yield": 1.04,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-08",
+      "pe_ratio": 49.54,
+      "pb_ratio": 4.29,
+      "dividend_yield": 1.04,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-09",
+      "pe_ratio": 48.72,
+      "pb_ratio": 4.22,
+      "dividend_yield": 1.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-13",
+      "pe_ratio": 48.51,
+      "pb_ratio": 4.2,
+      "dividend_yield": 1.06,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-14",
+      "pe_ratio": 45.33,
+      "pb_ratio": 3.92,
+      "dividend_yield": 1.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-15",
+      "pe_ratio": 46.82,
+      "pb_ratio": 4.05,
+      "dividend_yield": 1.1,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-16",
+      "pe_ratio": 45.69,
+      "pb_ratio": 3.95,
+      "dividend_yield": 1.12,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-17",
+      "pe_ratio": 41.79,
+      "pb_ratio": 3.62,
+      "dividend_yield": 1.23,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-20",
+      "pe_ratio": 39.64,
+      "pb_ratio": 3.43,
+      "dividend_yield": 1.29,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-21",
+      "pe_ratio": 40.62,
+      "pb_ratio": 3.52,
+      "dividend_yield": 1.26,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-22",
+      "pe_ratio": 41.28,
+      "pb_ratio": 3.57,
+      "dividend_yield": 1.24,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-23",
+      "pe_ratio": 40.46,
+      "pb_ratio": 3.5,
+      "dividend_yield": 1.27,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-24",
+      "pe_ratio": 37.9,
+      "pb_ratio": 3.28,
+      "dividend_yield": 1.35,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-27",
+      "pe_ratio": 38.56,
+      "pb_ratio": 3.34,
+      "dividend_yield": 1.33,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-28",
+      "pe_ratio": 34.82,
+      "pb_ratio": 3.01,
+      "dividend_yield": 1.47,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-29",
+      "pe_ratio": 32.15,
+      "pb_ratio": 2.78,
+      "dividend_yield": 1.59,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-30",
+      "pe_ratio": 30.92,
+      "pb_ratio": 2.68,
+      "dividend_yield": 1.66,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-07-31",
+      "pe_ratio": 34,
+      "pb_ratio": 2.94,
+      "dividend_yield": 1.51,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-03",
+      "pe_ratio": 37.38,
+      "pb_ratio": 3.24,
+      "dividend_yield": 1.37,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-04",
+      "pe_ratio": 41.08,
+      "pb_ratio": 3.56,
+      "dividend_yield": 1.25,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-05",
+      "pe_ratio": 43.03,
+      "pb_ratio": 3.72,
+      "dividend_yield": 1.19,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-06",
+      "pe_ratio": 44.51,
+      "pb_ratio": 3.85,
+      "dividend_yield": 1.15,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-07",
+      "pe_ratio": 44.05,
+      "pb_ratio": 3.81,
+      "dividend_yield": 1.16,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-10",
+      "pe_ratio": 45.69,
+      "pb_ratio": 3.95,
+      "dividend_yield": 1.12,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-11",
+      "pe_ratio": 45.49,
+      "pb_ratio": 3.94,
+      "dividend_yield": 1.13,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-12",
+      "pe_ratio": 46.15,
+      "pb_ratio": 3.99,
+      "dividend_yield": 1.11,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-13",
+      "pe_ratio": 26.06,
+      "pb_ratio": 3.84,
+      "dividend_yield": 1.11,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-14",
+      "pe_ratio": 26.52,
+      "pb_ratio": 3.91,
+      "dividend_yield": 1.09,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-17",
+      "pe_ratio": 27.97,
+      "pb_ratio": 4.12,
+      "dividend_yield": 1.04,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-18",
+      "pe_ratio": 27.62,
+      "pb_ratio": 4.07,
+      "dividend_yield": 1.05,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-19",
+      "pe_ratio": 28.41,
+      "pb_ratio": 4.18,
+      "dividend_yield": 1.02,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-20",
+      "pe_ratio": 31.01,
+      "pb_ratio": 4.57,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-21",
+      "pe_ratio": 32.46,
+      "pb_ratio": 4.78,
+      "dividend_yield": 0.89,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-24",
+      "pe_ratio": 31.16,
+      "pb_ratio": 4.59,
+      "dividend_yield": 0.93,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-25",
+      "pe_ratio": 31.59,
+      "pb_ratio": 4.65,
+      "dividend_yield": 0.92,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-26",
+      "pe_ratio": 34.2,
+      "pb_ratio": 5.04,
+      "dividend_yield": 0.85,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-27",
+      "pe_ratio": 33.77,
+      "pb_ratio": 4.97,
+      "dividend_yield": 0.86,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-28",
+      "pe_ratio": 36.38,
+      "pb_ratio": 5.36,
+      "dividend_yield": 0.8,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-08-31",
+      "pe_ratio": 36.67,
+      "pb_ratio": 5.4,
+      "dividend_yield": 0.79,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-09-01",
+      "pe_ratio": 37.39,
+      "pb_ratio": 5.51,
+      "dividend_yield": 0.78,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-09-02",
+      "pe_ratio": 37.97,
+      "pb_ratio": 5.59,
+      "dividend_yield": 0.76,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-09-03",
+      "pe_ratio": 34.78,
+      "pb_ratio": 5.12,
+      "dividend_yield": 0.83,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    },
+    {
+      "symbol": "1815",
+      "date": "2026-09-04",
+      "pe_ratio": 34.35,
+      "pb_ratio": 5.06,
+      "dividend_yield": 0.84,
+      "backfilled": true,
+      "source": "TPEX_HISTORICAL",
+      "fetched_at": "2026-09-06T01:23:41.943708+08:00"
+    }
+  ]
+}
