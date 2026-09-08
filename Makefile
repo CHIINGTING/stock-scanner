@@ -71,4 +71,31 @@ test:
 daily-data:
 	go run ./cmd/daily-data -report-dir reports
 
-.PHONY: daily-data
+# ── 個股健檢儀表板 (R14) — HTTP 服務 + JSON API ────────────────────────────────
+#
+#   http://localhost:8080/                             網頁
+#   http://localhost:8080/api/v1/stocks?q=台積          搜尋
+#   http://localhost:8080/api/v1/stocks/2330/health     單檔健檢（JSON）
+#   http://localhost:8080/healthz                       存活探測
+#
+# 每個健檢都是即時計算，答案全部來自掃描器與各 fetch 指令「已經封存」的證據 ——
+# 它不寫任何掃描器讀的東西，也不影響 Score / Action / 排序 / 停損。
+#
+# ⚠ 價格快取刻意與掃描器分開（.cache-health-dashboard/）。這是正確性要求不是效能考量：
+#   internal/fetcher 會把抓到的資料寫回快取，共用目錄會讓盤中的健檢把「當天還沒收盤的
+#   半根 K 棒」寫進掃描器下一次讀的序列。-cache-dir 指到掃描器的目錄會直接啟動失敗。
+dashboard:
+	go run ./cmd/health-dashboard -config configs/config.yaml -addr $(or $(ADDR),:8080)
+
+# 同上，但完全不呼叫模型。沒有 OPENAI_API_KEY 時也能跑，
+# 且省下每次開啟頁面的 API 費用；所有數字與判定完全不變（AI 只做文字判讀）。
+dashboard-no-ai:
+	go run ./cmd/health-dashboard -config configs/config.yaml -addr $(or $(ADDR),:8080) -no-ai
+
+# 事後評分：以健檢當下的收盤價為基準計算 1/3/5/10/20 日報酬，寫回 SQLite 後結束（不啟動服務）。
+# 需要 health_dashboard.history.enabled=true 才有東西可評。
+dashboard-outcomes:
+	go run ./cmd/health-dashboard -config configs/config.yaml -history -outcomes \
+		$(if $(ASOF),-outcomes-as-of $(ASOF),)
+
+.PHONY: daily-data dashboard dashboard-no-ai dashboard-outcomes

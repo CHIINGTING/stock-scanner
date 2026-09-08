@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/deep-huang/stock-scanner/internal/market/model"
+	"github.com/deep-huang/stock-scanner/internal/numtoken"
 )
 
 // TWSE provider — the three market-level datasets the MVP takes from 臺灣證券交易所.
@@ -399,7 +400,16 @@ func parseCountWithLimit(s string) (count, limit int) {
 // genuine zero on these rows — but any other unparsable text is an error rather than a
 // silent zero, because a layout change must not look like a quiet market.
 func parseAmount(s string) (float64, error) {
-	s = strings.TrimSpace(strings.ReplaceAll(s, ",", ""))
+	// The cleanup is shared with R15's TAIFEX decoder (internal/numtoken), and since R15 §10.2
+	// so is the DECODE of the one response both read (internal/taifexfeed). The POLICY below
+	// is not, and must not be. R15 maps ""/"-" to ABSENT because on a derivatives row "-"
+	// means "not carried" while "0" means "a strike nobody holds". On these TWSE cash rows
+	// an empty cell genuinely is a zero, so this call site keeps its own answer.
+	//
+	// The two answers are stated side by side, on the same input bytes, in
+	// internal/taifexfeed/policy_contrast_test.go — so changing this line is a decision that
+	// fails a test, not a drift nobody notices.
+	s = numtoken.Normalize(s)
 	if s == "" || s == "-" {
 		return 0, nil
 	}

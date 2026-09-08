@@ -4,6 +4,7 @@ bin/
 /health-dashboard
 /daily-data
 /valuation-backfill
+/market-regime-replay
 .cache/
 .cache_fresh_r6_5/
 # R14 健檢儀表板的獨立價格快取。它與 .cache 分開是刻意的：fetcher 會回寫抓到的
@@ -44,3 +45,12 @@ data/daytrading/
 # R13-M5 財報封存 —— 每日一目錄的 MOPS snapshot，是 point-in-time 歷史的來源。
 # 與 data/market 同理納入版控（每檔約 1KB，累積很慢），但 tmp 檔排除。
 data/fundamental/**/*.tmp
+
+# EP-0b Market Regime replay —— 由 .cache 重播產生（364 檔約 1.4 MB，重建耗時 51ms）。
+# 與 data/market 刻意相反：live snapshot 是 point-in-time 證據所以納入版控，
+# replay 是「可重跑」的衍生品，且 posture 一律 UNKNOWN，不是當日真的可知的東西。
+# 注意「可重跑」不等於「跨時間可重現」：廣度是用 .cache 目前的成員資格算的
+# （CacheFeed.Universe 對 *.json 做 glob），所以重跑會隨 .cache 增刪而得到不同的
+# breadth 數字，與本次結果不必然逐位相同。價格類 metric 則會相同。
+# 把它進 git 會讓它看起來與 live 歷史同等，那正是 EP-0b 全力要防的混淆。
+data/market_replay/

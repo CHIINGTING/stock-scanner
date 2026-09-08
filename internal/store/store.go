@@ -29,12 +29,21 @@ var ErrNotFound = errors.New("store: not found")
 // nowUTC is the clock, indirected so tests can pin time without touching every call site.
 var nowUTC = func() time.Time { return time.Now().UTC() }
 
-// Config is the R13 store block of the scanner config.
+// Config is the store block of the scanner config. It is the R13 store's config by default,
+// and any other database's config once Schema is set.
 type Config struct {
 	// Path is the SQLite file. Empty → DefaultPath. ":memory:" is accepted for tests.
 	Path string `yaml:"path"`
 	// BusyTimeoutMs bounds how long a statement waits for a lock. Zero → 5000.
 	BusyTimeoutMs int `yaml:"busy_timeout_ms"`
+	// Schema selects the migration sequence to apply. The zero value means R13Schema, so
+	// every caller that predates this field opens the R13 database exactly as before.
+	//
+	// `yaml:"-"` is load-bearing, not cosmetic. research.Config embeds this struct under a
+	// yaml tag (internal/research/research.go), so an untagged field would make
+	// []Migration{Stmts []string} — arbitrary DDL — reachable from config.yaml. A config file
+	// chooses WHERE a database lives; it does not get to choose what is in it.
+	Schema Schema `yaml:"-"`
 }
 
 // Defaulted fills zero values, matching the Defaulted() convention used by the ai, market
@@ -46,6 +55,9 @@ func (c Config) Defaulted() Config {
 	if c.BusyTimeoutMs <= 0 {
 		c.BusyTimeoutMs = 5000
 	}
+	if c.Schema.isZero() {
+		c.Schema = R13Schema
+	}
 	return c
 }
 
@@ -55,7 +67,8 @@ type Store struct {
 	path string
 }
 
-// Open opens (creating if needed) the database and migrates it to SchemaVersion.
+// Open opens (creating if needed) the database and migrates it to cfg.Schema.Version()
+// (R13Schema when the caller named no schema).
 //
 // The driver is modernc.org/sqlite: pure Go, so `go build` needs no C toolchain and
 // CGO_ENABLED=0 still works. That matters more here than raw speed — this repo has never
@@ -98,7 +111,7 @@ func OpenContext(ctx context.Context, cfg Config) (*Store, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("store: connect %s: %w", cfg.Path, err)
 	}
-	if err := migrate(ctx, db); err != nil {
+	if err := migrate(ctx, db, cfg.Schema); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
