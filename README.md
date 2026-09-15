@@ -852,6 +852,62 @@ go run ./cmd/backtest-panel -capital 300000 -reserve 200000 -add 20000 -add-coun
 | `news.providers.socialworkerdaily.{enabled,api_base,max_items}` | SWD 來源設定 |
 | `news.providers.twetq.{enabled,base_url}` | TWETQ 來源設定（best-effort） |
 
+### scanner — 三大法人籌碼（R10-1，display / context，報告 ⑪）
+
+法人買賣超為**延遲揭露**資料，只作籌碼佐證，不是買賣訊號。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_institution` | 載入 snapshot 並 attach（預設 false） |
+| `show_institution` | 報告 ⑪ + 摘要 chips 顯示（預設 false） |
+| `institution.snapshot_dir` | snapshot 目錄（`data/institution`） |
+| `institution.history_days` | 回看窗天數（40） |
+
+獨立預抓工具：`cmd/institution-fetch`。
+
+### scanner — 乖離率 BIAS（R10-1，display / context，報告 ⑫）
+
+BIAS 衡量的是**追價 / 超跌風險**，不是進出場訊號。只需要 candles，不必額外資料源。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_bias` | 計算 `WatchlistEntry.Bias`（預設 false） |
+| `show_bias` | 報告 ⑫ 顯示（預設 false） |
+
+### scanner — K 線型態（R10-2，Shadow Research Only，報告 ⑬）
+
+| 變數 | 說明 |
+|------|------|
+| `enable_candlestick` | 執行型態分析並 attach（預設 false） |
+| `show_candlestick` | 報告 ⑬ 顯示（預設 false） |
+
+`show_candlestick: true` 而 `enable_candlestick: false` 會在**啟動時直接失敗**（見下方「雙層開關」說明）。
+
+### scanner — 趨勢／乖離／族群熱度（R12，Shadow Only，報告 ⑮）
+
+MA 斜率 + BIAS 位置 + 族群熱度合成單一 deterministic 狀態。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_trend_extension` | 計算 `SectorRotation.Heat` 與 `WatchlistEntry.TrendExt`（預設 false） |
+| `show_trend_extension` | 報告 ⑮ 顯示（預設 false） |
+
+關閉時輸出 byte-identical。
+
+### scanner — 技術指標擴充（R14，Shadow Only，報告 ⑯）
+
+ADX/DI、RSI、MACD、Keltner、古典樞紐點，以及彙整後的技術脈絡。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_technical_indicators` | 計算並 attach `WatchlistEntry.Technical`（預設 false） |
+| `show_technical_indicators` | 報告 ⑯ 顯示（預設 false） |
+| `technical.*` | 各指標週期與門檻（見 `internal/technical` 的 `DefaultConfig`） |
+
+兩個旗標**刻意獨立**：`enable=true, show=false` 仍會計算、仍寫入 R13 evidence、仍送到 agent，只是 HTML 不變 —— R14 本來就設計成這樣跑。R14 的前提是：教科書指標必須先用實際 outcome 證明自己，才有資格進入評分；在那之前它們只是 evidence。
+
+`show_technical_indicators: true` 而 `enable_technical_indicators: false` 會在**啟動時直接失敗**。
+
 ### scanner — 進場計畫 EntryPlan（EP-6，Shadow Only；報告區塊 ⑲ 由 EP-8 整合）
 
 「這檔是否值得持有」由掃描器先回答完，之後才輪到「要在什麼價位進場」。EntryPlan 是後者：一個
