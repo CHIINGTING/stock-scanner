@@ -890,6 +890,12 @@ type GuardrailViewOptions struct {
 	// Default false → the section and its styles are entirely absent.
 	ShowTechnicalIndicators bool
 
+	// ShowEntryPlan gates the report ⑲ "進場計畫" section (EP-8) and its styles. Display-only:
+	// the section renders the entryplan.Plan already attached to WatchlistEntry.EntryPlan and
+	// changes no score / action / WatchAction / EntryStatus / sort / legacy price field. Default
+	// false → the section and its styles are entirely absent. A nil plan renders nothing.
+	ShowEntryPlan bool
+
 	MFScoreModifierBuilding     float64
 	MFScoreModifierContinuation float64
 	MFScoreModifierShiftUp      float64
@@ -1223,6 +1229,8 @@ func (r *Report) Generate(
 		"techStrengthCSS": techStrengthCSS,
 		"techMomentumCSS": techMomentumCSS,
 		"techVolCSS":      techVolCSS,
+		// ⑲ EP-8 view builder. Presentation only — see report_entryplan.go.
+		"entryPlanView": entryPlanView,
 		// R11 AI display helpers. aiOK is what keeps the ⑭ section from rendering an empty
 		// shell when the analysis was unavailable — the report simply omits it, matching how
 		// ⑨/⑩/⑬ handle their own unavailable states.
@@ -2201,7 +2209,20 @@ th.rotscore{min-width:120px}
 #btFrameWrap{display:none;margin-top:12px}
 #btFrame{width:100%;height:1100px;border:1px solid #1e3a5f;border-radius:8px;background:#0c1220;resize:vertical;overflow:auto}
 {{ end }}
-</style>
+</style>{{ if .GV.ShowEntryPlan }}<style id="ep19-styles">
+/* ⑲ 進場計畫（EP-8）— shadow 區塊，虛線框與舊版「④ 價位計畫」區隔 */
+.wl-ep{border:1px dashed #6d28d9;background:#130f24}
+.wl-ep h4{color:#c4b5fd}
+.wl-ep .ep-status{display:inline-block;border-radius:6px;padding:3px 10px;font-size:.78rem;font-weight:700;margin-bottom:6px;border:1px solid #334155;background:#111827;color:#cbd5e1}
+.wl-ep .ep-status.ep-s-now{border-color:#14532d;color:#86efac}
+.wl-ep .ep-status.ep-s-wait{border-color:#1e3a8a;color:#93c5fd}
+.wl-ep .ep-status.ep-s-no{border-color:#7f1d1d;color:#fca5a5}
+.wl-ep .ep-status.ep-s-data{border-color:#334155;color:#94a3b8}
+.wl-ep .ep-status.ep-s-unknown{border-color:#b45309;color:#fcd34d}
+.wl-ep .ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:3px 14px;font-size:.74rem;color:#cbd5e1}
+.wl-ep .ep-grid span{color:#64748b}
+.wl-ep .ep-code{font-size:.66rem;color:#94a3b8;border:1px solid #334155;border-radius:4px;padding:0 4px;letter-spacing:.04em}
+</style>{{ end }}
 </head>
 <body>
 <div class="container">
@@ -2659,6 +2680,35 @@ th.rotscore{min-width:120px}
             <div class="wl-note">趨勢方向（斜率）＋ 價格位置（乖離）＋ 族群共振（熱度）的合併判讀，僅供閱讀，不改變任何分數、階段或買賣訊號。</div>
           </div>
           {{- end }}{{- end }}
+          {{- if $.GV.ShowEntryPlan }}{{- with entryPlanView $e }}<section class="wl-sec wl-ep">
+            <h4>⑲ 進場計畫（Shadow Only，不改變 BUY／WATCH／SELL）</h4>
+            <div class="wl-note">規劃／研究證據，不是下單指令。規則為啟發式，未經回測驗證。</div>
+            <div class="ep-status {{ .StatusCSS }}">狀態 <b>{{ .StatusCode }}</b>　{{ .StatusLabel }}</div>
+            <div class="ep-grid">
+              <div><span>理想進場區</span> {{ .Zone }}{{ with .ZoneBasis }} <span class="ep-code">{{ . }}</span>{{ end }}</div>
+              <div><span>計畫所見現價</span> {{ .CurrentPrice }}</div>
+              <div><span>現價位置</span> {{ .RelationLabel }} <span class="ep-code">{{ .Relation }}</span></div>
+              <div><span>追價上限</span> {{ .MaxChase }}</div>
+              <div><span>想法失效價</span> {{ .Invalidation }}</div>
+              <div><span>目標一</span> {{ .Target1 }}</div>
+              <div><span>目標二</span> {{ .Target2 }}</div>
+              <div><span>風險報酬比</span> {{ .RiskReward }}</div>
+              <div><span>Policy</span> {{ .Policy }}</div>
+              <div><span>RuleVersion</span> {{ .RuleVersion }}</div>
+              <div><span>Confidence</span> {{ .Confidence }}（{{ .ConfidenceLabel }}）</div>
+            </div>
+            <div class="wl-gs-h">理由：</div>
+            {{- if .Reasons }}
+            <ul class="wl-gs-list ep-reasons">{{- range .Reasons }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- else }}
+            <div>{{ "—" }}</div>
+            {{- end }}
+            {{- if .Caveats }}
+            <div class="wl-gs-h">注意：</div>
+            <ul class="wl-gs-list ep-caveats">{{- range .Caveats }}<li>{{ . }}</li>{{- end }}</ul>
+            {{- end }}
+            <div class="wl-note">舊版「④ 價位計畫」的進場區／停損價／停利區維持原樣，EP-10 之前不收斂；本區不取代舊欄位。</div>
+          </section>{{- end }}{{- end }}
         </div>
       </div>
     </td>

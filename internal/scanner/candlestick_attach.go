@@ -50,12 +50,21 @@ func computeCandlestick(candles []fetcher.Candle, stage RocketStage) *candlestic
 //
 //	ShowCandlestick         requires EnableCandlestick         (SPEC R10-2 §9)
 //	ShowTechnicalIndicators requires EnableTechnicalIndicators (R14 §3)
+//	ShowEntryPlan           requires EnableEntryPlan           (EP-6A)
+//
+// EP-6A adds its pair for the reason stated above: nothing here is inherited. A feature that
+// declares a show_/enable_ pair and does not add a line to this function has no startup check
+// at all, and the missing check is invisible — the config parses, the scan runs, and the only
+// symptom is a section rendering nothing.
 func (c Config) Validate() error {
 	if c.ShowCandlestick && !c.EnableCandlestick {
 		return fmt.Errorf("config: show_candlestick=true requires enable_candlestick=true")
 	}
 	if c.ShowTechnicalIndicators && !c.EnableTechnicalIndicators {
 		return fmt.Errorf("config: show_technical_indicators=true requires enable_technical_indicators=true")
+	}
+	if c.ShowEntryPlan && !c.EnableEntryPlan {
+		return fmt.Errorf("config: show_entry_plan=true requires enable_entry_plan=true")
 	}
 	return nil
 }

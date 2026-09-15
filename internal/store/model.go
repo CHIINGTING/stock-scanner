@@ -148,6 +148,10 @@ const (
 	CategoryNews        = "news"
 	CategoryMarket      = "market"
 	CategoryRisk        = "risk"
+	// CategoryEntryPlan holds the EP-7 projection of a watchlist entry's published
+	// entryplan.Plan (keys prefixed ep_, registry in internal/research/entryplan_evidence.go).
+	// It is a record of shadow output, not a scanner fact: no production code reads it back.
+	CategoryEntryPlan = "entry_plan"
 )
 
 // ScanRun is one execution of the scanner.

@@ -210,9 +210,16 @@ func (r *Recorder) RecordScan(ctx context.Context, meta RunMeta, in Input) (Resu
 	// multi-agent work items operate on.
 	for _, e := range in.Watchlist {
 		var c collector
+		snap := snapshotFrom(e, run.TradingDate)
 		buildWatchlistEvidence(&c, e, rotIndex[e.Sector], in.MarketCtx)
+		// EP-7: the published entry plan, as ep_* rows in the same batch as the snapshot's
+		// other evidence. A plan that does not describe this snapshot, or is malformed, is not
+		// recorded; the snapshot and its other evidence still are.
+		if err := buildEntryPlanEvidence(&c, e, snap); err != nil {
+			r.logf("research: %s entry plan not recorded: %v", e.A.Symbol, err)
+		}
 		countByCategory(byCat, c.items)
-		id, ok := r.persist(ctx, run, snapshotFrom(e, run.TradingDate), c.items, &res)
+		id, ok := r.persist(ctx, run, snap, c.items, &res)
 		if ok {
 			res.WatchlistSnapshots[e.A.Symbol] = id
 		}

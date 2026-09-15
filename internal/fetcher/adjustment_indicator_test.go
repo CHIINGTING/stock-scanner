@@ -20,9 +20,14 @@ package fetcher_test
 //
 // Everything here measures by FINITE DIFFERENCE on the real indicator: build a
 // fixture, bump one input, and read how much of the bump survives into today's
-// value. Nothing calls a formula and compares it to itself. The literals
-// asserted are the ones printed in WindowIsAdjustmentClean's doc, so a doc table
-// edited without re-measuring fails here.
+// value. Nothing calls a formula and compares it to itself.
+//
+// The literals asserted here are COPIES of the ones printed in
+// WindowIsAdjustmentClean's doc, and the protection that buys is one-directional.
+// If the indicator drifts away from the documented recursion, these tests go red.
+// The converse does NOT hold: editing a number in that doc comment changes
+// nothing here, and the suite stays green — measured, by editing three of them.
+// Keeping the two in step is a reviewer's job, not this file's.
 
 import (
 	"encoding/json"
@@ -209,20 +214,26 @@ func TestWilderATRCannotBeCertifiedByWindow(t *testing.T) {
 //
 // Fixture: closes alternate 100 / 101, so every bar is a gain or a loss and
 // BOTH Wilder averages stay strictly positive (a monotone fixture would pin
-// avgLoss at 0 and RSI at the constant 100, measuring nothing).
+// avgLoss at 0 and RSI at the constant 100, measuring nothing). By span 400 the
+// averages have converged to their steady state on the newest bar, which is a
+// GAIN bar: avgGain = 14/27, avgLoss = 13/27, RSI[newest] = 100·14/27 = 51.85.
 //
 // The bumped bar must be a PEAK (close 101, odd index): bumping a peak up makes
 // that bar's gain larger and the next bar's loss larger, and both sign patterns
-// survive a small bump. Bumping a TROUGH instead shrinks a loss and a gain by
-// the same amount and the two contributions cancel to within float noise
-// (measured: 7e-10, i.e. nothing) — a degenerate direction, not a memory
-// measurement, so only peaks are used and only even ages are reachable.
+// survive a small bump. Bumping a TROUGH instead shrinks a loss at age 1 and a
+// gain at age 0 by the same amount, and at the steady state above the two
+// contributions cancel EXACTLY rather than approximately:
+//
+//	dRSI/dLoss·(13/14) + dRSI/dGain = -100·(14/27)·(13/14) + 100·(13/27) = 0
+//
+// (measured: +7e-10 at age 1 and exactly 0.0 at age 3 — float noise around a
+// true zero). That is a degenerate direction, not a memory measurement, so only
+// peaks are used and only EVEN ages are reachable.
 //
 // RSI is NONLINEAR in the two averages, so this is a derivative at one point,
-// not a residual weight. What is claimed of it is only the SHAPE: shifting the
-// bumped bar one bar further back multiplies the derivative by exactly
-// (N-1)/N, because that factor multiplies the perturbation of avgGain and of
-// avgLoss alike, leaving the (fixed) partial derivatives untouched.
+// not a residual weight. What is claimed of it, why the baseline is age 2 and
+// not age 0, and why every value it returns from age 2 on is NEGATIVE are all in
+// TestRSIWilderMemoryOnRealIndicator.
 func rsiSensitivity(t *testing.T, period, age int) float64 {
 	t.Helper()
 	const (
@@ -250,39 +261,126 @@ func rsiSensitivity(t *testing.T, period, age int) float64 {
 // TestRSIWilderMemoryOnRealIndicator pins the doc's claim that rsi.go:38-39 is
 // the IDENTICAL Wilder recursion, on the real indicator.RSI.
 //
-// Hand-derived expectation: the sensitivity of today's RSI to a close `age` bars
-// back is proportional to (13/14)^age at period 14, so
+// A CLOSE IS NOT A DELTA — WHICH IS WHY THE BASELINE IS AGE 2, NOT AGE 0.
 //
-//	sensitivity(age) / sensitivity(0) = (13/14)^age exactly.
+// avgGain / avgLoss are Wilder recursions over the DELTAS d[i] = closes[i] -
+// closes[i-1]. One delta enters at weight 1/14 and retains (13/14)^age — the
+// same exact statement TestWilderATRCannotBeCertifiedByWindow measures on ATR,
+// whose input (a true range) likewise enters exactly once.
 //
-// Only even ages are measurable (see rsiSensitivity), which brackets rather than
-// lands on the 1% point: (13/14)^62 = 0.010533 is still above 1% and
-// (13/14)^64 = 0.009083 is below, so with the exact shape asserted the crossing
-// is at 63 — the same 63 the doc quotes for ATR(14).
+// A CLOSE enters twice. closes[j] is read by d[j], as its end point, and by
+// d[j+1], as its start point — OPPOSITE signs, ONE bar of age apart. Bumping a
+// peak at age a >= 2 therefore enlarges a gain at age a and a loss at age a-1,
+// so with G = 14/27 and L = 13/27 (the fixture's steady state):
+//
+//	sens(a) = dRSI/dGain·(1/14)(13/14)^a + dRSI/dLoss·(1/14)(13/14)^(a-1)
+//	        = (1/14)(13/14)^(a-1) · [ 100·(13/27)·(13/14) - 100·(14/27) ]
+//	        = -(25/49)·(13/14)^(a-1)
+//
+// Two consequences, and asserting BOTH pins strictly more than the old
+// "ratio == (13/14)^age" did — it fixes the decay rate AND the boundary:
+//
+//  1. THE SHAPE SURVIVES THE NONLINEARITY, from age 2 onward. Both terms carry
+//     the same (13/14)^a, so sens(a2)/sens(a1) = (13/14)^(a2-a1) EXACTLY for any
+//     a1, a2 >= 2 (measured to 1e-9), even though the magnitude depends on where
+//     the series sits. That, and nothing stronger, is what "the identical Wilder
+//     recursion" buys for a nonlinear function of the two averages.
+//
+//  2. THE SIGN IS NEGATIVE at every age >= 2, and POSITIVE at age 0. The loss
+//     term is one bar YOUNGER and therefore 14/13 heavier, so it wins: bumping
+//     an old peak LOWERS today's RSI. Age 0 is the structural exception —
+//     closes[newest] has no d[n] to be the start point of, so it enters ONE
+//     delta and nothing cancels:
+//
+//     sens(0) = dRSI/dGain·(1/14) = 100·(13/27)/14 = +650/189 = +3.4392
+//     sens(0)/sens(2) = -196/27 = -7.2593
+//
+//     Age 0 is thus not a scaled-up point on the curve; it is off the curve and
+//     on the OTHER SIDE OF ZERO. Normalising by it — which an earlier version of
+//     this test did, copying the ATR convention without re-deriving it —
+//     produces a table of negative "residuals" and asserts a proportionality
+//     that does not exist. The doc always said RSI is a nonlinear function of
+//     the two averages and that the number is a memory length, not an error
+//     bound; the old assertion was the one claiming otherwise.
+//
+// THE 1% POINT: 63 IN DELTA AGE, 65 IN CLOSE AGE. BOTH ARE REPORTED.
+//
+// (13/14)^k first falls under 1% at k = 63 (ln(100)/ln(14/13) = 62.14, rounds
+// UP). That is the 63 WindowIsAdjustmentClean's doc quotes for ATR(14) and for
+// RSI's avgGain / avgLoss, and it is stated in DELTA age.
+//
+// Measured against the sens(2) baseline the exponent is age-2, so the first age
+// at which a CLOSE's observable effect on today's RSI is under 1% is 65 = 63+2.
+// The +2 is NOT a slower decay — the rate is bit-for-bit ATR's, asserted below
+// against atrResidual — it is the two-delta offset: the youngest close that
+// lies on the curve at all is 2 bars old. 65 is ODD and so unmeasurable here
+// (see rsiSensitivity), so what is asserted is the even bracket around it,
+// age 64 = (13/14)^62 = 0.010105 (still >= 1%) and age 66 = (13/14)^64 =
+// 0.008713 (< 1%), together with the exact shape — which makes the crossing
+// inside that bracket arithmetic rather than measurement.
 func TestRSIWilderMemoryOnRealIndicator(t *testing.T) {
 	const period = 14
-	base := rsiSensitivity(t, period, 0)
-	if base == 0 {
-		t.Fatalf("fixture broken: RSI is insensitive to the newest close")
+
+	// Age 2, not age 0: the youngest close that is ON the geometric curve.
+	base := rsiSensitivity(t, period, 2)
+	if base >= 0 {
+		t.Fatalf("fixture broken: RSI sensitivity at age 2 = %g, want strictly negative", base)
 	}
-	for _, age := range []int{2, 4, 8, 20, 40, 62, 64} {
-		got := rsiSensitivity(t, period, age) / base
-		want := math.Pow(13.0/14, float64(age))
+
+	// The boundary effect itself, pinned quantitatively. This is the assertion
+	// that would catch someone "fixing" rsi.go so the newest close entered two
+	// deltas.
+	//
+	// It does NOT catch a change to how the averages are SEEDED, and cannot: the
+	// fixture is 400 bars long, so the seed's influence on the newest value is
+	// (13/14)^386 ~ 4e-13, twelve orders below this assertion's tolerance. That is
+	// the same span that makes the ratio below robust — the two properties are the
+	// same fact, so no tolerance choice buys both. Measured: widening rsi.go's seed
+	// window by one bar leaves this whole package green.
+	s0 := rsiSensitivity(t, period, 0)
+	if s0 <= 0 {
+		t.Errorf("RSI(14) sensitivity at age 0 = %g, want strictly POSITIVE — the newest close is read "+
+			"by ONE delta (d[n-1]) and has no d[n] to oppose it", s0)
+	}
+	if got, want := s0/base, -196.0/27; math.Abs(got-want) > 1e-6 {
+		t.Errorf("RSI(14) sensitivity(0)/sensitivity(2) = %.9f, want -196/27 = %.9f — that ratio IS the "+
+			"one-delta/two-delta boundary effect at this fixture's steady state (avgGain 14/27, "+
+			"avgLoss 13/27); a change in it means the fixture or rsi.go's seeding moved", got, want)
+	}
+
+	for _, age := range []int{2, 4, 8, 20, 40, 62, 64, 66} {
+		s := rsiSensitivity(t, period, age)
+		if s >= 0 {
+			t.Errorf("RSI(14) sensitivity at age %d = %g, want strictly NEGATIVE — an interior close "+
+				"feeds a gain at age %d and a loss at age %d, and the younger loss term (14/13 "+
+				"heavier) must dominate", age, s, age, age-1)
+		}
+		got := s / base
+		want := math.Pow(13.0/14, float64(age-2))
 		if math.Abs(got-want) > 1e-6 {
 			t.Errorf("RSI(14) sensitivity ratio at age %d = %.9f, want (13/14)^%d = %.9f — "+
 				"avgGain/avgLoss are no longer the Wilder recursion the doc cites",
-				age, got, age, want)
+				age, got, age-2, want)
 		}
-		if got <= 0 {
-			t.Errorf("RSI(14) sensitivity ratio at age %d = %g, want strictly positive — "+
-				"a Wilder recursion has no cut-off", age, got)
+		// The same rate, measured on a DIFFERENT indicator: ATR's residual at
+		// delta-age age-2. This is the doc's word "identical", made executable —
+		// and it is what ties the close-age curve back to the 63 in the table.
+		if atr := atrResidual(t, period, age-2); math.Abs(got-atr) > 1e-6 {
+			t.Errorf("RSI(14) ratio at age %d = %.9f but ATR(14) residual at delta-age %d = %.9f — "+
+				"rsi.go:38-39 and atr.go:27-29 are supposed to be the same recursion",
+				age, got, age-2, atr)
 		}
 	}
-	if r := rsiSensitivity(t, period, 62) / base; r < 0.01 {
-		t.Errorf("RSI(14) memory at age 62 = %.6f, want >= 0.01 — 62 bars is not yet the 1%% point", r)
+
+	// The 1% bracket. The crossing is at close-age 65, which is odd and cannot be
+	// measured; 64 and 66 straddle it and the exact shape above fills the gap.
+	if r := rsiSensitivity(t, period, 64) / base; r < 0.01 {
+		t.Errorf("RSI(14) memory at close-age 64 = %.6f, want >= 0.01 — that is (13/14)^62 = 0.010105, "+
+			"so 64 is NOT yet the 1%% point and the crossing cannot be below 65", r)
 	}
-	if r := rsiSensitivity(t, period, 64) / base; r >= 0.01 {
-		t.Errorf("RSI(14) memory at age 64 = %.6f, want < 0.01 — the 1%% point must be at or before 64", r)
+	if r := rsiSensitivity(t, period, 66) / base; r >= 0.01 {
+		t.Errorf("RSI(14) memory at close-age 66 = %.6f, want < 0.01 — that is (13/14)^64 = 0.008713, "+
+			"so the 1%% point must be at or before 66", r)
 	}
 }
 
@@ -367,7 +465,10 @@ func TestKDJCascadeResidualOnRealIndicator(t *testing.T) {
 	)
 
 	// 1. The doc's table, against the real indicator.
-	for _, tc := range []struct{ age int; wantK, wantD float64 }{
+	for _, tc := range []struct {
+		age          int
+		wantK, wantD float64
+	}{
 		{1, 0.6667, 1.3333},
 		{2, 0.4444, 1.3333},
 		{5, 0.1317, 0.7901},
@@ -465,7 +566,10 @@ func TestKDJCascadeResidualOnRealIndicator(t *testing.T) {
 	// 6. J = 3K - 2D inherits D's tail: the 2D term overtakes the 3K term between
 	//    ages 3 and 4 (J's response to a shock changes SIGN there) and dominates
 	//    afterwards.
-	for _, tc := range []struct{ age int; wantPositive bool }{{3, true}, {4, false}} {
+	for _, tc := range []struct {
+		age          int
+		wantPositive bool
+	}{{3, true}, {4, false}} {
 		_, _, _, _, rawJ := kdjResidual(t, tc.age, kPeriod, dflt, dflt)
 		if (rawJ > 0) != tc.wantPositive {
 			t.Errorf("J response at age %d = %+.9e, want positive == %v — the 3K/2D crossover "+
@@ -493,9 +597,10 @@ type cachedStock struct {
 	Data fetcher.StockData `json:"data"`
 }
 
-// degapErrors returns, per cached symbol with a detectable last adjustment, the
-// age of that adjustment and the ATR(14) error the raw series carries because of
-// it — the exact counterfactual quoted in WindowIsAdjustmentClean's doc.
+// degapErrors returns two parallel slices — one entry per cached symbol with a
+// detectable last adjustment — holding the age of that adjustment and the ATR(14)
+// error the raw series carries because of it: the exact counterfactual quoted in
+// WindowIsAdjustmentClean's doc.
 //
 // The counterfactual restates the close on the bar BEFORE the event onto the new
 // basis (Close[k-1] × RatioAfter/RatioBefore). That close is read by exactly one
@@ -503,13 +608,12 @@ type cachedStock struct {
 // restated series to the real indicator.ATR de-gaps ONE true range and leaves
 // every other input identical. Error is |raw/cf - 1| in percent, an ABSOLUTE
 // value (signed, 7 / 136 / 67 of the doc's three rows are negative).
-func degapErrors(t *testing.T) (byAge map[string]float64, ages []int, errs []float64) {
+func degapErrors(t *testing.T) (ages []int, errs []float64) {
 	t.Helper()
 	entries, err := os.ReadDir(adjustmentIndicatorCacheDir)
 	if err != nil {
 		t.Skipf("no .cache at %s — skipping real-data validation", adjustmentIndicatorCacheDir)
 	}
-	byAge = map[string]float64{}
 	for _, e := range entries {
 		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
 			continue
@@ -553,7 +657,7 @@ func degapErrors(t *testing.T) (byAge map[string]float64, ages []int, errs []flo
 		ages = append(ages, age)
 		errs = append(errs, math.Abs(raw/cf-1)*100)
 	}
-	return byAge, ages, errs
+	return ages, errs
 }
 
 // TestATRDeGappingErrorRealCache is the canary for the de-gapping measurement in
@@ -573,7 +677,7 @@ func degapErrors(t *testing.T) (byAge map[string]float64, ages []int, errs []flo
 // cannot do that for you. Skips when .cache is absent or too small to say
 // anything.
 func TestATRDeGappingErrorRealCache(t *testing.T) {
-	_, ages, errs := degapErrors(t)
+	ages, errs := degapErrors(t)
 
 	band := func(lo, hi int) []float64 {
 		var out []float64
@@ -610,7 +714,7 @@ func TestATRDeGappingErrorRealCache(t *testing.T) {
 		t.Skipf("cache too small for this canary: %d symbols at age >= 63, %d at age 15..62 "+
 			"(the doc's measurement had 386 and 992)", len(old), len(young))
 	}
-	t.Logf("doc's numbers: age>=63 n=386 median 0.00%% p90 0.03%% max 0.59%%; "+
+	t.Logf("doc's numbers: age>=63 n=386 median 0.00%% p90 0.03%% max 0.59%%; " +
 		"age 15..62 n=992 median 0.13%% p90 1.37%% max 12.96%%")
 
 	if m := stat(old, 100); m >= 1.0 {

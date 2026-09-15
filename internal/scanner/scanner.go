@@ -251,6 +251,27 @@ type Config struct {
 
 	AI ai.Config `yaml:"ai"`
 
+	// ── Entry Plan (EP-6) — SHADOW MODE, execution-side reading only ─────────────
+	// EnableEntryPlan gates PROJECTING each watchlist entry onto entryplan.Snapshot and
+	// attaching the resulting entryplan.Plan to WatchlistEntry.EntryPlan, as a POST-PASS
+	// that runs after the sort in EnrichWatchlist is already final. Default false → the
+	// projection never runs, every EntryPlan field stays nil, and output is byte-identical.
+	//
+	// ShowEntryPlan gates the REPORT SECTION ONLY: report ⑲ "進場計畫" (EP-8), passed to
+	// report.GuardrailViewOptions.ShowEntryPlan by cmd/scanner/main.go. The section renders the
+	// already-attached plan and changes no score, action, status, sort or legacy price field.
+	// It is declared beside the compute flag because the pair is what Config.Validate checks:
+	// show_entry_plan=true with enable_entry_plan=false is a startup error.
+	//
+	// NEVER affects Score / Action / RocketScore / WatchAction / ExplosionProb / sort /
+	// stop / ranking / position sizing / Stage / market regime / sector rotation. The plan
+	// answers "at what price", strictly AFTER something else has already answered "is this
+	// worth owning at all" — see internal/entryplan/doc.go and its architecture test.
+	// Data layer in internal/entryplan (a pure domain package); the scanner-side bridge is
+	// internal/scanner/entryplan_attach.go.
+	EnableEntryPlan bool `yaml:"enable_entry_plan"` // 預設 false
+	ShowEntryPlan   bool `yaml:"show_entry_plan"`   // 預設 false
+
 	KDJ struct {
 		KPeriod int `yaml:"k_period"`
 		DSmooth int `yaml:"d_smooth"`

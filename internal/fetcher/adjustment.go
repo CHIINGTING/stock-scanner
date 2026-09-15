@@ -572,15 +572,33 @@ func LastAdjustmentAge(candles []Candle) (barsAgo int, ok bool) {
 // The repo's other recursive indicators behave the same way at their own rates:
 //
 //	RSI (rsi.go:38-39)  avgGain / avgLoss are the identical Wilder recursion, so
-//	                    ((N-1)/N)^age with N = 14 → age 63 for 1%. RSI is a
-//	                    NONLINEAR function of the two, so read that as a memory
-//	                    length, not an error bound. MEASURED on the real
-//	                    indicator.RSI (central difference of RSI[newest] against
-//	                    one close, alternating fixture so both averages stay
-//	                    nonzero): the sensitivity shrinks by exactly 13/14 per
-//	                    extra bar of age, i.e. the closed form survives the
-//	                    nonlinearity as a SHAPE even though the magnitude
-//	                    depends on where the series sits.
+//	                    ((N-1)/N)^age with N = 14 → age 63 for 1%. That 63 is in
+//	                    DELTA age: the recursion's inputs are the deltas
+//	                    closes[i]-closes[i-1], and each delta enters exactly once,
+//	                    which is what makes it the same number as ATR(14)'s. RSI
+//	                    is a NONLINEAR function of the two averages, so read it as
+//	                    a memory length, not an error bound.
+//	                    MEASURED on the real indicator.RSI (central difference of
+//	                    RSI[newest] against one CLOSE, alternating fixture so both
+//	                    averages stay nonzero): the closed form survives the
+//	                    nonlinearity as a SHAPE — moving the bumped close k bars
+//	                    further back multiplies the sensitivity by exactly
+//	                    (13/14)^k, bit-for-bit ATR(14)'s residual at delta-age k —
+//	                    though the magnitude depends on where the series sits.
+//	                    But a CLOSE IS NOT A DELTA, and the two ages differ by 2.
+//	                    closes[j] is read by d[j] (as end point) AND by d[j+1] (as
+//	                    start point), opposite signs, one bar of age apart, and the
+//	                    younger loss term is 14/13 heavier — so the observable
+//	                    sensitivity is NEGATIVE at every age >= 2, and the curve
+//	                    STARTS at age 2. Age 0 is off it entirely: the newest close
+//	                    has no d[n] to oppose it, so sens(0) is POSITIVE and
+//	                    -196/27 = -7.26x sens(2). Normalised against sens(2), the
+//	                    youngest close that is on the curve, the 1% point is
+//	                    63 + 2 = 65 bars of CLOSE age. BOTH numbers are real and
+//	                    they answer different questions: 63 for avgGain/avgLoss
+//	                    (and for ATR, whose input enters once), 65 for the
+//	                    observable dRSI/dclose. All of it is pinned by
+//	                    TestRSIWilderMemoryOnRealIndicator.
 //	KDJ (kdj.go:48-49)  K and D are EMAs seeded at 50 from index 0 — recursive
 //	                    from the first bar, no window at all, and CASCADED, which
 //	                    makes D's tail strictly longer than K's. Detail below.
@@ -695,10 +713,22 @@ func LastAdjustmentAge(candles []Candle) (barsAgo int, ok bool) {
 //
 //	age >= ceil(ln(tolerance) / ln((N-1)/N))
 //
-// which at a 1% tolerance is 63 for ATR(14) and RSI(14), 90 for ATR(20), and 12
-// (K) / 19 (D) for KDJ at the defaults. The threshold belongs to the consumer's
-// error budget — the table above is the price list — so no default is offered
-// here for copying.
+// which at a 1% tolerance is 63 for ATR(14) and for RSI(14)'s avgGain / avgLoss,
+// 90 for ATR(20), and 12 (K) / 19 (D) for KDJ at the defaults.
+//
+// USE 63, NOT 65, AGAINST LastAdjustmentAge. Those two numbers are both real (see
+// the RSI note above) and it is easy to reach for the wrong one, because the age
+// you hold is a BAR age and 65 is the answer for a CLOSE. It is the wrong answer
+// here: 65 prices an isolated bump to ONE close, and an ex-dividend is not that
+// action. It restates EVERY close before the event bar k by the same ratio, so
+// the deltas below k keep both endpoints on one basis and are merely rescaled —
+// exactly ONE delta mixes bases, d[k] = c[k] - c[k-1]. That delta's age is
+// len(candles)-1-k, which is precisely what LastAdjustmentAge returns. So the
+// age in hand is already a delta age, and the delta-age threshold, 63, is the
+// one that applies — the same 63 as ATR(14), for the same reason.
+//
+// The threshold belongs to the consumer's error budget — the table above is the
+// price list — so no default is offered here for copying.
 //
 // Pass the FULL series. Do NOT pre-slice — see ScanAdjustments.
 //
