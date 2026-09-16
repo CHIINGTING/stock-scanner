@@ -37,11 +37,11 @@ func TestMigrationV2IsBackwardCompatible(t *testing.T) {
 		version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)`); err != nil {
 		t.Fatal(err)
 	}
-	for _, m := range migrations {
-		if m.version != 1 {
+	for _, m := range R13Schema.Migrations {
+		if m.Version != 1 {
 			continue
 		}
-		for _, stmt := range m.stmts {
+		for _, stmt := range m.Stmts {
 			if _, err := raw.ExecContext(ctx, stmt); err != nil {
 				t.Fatalf("v1 ddl: %v", err)
 			}

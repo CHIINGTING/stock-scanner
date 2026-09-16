@@ -203,6 +203,13 @@ func TestParseAmount(t *testing.T) {
 	if _, err := parseAmount("暫停交易"); err == nil {
 		t.Error("unparsable text returned a silent zero")
 	}
+	// The other half of the ""/"-" policy, pinned because R15 (§3.1) extracted the textual
+	// cleanup into internal/numtoken and applies the OPPOSITE policy to the same token: on a
+	// derivatives row "-" means "not carried" and decodes to ABSENT. That extraction must not
+	// have moved this answer, which is correct for the TWSE cash rows it was written for.
+	if v, err := parseAmount("-"); err != nil || v != 0 {
+		t.Errorf(`"-" on a TWSE cash row is a clean zero: %v %v`, v, err)
+	}
 }
 
 // ── HTTP path, against httptest rather than TWSE ─────────────────────────────────────

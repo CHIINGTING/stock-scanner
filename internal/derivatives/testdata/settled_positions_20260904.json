@@ -1,0 +1,24 @@
+[
+ {
+  "TheFinalSettlementDay": "20260904",
+  "ContractDeliveryMonth": "202609",
+  "ContractName": "臺指選擇權F1",
+  "Contract": "TXU",
+  "Call/Put": "買權",
+  "OIAtTheMaturityDate(Lot)": "65201",
+  "OIOfIn-the-MoneyAtTheMaturityDate(Lot)": "14459",
+  "AbandonedOIofIn-the-MoneyAtTheMaturityDate(Lot)": "0",
+  "ActualExecutedOI(Lot)": "14459"
+ },
+ {
+  "TheFinalSettlementDay": "20260904",
+  "ContractDeliveryMonth": "202609",
+  "ContractName": "臺指選擇權F1",
+  "Contract": "TXU",
+  "Call/Put": "賣權",
+  "OIAtTheMaturityDate(Lot)": "61393",
+  "OIOfIn-the-MoneyAtTheMaturityDate(Lot)": "1152",
+  "AbandonedOIofIn-the-MoneyAtTheMaturityDate(Lot)": "0",
+  "ActualExecutedOI(Lot)": "1152"
+ }
+]

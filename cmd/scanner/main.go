@@ -218,35 +218,8 @@ func main() {
 
 	// ── 3.5 Watchlist 飆股候選追蹤（連動族群輪動）────────────────────────────────
 	if len(wStocks) > 0 {
-		fmt.Printf("      分析 Watchlist 飆股候選 (%d 支)...\n", len(wStocks))
-		sectorOf := buildSectorOf(sectorList, rotationResults)
-		rotMap := make(map[string]*scanner.SectorRotation, len(rotationResults))
-		for i := range rotationResults {
-			rotMap[rotationResults[i].Name] = &rotationResults[i]
-		}
-		// C6a: full-market RS table (nil when RS disabled); attached as shadow only.
-		rsTable := s.BuildRSTable(marketStocks)
-		watchlistResults = s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped, rsTable)
-
-		// R8-4: ETF flow / active-rotation CONTEXT (display-only). Post-pass attach
-		// AFTER enrichment, so it never touches score/action/probability/order. Off by
-		// default; snapshot gaps degrade quietly and never interrupt the scan.
-		if cfg.Scanner.EnableETFFlow {
-			attachETFFlow(watchlistResults, cfg.Scanner, analysisDate)
-		}
-
-		// R10-1: Institutional Flow + confluence CONTEXT (display-only). Post-pass attach
-		// AFTER enrichment, so it never touches score/action/probability/order. Off by
-		// default; missing snapshots degrade quietly and never interrupt the scan.
-		if cfg.Scanner.EnableInstitution {
-			attachInstitution(watchlistResults, wStocks, cfg.Scanner.Institution, analysisDate)
-		}
-
-		// R11: AI explanation (shadow-only). LAST post-pass — by here every score, action
-		// and sort position is final, so the model is reading a finished verdict rather
-		// than participating in one. Off by default; a missing OPENAI_API_KEY, a timeout,
-		// a 429/5xx or malformed output all leave the scan and the report untouched.
-		attachAI(watchlistResults, cfg.Scanner, marketCtx)
+		watchlistResults = buildWatchlist(s, cfg.Scanner, wStocks, marketStocks,
+			sectorList, rotationResults, grouped, analysisDate, marketCtx)
 	}
 
 	// ── 3.6 News / 消息面 (Phase 1) — SHADOW MODE, display/context only ──────────
@@ -299,6 +272,7 @@ func main() {
 	// depend on four exchanges being up, and on a historical run would return today's
 	// figures under a past date.
 	fundViews, valViews := loadResearchViews(cfg, watchlistResults, analysisDate)
+	attachEntryPlanValuation(watchlistResults, cfg.Scanner, wStocks, marketCtx, analysisDate, fundViews, valViews)
 
 	gv := report.GuardrailViewOptions{
 		Fundamental:                 fundViews,
@@ -316,6 +290,7 @@ func main() {
 		ShowTechnicalIndicators:     cfg.Scanner.ShowTechnicalIndicators,
 		ShowAI:                      cfg.Scanner.ShowAI,
 		ShowTrendExtension:          cfg.Scanner.ShowTrendExtension,
+		ShowEntryPlan:               cfg.Scanner.ShowEntryPlan,
 		RSWatchThreshold:            cfg.Scanner.RSWatchThreshold,
 		MFScoreModifierBuilding:     cfg.Scanner.MFScoreModifierBuilding,
 		MFScoreModifierContinuation: cfg.Scanner.MFScoreModifierContinuation,
@@ -370,6 +345,103 @@ func main() {
 			}
 		}
 	}
+}
+
+// buildWatchlist is the PRODUCTION watchlist pipeline: it enriches the fetched watchlist
+// candles into WatchlistEntry values and then runs every shadow post-pass, in the order the
+// binary runs them. main() calls it, and in production nothing else does.
+//
+// # WHY THIS IS A FUNCTION AT ALL (EP-6B)
+//
+// Until EP-6B this body was inline in main(), and main() is 350 lines that need a config
+// file, the network and the filesystem — so no test could execute it. The consequence was
+// MEASURED, not assumed: deleting the attachEntryPlan call left `go test ./cmd/scanner/...
+// ./internal/scanner/...` fully green, because an unused function is legal Go. The four older
+// attaches (ETF flow, institution, AI, and news further down main) had exactly the same hole.
+//
+// Extracting the body gives the wiring a seam a BEHAVIOURAL test can drive:
+// cmd/scanner/entryplan_pipeline_test.go calls this function with fixture candles and fails
+// if the returned entries carry no plan — so removing the attachEntryPlan call below is now
+// caught by a test that reads RESULTS, not source text.
+//
+// # WHAT THIS SEAM STILL DOES NOT COVER — stated plainly rather than smoothed over
+//
+// Deleting the buildWatchlist CALL from main() is STILL not caught by any behavioural test.
+// The hole moved up one level; it did not disappear. Closing it would mean executing main()
+// itself, which needs a config file, the network and the filesystem.
+//
+// That one level is covered by the weakest guard available today: an AST assertion that
+// main() contains a call to buildWatchlist (TestMainCallsTheProductionWatchlistSeam). That is
+// STRUCTURAL, not behavioural — strictly weaker than the test below it. It would still pass
+// if the call were moved somewhere that never runs, and it proves nothing about what the call
+// produces. It is an early warning, not a proof, and the wiring must not be described as
+// fully proven while it is what guards this layer.
+//
+// # PURE MOVE
+//
+// Every attach below keeps the arguments, the order and the gating it had inline; only the
+// names of the values changed (cfg.Scanner → sc, watchlistResults → out). EP-6B changed no
+// post-pass and reordered nothing. The comments are the originals with ONE exception: the
+// ETF-flow and institution comments are verbatim, but the R11 comment was updated, because
+// "LAST post-pass" stopped being true once EP-6's entry plan was appended after it.
+func buildWatchlist(
+	s *scanner.Scanner,
+	sc scanner.Config,
+	wStocks []fetcher.StockData, // watchlist OHLCV, the pass's subject
+	marketStocks []fetcher.StockData, // full-market candles, for the C6a RS table only
+	sectorList *fetcher.SectorList,
+	rotationResults []scanner.SectorRotation,
+	grouped map[string][]fetcher.StockData,
+	analysisDate time.Time,
+	marketCtx research.MarketContext,
+) []scanner.WatchlistEntry {
+
+	fmt.Printf("      分析 Watchlist 飆股候選 (%d 支)...\n", len(wStocks))
+	sectorOf := buildSectorOf(sectorList, rotationResults)
+	rotMap := make(map[string]*scanner.SectorRotation, len(rotationResults))
+	for i := range rotationResults {
+		rotMap[rotationResults[i].Name] = &rotationResults[i]
+	}
+	// C6a: full-market RS table (nil when RS disabled); attached as shadow only.
+	rsTable := s.BuildRSTable(marketStocks)
+	out := s.EnrichWatchlist(wStocks, sectorOf, rotMap, grouped, rsTable)
+
+	// R8-4: ETF flow / active-rotation CONTEXT (display-only). Post-pass attach
+	// AFTER enrichment, so it never touches score/action/probability/order. Off by
+	// default; snapshot gaps degrade quietly and never interrupt the scan.
+	if sc.EnableETFFlow {
+		attachETFFlow(out, sc, analysisDate)
+	}
+
+	// R10-1: Institutional Flow + confluence CONTEXT (display-only). Post-pass attach
+	// AFTER enrichment, so it never touches score/action/probability/order. Off by
+	// default; missing snapshots degrade quietly and never interrupt the scan.
+	if sc.EnableInstitution {
+		attachInstitution(out, wStocks, sc.Institution, analysisDate)
+	}
+
+	// R11: AI explanation (shadow-only). The last post-pass that can reach the network,
+	// and — until EP-6 — the last one full stop; EP-6's entry plan is deliberately
+	// placed AFTER it so no plan can reach the prompt. By here every score, action
+	// and sort position is final, so the model is reading a finished verdict rather
+	// than participating in one. Off by default; a missing OPENAI_API_KEY, a timeout,
+	// a 429/5xx or malformed output all leave the scan and the report untouched.
+	attachAI(out, sc, marketCtx)
+
+	// EP-6: entry plan (shadow-only). Placed here for the reason the R11 comment
+	// above gives — by this point every score, action, probability and SORT POSITION
+	// is final (the ordering happens at the end of EnrichWatchlist — the RocketScore
+	// sort and the R4-3 MTF tie-breaker, watchlist.go:363-367, both of which run
+	// before it returns), so the plan reads a finished verdict rather than joining in
+	// one. It runs AFTER the AI pass as well, so an entry plan cannot reach the model
+	// prompt: at the moment buildAIEvidence runs, no plan exists yet.
+	//
+	// Deterministic and offline: no network, no clock, no I/O. Off by default, and a
+	// stock whose evidence is missing gets a plan that says which evidence was missing
+	// rather than no plan at all.
+	attachEntryPlan(out, sc, wStocks, marketCtx)
+
+	return out
 }
 
 // collectWatchCandidates extracts the BUY/WATCH/HOLD stocks from scan results as
@@ -457,6 +529,83 @@ func attachAI(entries []scanner.WatchlistEntry, sc scanner.Config, mc research.M
 		aiMarket.Score = *mc.Score
 	}
 	scanner.AttachAI(ctx, entries, sc.AI, sc.EnableAI, aiMarket, log.Printf)
+}
+
+// attachEntryPlan (EP-6) is the entry-plan shadow post-pass: it projects each watchlist entry
+// onto the entryplan input contract and attaches the computed plan.
+//
+// The flag check lives INSIDE scanner.AttachEntryPlan rather than around this call, following
+// attachAI: one gate, in the function that owns the feature, so a caller cannot forget it and
+// there is exactly one place to read to know what "off" means. Off means every EntryPlan field
+// stays nil — feature absence, never a plan carrying a "disabled" verdict.
+//
+// It cannot fail the scan and cannot slow it down in any interesting way: entryplan is a pure
+// domain package with no network, no filesystem, no database and no clock, and ComputePlan is
+// total — defined for every input, including a snapshot with nothing in it.
+//
+// # EP-6C: the two inputs the projection gained, both ALREADY LOADED
+//
+// The per-symbol candle index is built here from wStocks — the exact series EnrichWatchlist
+// analysed in this same call — exactly as attachInstitution builds its own. Nothing is
+// fetched: the bridge needs the series for the previous close and the adjustment age, and
+// re-reading it from anywhere else would risk handing the plan a DIFFERENT series from the one
+// the analysis ran on, which is the failure the bridge's own alignment check refuses.
+//
+// The market read is the SAME research.MarketContext main() loaded once and handed to the AI
+// pass, mapped to scanner.EntryPlanMarket with the SAME availability rule attachAI uses
+// (mc.Regime != ""). One load, one meaning: the entry plan and the AI explanation cannot end
+// up describing two different markets, which is the reason main() loads it once at all.
+func attachEntryPlan(entries []scanner.WatchlistEntry, sc scanner.Config,
+	wStocks []fetcher.StockData, mc research.MarketContext) {
+
+	candlesByCode := make(map[string][]fetcher.Candle, len(wStocks))
+	for _, s := range wStocks {
+		candlesByCode[s.Symbol] = s.Candles
+	}
+	market := scanner.EntryPlanMarket{Available: mc.Regime != "", Regime: mc.Regime}
+	scanner.AttachEntryPlan(entries, candlesByCode, market, sc.EnableEntryPlan)
+}
+
+// attachEntryPlanValuation supplies the already-loaded PIT research views to the pure
+// valuation domain, then reprojects EntryPlan only. No fetch occurs here.
+func attachEntryPlanValuation(entries []scanner.WatchlistEntry, sc scanner.Config,
+	wStocks []fetcher.StockData, mc research.MarketContext, loadedAsOf time.Time,
+	funds map[string]*fundamental.View, vals map[string]*valuation.Valuation) {
+
+	if !sc.EnableEntryPlan {
+		return
+	}
+	candlesByCode := make(map[string][]fetcher.Candle, len(wStocks))
+	for _, stock := range wStocks {
+		candlesByCode[stock.Symbol] = stock.Candles
+	}
+	evidence := entryPlanValuationEvidence(entries, candlesByCode, loadedAsOf, funds, vals)
+	market := scanner.EntryPlanMarket{Available: mc.Regime != "", Regime: mc.Regime}
+	scanner.AttachEntryPlan(entries, candlesByCode, market, true, evidence)
+}
+
+func entryPlanValuationEvidence(entries []scanner.WatchlistEntry, candlesByCode map[string][]fetcher.Candle,
+	loadedAsOf time.Time, funds map[string]*fundamental.View,
+	vals map[string]*valuation.Valuation) map[string]scanner.EntryPlanValuation {
+	evidence := make(map[string]scanner.EntryPlanValuation, len(entries))
+	loadDate := loadedAsOf.Format("2006-01-02")
+	for i := range entries {
+		code := entries[i].A.Symbol
+		entryDate := entries[i].A.Date.Format("2006-01-02")
+		// Research views were loaded once at loadDate. They are valid only for an entry
+		// describing that exact session: relabelling the same loaded pointers with an older
+		// entry date would not make them point-in-time data for that date.
+		if entryDate != loadDate {
+			evidence[code] = scanner.EntryPlanValuation{Status: string(valuation.Unavailable),
+				Suitability: string(valuation.SuitabilityInsufficientData), AsOf: entryDate}
+			continue
+		}
+		v := valuation.BuildEntryPlanEvidence(loadDate,
+			code, entries[i].A.Close, candlesByCode[code], vals[code], funds[code])
+		evidence[code] = scanner.EntryPlanValuation{Status: string(v.Status), BaseTarget: v.BaseTarget,
+			Suitability: string(v.Suitability), AsOf: v.AsOf}
+	}
+	return evidence
 }
 
 // buildAnalysisHistory converts the enriched watchlist into the canonical structured

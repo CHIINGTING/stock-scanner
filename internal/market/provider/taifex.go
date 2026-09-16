@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/deep-huang/stock-scanner/internal/market/model"
+	"github.com/deep-huang/stock-scanner/internal/numtoken"
+	"github.com/deep-huang/stock-scanner/internal/taifexfeed"
 )
 
 // TAIFEX provider — foreign institutional open interest in 臺股期貨.
@@ -116,31 +118,51 @@ func (p *TAIFEXProvider) get(ctx context.Context, url string) ([]byte, error) {
 	return buf, nil
 }
 
-// taifexRow mirrors the JSON feed. Keys carry parentheses, so they need explicit tags.
-type taifexRow struct {
-	Date         string `json:"Date"`
-	ContractCode string `json:"ContractCode"`
-	Item         string `json:"Item"`
-	LongOI       string `json:"OpenInterest(Long)"`
-	ShortOI      string `json:"OpenInterest(Short)"`
-	NetOI        string `json:"OpenInterest(Net)"`
-}
-
 // ParseTAIFEXDaily extracts foreign 臺股期貨 open interest from the UTF-8 JSON feed.
 //
 // NetOI is taken from the official 多空未平倉口數淨額 column rather than derived from
 // long-short, for the same reason as the TWSE cash net: a column-layout change should
 // surface as a mismatch, not be papered over by arithmetic.
+//
+// # One decode, two policies (R15 §10.2 / FU-10)
+//
+// internal/derivatives/provider reads this SAME response for R15's institutional FLOW and
+// POSITION rows. There used to be a second decoder here — a `taifexRow` struct with its own
+// json tags for OpenInterest(Long/Short/Net) — and the two disagreed on the same bytes,
+// because `parseAmount("-")` is 0 while R15's `decodeNum("-")` is ABSENT. The same row
+// therefore meant different things depending on which entry point ran, which is exactly the
+// failure FU-10 records.
+//
+// The DECODE now happens once, in internal/taifexfeed, which both readers import and which
+// imports neither (internal/derivatives must stay a leaf of the decision path). The POLICY
+// stays here: on these rows this function keeps parseAmount, unchanged, pinned by
+// twse_test.go. The divergence is tabulated in internal/taifexfeed's package comment and
+// pinned side by side in internal/taifexfeed/policy_contrast_test.go.
+//
+// # Why this reader still ignores TradingVolume(*)
+//
+// The decode is widened as §10.2 asks — internal/taifexfeed returns every column the response
+// carried, FLOW half included — but model.FuturesOIData is deliberately NOT. Nothing on this
+// side consumes a traded volume: analyzer.AnalyzeForeignFutures reads net OI and its history,
+// and the Big5 backfill (taifex_backfill.go) that must stay semantically equivalent to this
+// path produces the same struct. Adding three fields nothing reads would (a) change the shape
+// of every persisted RawSnapshot for no reader, and (b) put a SECOND copy of the FLOW numbers
+// beside R15's, normalised under the opposite absence policy — the very duplication this
+// change removes. The FLOW half reaches callers through
+// derivatives/provider.ParseInstitutionalFutures, which is the superset type §10.2 allows.
 func ParseTAIFEXDaily(body []byte, wantDate string) (*model.FuturesOIData, string, error) {
-	var rows []taifexRow
-	if err := json.Unmarshal(body, &rows); err != nil {
+	// Only the columns this reader actually reads are required. R15 requires the FLOW columns
+	// too, because it stores them; requiring them here would take the market snapshot offline
+	// over half a response it never looks at.
+	rows, err := taifexfeed.Decode(body, taifexfeed.ColsInstitutionalFuturesPosition)
+	if err != nil {
+		if errors.Is(err, taifexfeed.ErrNoRows) {
+			return nil, "", fmt.Errorf("TAIFEX: %w: empty feed", ErrNoData)
+		}
 		return nil, "", fmt.Errorf("TAIFEX: decode: %w", err)
 	}
-	if len(rows) == 0 {
-		return nil, "", fmt.Errorf("TAIFEX: %w: empty feed", ErrNoData)
-	}
 
-	asOf, err := taifexDate(rows[0].Date)
+	asOf, err := taifexDate(rows[0][taifexfeed.ColDate])
 	if err != nil {
 		return nil, "", fmt.Errorf("TAIFEX: %w", err)
 	}
@@ -152,11 +174,11 @@ func ParseTAIFEXDaily(body []byte, wantDate string) (*model.FuturesOIData, strin
 	out := &model.FuturesOIData{Contract: contractTXF, Item: itemForeign, OtherItems: map[string]float64{}}
 	var found bool
 	for _, r := range rows {
-		if strings.TrimSpace(r.ContractCode) != contractTXF {
+		if strings.TrimSpace(r[taifexfeed.ColContractCode]) != contractTXF {
 			continue
 		}
-		item := strings.TrimSpace(r.Item)
-		net, err := parseAmount(r.NetOI)
+		item := strings.TrimSpace(r[taifexfeed.ColItem])
+		net, err := parseAmount(r[taifexfeed.ColPosNet])
 		if err != nil {
 			return nil, asOf, fmt.Errorf("TAIFEX: %s net OI: %w", item, err)
 		}
@@ -164,8 +186,8 @@ func ParseTAIFEXDaily(body []byte, wantDate string) (*model.FuturesOIData, strin
 			out.OtherItems[item] = net
 			continue
 		}
-		long, err1 := parseAmount(r.LongOI)
-		short, err2 := parseAmount(r.ShortOI)
+		long, err1 := parseAmount(r[taifexfeed.ColPosLong])
+		short, err2 := parseAmount(r[taifexfeed.ColPosShort])
 		if err1 != nil || err2 != nil {
 			return nil, asOf, fmt.Errorf("TAIFEX: 外資 long/short OI unparsable")
 		}
@@ -190,7 +212,9 @@ func taifexDate(s string) (string, error) {
 // parseOI is parseAmount with an int-ish contract, kept separate so the backfill parser can
 // share it without importing the TWSE file's naming.
 func parseOI(s string) (float64, error) {
-	s = strings.TrimSpace(strings.ReplaceAll(s, ",", ""))
+	// Same shared cleanup as parseAmount (internal/numtoken), same reason it stops there:
+	// the "" -> 0 answer belongs to the Big5 backfill's own rows, not to the normaliser.
+	s = numtoken.Normalize(s)
 	if s == "" {
 		return 0, nil
 	}

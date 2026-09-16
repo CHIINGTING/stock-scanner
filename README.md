@@ -728,6 +728,24 @@ go run ./cmd/backtest-panel -capital 300000 -reserve 200000 -add 20000 -add-coun
   RS / 新高 / VCP / MomentumFlow 這些 shadow 訊號才會**真的影響**飆股分數；
   否則即使各自 `enable` 也只是 shadow-only（只計算、不改分數，即「觀察模式」）。
 
+四種組合的意義一致（以 `X` 代表功能名）：
+
+| 組合 | 行為 |
+|------|------|
+| `enable_X: false`（預設） | 完全不計算，欄位為 nil，輸出與沒有這個功能時一致 |
+| `enable_X: true, show_X: false` | **有計算、有記錄**（evidence / 快照 / agent 可見），報告不顯示 —— 純觀察模式 |
+| `enable_X: true, show_X: true` | 計算 + 顯示 |
+| `enable_X: false, show_X: true` | 不計算，報告也沒有東西可顯示 |
+
+> **最後一列只有三對會在啟動時擋下來。** `scanner.Config.Validate()`
+> （`internal/scanner/candlestick_attach.go`）目前只強制
+> `show_candlestick → enable_candlestick`、
+> `show_technical_indicators → enable_technical_indicators` 與
+> `show_entry_plan → enable_entry_plan` 這三對，
+> 違反時直接 fatal。**其餘的 `show_*` 並不會被檢查**，設成 `true` 而
+> `enable_*` 為 `false` 只會安靜地渲染出一個空區塊 —— 那讀起來像「沒有東西可看」，
+> 而不是「沒有人去看」。新增雙層開關時要記得自己加進那個 validator，它不會自動繼承。
+
 ### fetcher（抓取 / 快取）
 
 | 變數 | 預設 | 說明 |
@@ -833,6 +851,217 @@ go run ./cmd/backtest-panel -capital 300000 -reserve 200000 -add 20000 -add-coun
 | `news.user_agent` | 瀏覽器 UA（TWETQ 過 Cloudflare 用） |
 | `news.providers.socialworkerdaily.{enabled,api_base,max_items}` | SWD 來源設定 |
 | `news.providers.twetq.{enabled,base_url}` | TWETQ 來源設定（best-effort） |
+
+### scanner — 三大法人籌碼（R10-1，display / context，報告 ⑪）
+
+法人買賣超為**延遲揭露**資料，只作籌碼佐證，不是買賣訊號。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_institution` | 載入 snapshot 並 attach（預設 false） |
+| `show_institution` | 報告 ⑪ + 摘要 chips 顯示（預設 false） |
+| `institution.snapshot_dir` | snapshot 目錄（`data/institution`） |
+| `institution.history_days` | 回看窗天數（40） |
+
+獨立預抓工具：`cmd/institution-fetch`。
+
+### scanner — 乖離率 BIAS（R10-1，display / context，報告 ⑫）
+
+BIAS 衡量的是**追價 / 超跌風險**，不是進出場訊號。只需要 candles，不必額外資料源。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_bias` | 計算 `WatchlistEntry.Bias`（預設 false） |
+| `show_bias` | 報告 ⑫ 顯示（預設 false） |
+
+### scanner — K 線型態（R10-2，Shadow Research Only，報告 ⑬）
+
+| 變數 | 說明 |
+|------|------|
+| `enable_candlestick` | 執行型態分析並 attach（預設 false） |
+| `show_candlestick` | 報告 ⑬ 顯示（預設 false） |
+
+`show_candlestick: true` 而 `enable_candlestick: false` 會在**啟動時直接失敗**（見下方「雙層開關」說明）。
+
+### scanner — 趨勢／乖離／族群熱度（R12，Shadow Only，報告 ⑮）
+
+MA 斜率 + BIAS 位置 + 族群熱度合成單一 deterministic 狀態。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_trend_extension` | 計算 `SectorRotation.Heat` 與 `WatchlistEntry.TrendExt`（預設 false） |
+| `show_trend_extension` | 報告 ⑮ 顯示（預設 false） |
+
+關閉時輸出 byte-identical。
+
+### scanner — 技術指標擴充（R14，Shadow Only，報告 ⑯）
+
+ADX/DI、RSI、MACD、Keltner、古典樞紐點，以及彙整後的技術脈絡。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_technical_indicators` | 計算並 attach `WatchlistEntry.Technical`（預設 false） |
+| `show_technical_indicators` | 報告 ⑯ 顯示（預設 false） |
+| `technical.*` | 各指標週期與門檻（見 `internal/technical` 的 `DefaultConfig`） |
+
+兩個旗標**刻意獨立**：`enable=true, show=false` 仍會計算、仍寫入 R13 evidence、仍送到 agent，只是 HTML 不變 —— R14 本來就設計成這樣跑。R14 的前提是：教科書指標必須先用實際 outcome 證明自己，才有資格進入評分；在那之前它們只是 evidence。
+
+`show_technical_indicators: true` 而 `enable_technical_indicators: false` 會在**啟動時直接失敗**。
+
+### scanner — 進場計畫 EntryPlan（EP-6，Shadow Only；報告區塊 ⑲ 由 EP-8 整合）
+
+「這檔是否值得持有」由掃描器先回答完，之後才輪到「要在什麼價位進場」。EntryPlan 是後者：一個
+純運算的 domain 套件（`internal/entryplan`，無網路 / 無檔案 / 無時鐘），由橋接檔
+`internal/scanner/entryplan_attach.go` 把掃描結果投影過去，再把算出來的 plan 掛回
+`WatchlistEntry.EntryPlan`。它跑在排序**之後**，而且沒有任何東西會把它讀回去。
+
+EntryPlan **不是**第二套「何時買」的分類器：進場語意直接沿用既有的 `WatchAction`
+（`PULLBACK_BUY` → PULLBACK、`BREAKOUT_BUY` → BREAKOUT），橋接不重新判斷。
+`Action = BUY` 也**不等於** `BUY_NOW` —— 後者還要求進場語意已確定、市場 regime 的政策允許
+這種進場、有合法區間、現價落在區間內（或政策明示允許追價且未越過上限）。
+另外（EP-6D，使用者決定）：只要 `WatchAction` 已給出進場語意（`PULLBACK_BUY` / `BREAKOUT_BUY`），
+而掃描器的主要建議 `Action` 為 `SELL`、`REDUCE`、`TAKE PROFIT` 或 `STOP LOSS`，plan 一律是
+`NO_VALID_ENTRY`（決策表新的第 S1 條，理由碼 `STATUS_THESIS_CONTRADICTED`），而且**不產生任何
+進場價位**：沒有進場區間、追價上限、失效價、目標價、風險報酬比，`EntryTrace` 的區間 / 追價 /
+停損 / 目標計算紀錄也是空的（這些步驟根本不執行）—— 不論現價、regime 或區間為何，所以也不會出現
+「賣出」旁邊寫著「等拉回、在 X 買」。plan 裡仍保留的數字只有**市場觀測值**（現價、ATR、MA20 /
+MA60 / 底部低點 / 突破價、前一日收盤、20 日均量、還原日齡、估值投影），它們是證據，不是建議。沒有進場語意的股票不受影響（仍是
+`INSUFFICIENT_DATA`）。`Action` 為空或未知值時則只拿掉 `BUY_NOW`（改為 `INSUFFICIENT_DATA`，
+`STATUS_THESIS_UNCLASSIFIED`），其他狀態與價格不變。決策規則版本目前為 `EP6G-v1`；EP-6G 讓既有
+BASE 估值上限在 production EntryPlan 可達，因此屬於可觀察的序列化語意變更（先前的 sell-side
+規則版本為 `EP6D-v1`）。之後
+在同一個尚未發布的版本內又三度修改規則（併入 `TAKE PROFIT` / `STOP LOSS`、擴大為「不公布價格」、
+連 `EntryTrace` 的計算紀錄也不產生），
+都未再升版，因為當時沒有任何 plan 被存檔（EP-7 的持久化是之後才實作的）。
+
+| 變數 | 說明 |
+|------|------|
+| `enable_entry_plan` | 計算並 attach `WatchlistEntry.EntryPlan`（預設 false） |
+| `show_entry_plan` | 報告 ⑲「進場計畫」區塊開關（EP-8，預設 false） |
+
+`show_entry_plan: true` 而 `enable_entry_plan: false` 會在**啟動時直接失敗**。
+
+**怎麼打開，以及打開之後你會看到什麼**
+
+兩個旗標都在**頂層 `scanner:`** 底下（`internal/scanner/scanner.go:272-273` 的
+`yaml:"enable_entry_plan"` / `yaml:"show_entry_plan"`），**預設都是 false**。
+`configs/config.yaml` 目前**完全沒有寫這兩個鍵**，所以要用就得自己加進 `scanner:` 區塊：
+
+```yaml
+scanner:
+  enable_entry_plan: true   # 計算 plan（預設 false）
+  show_entry_plan: true     # 報告顯示 ⑲（預設 false）
+```
+
+這份就是**建議的 shadow 觀察設定**：會計算 EntryPlan、會在報告顯示 ⑲，而且**不影響掃描器的任何判斷**。
+
+四種組合：
+
+| `enable_entry_plan` | `show_entry_plan` | 結果 |
+|---|---|---|
+| false | false | 整個功能關閉。plan 不計算，`WatchlistEntry.EntryPlan` 為 `nil`，⑲ 不顯示 |
+| true | false | plan 會計算並掛上 `WatchlistEntry.EntryPlan`，而且已接線的下游會拿到它：EP-7 的研究庫持久化會寫 `ep_*` evidence 列（**還要 `research.enabled` 也開**），⑲ 不顯示 |
+| true | true | plan 會計算，報告顯示 ⑲ |
+| false | true | **設定無效，啟動時直接 fatal**。檢查在 `internal/scanner/candlestick_attach.go:66` 的 `Config.Validate()`，由 `cmd/scanner/main.go:70-72` 在任何掃描開始前呼叫，錯誤訊息是 `config: show_entry_plan=true requires enable_entry_plan=true`。不會退回預設值、不會靜默忽略 |
+
+**⑲ 會顯示的欄位**：狀態（`EntryStatus`）、理想進場區、追價上限、想法失效價、目標一、目標二、
+風險報酬比、Policy、Confidence、理由碼、注意事項、RuleVersion。
+
+**但不是每一檔都會有 ⑲。** 只有在掃描器已經給出**可辨識的進場型態**（canonical EntrySemantic：
+`PULLBACK` 或 `BREAKOUT`）時，這個區塊才會出現；掃描器對某檔只說 `WAIT` / `WATCH_CLOSELY` /
+`PREPARE_ENTRY`，或是出場動作 `TAKE_PROFIT` / `REMOVE_FROM_WATCHLIST`，就沒有進場想法可談，
+⑲ 整塊不出現。實測上絕大多數股票屬於這一類，所以**一份報告裡可能一檔 ⑲ 都沒有，這是正常輸出**。
+另外兩種會顯示、但不給價位的情況：
+
+- `INSUFFICIENT_DATA` —— 進場型態有了，但證據不足以做出判定（例如 ATR 不可用、沒有合法進場區）。
+  缺的欄位一律是 `—`，不會補 0。
+- `NO_VALID_ENTRY`（賣出矛盾）—— 掃描器給了買方型態，主要 `Action` 卻是 `SELL` / `REDUCE` /
+  `TAKE PROFIT` / `STOP LOSS`。⑲ **會顯示**，狀態是 `NO_VALID_ENTRY`，而且**不公布任何可執行價位**。
+
+**Shadow Only —— 這一段最重要**：打開這兩個旗標**不會改變** BUY／WATCH／SELL、`Score`、
+`RocketScore`、`WatchAction`、排序或名次，一個都不會動。⑲ 是**規劃／研究證據，不是下單指令**，
+系統裡也**沒有任何自動下單、自動買進或自動停損的東西**：`BUY_NOW` 不會觸發 BUY，
+`WAIT_PULLBACK` 不會掛單，追價上限不會自動追價，想法失效價不會自動停損。全部要人自己看、自己決定。
+
+**④ 和 ⑲ 的關係**：④ 是**舊版掃描器的價位指引**，⑲ 是 EntryPlan 的 **Shadow Only 決定性計畫**。
+兩者的計算語意不同，數字本來就可能不一樣 —— EP-10 實測全市場兩個交易日的結果是兩區同時出現時
+**沒有一檔完全一致**（見 `docs/EP10_LEGACY_VS_ENTRYPLAN.md`）。⑲ **不取代** ④，④ **不會**使用 ⑲ 的價位，
+⑲ 也**不會**重算 ④。本文件**不告訴你哪一個比較準**，兩者都**不是**權威建議。
+
+**研究狀態**：EntryPlan 目前是 **INTEGRATED、SHADOW ONLY、HEURISTIC、NOT BACKTEST-FITTED**。
+EP-9 已完成，但它產出的是 **REPLAYED_PIT 研究證據**；**production 歷史執行驗證為 `NOT_EVALUABLE`**，
+因為 production 的歷史路徑取不到歷史 regime 證據。EP-9 **不是** production 回測、**不是**已驗證的策略、
+**不是**獲利策略、**也不是**最佳化過的策略。
+
+**目前的限制**（簡列）：歷史 regime replay **沒有**接進 production 的 EntryPlan 路徑；replay 的
+posture 是 `UNKNOWN`，因此 posture 相關規則沒有完整的歷史驗證；replay 的 breadth 有存活者偏誤；
+`NEAR_SUPPORT` / `ELEVATED_EVIDENCE` 兩個 requirement 評估器**尚未實作**（所以 SIDEWAYS 與
+DISTRIBUTION 今天到不了 `BUY_NOW`，那是評估器缺席，不是對個股的判斷）；EntryPlan 未經回測擬合；
+`BREAKOUT_BUY` 在 production 的可達性**維持 EP-6F 既有的契約與結論，並未被修正**。
+
+**目前的實際狀態，請照字面讀：**
+
+| 階段 | 狀態 |
+|------|------|
+| domain engine（`internal/entryplan`） | 已實作 |
+| production 接線：`buildWatchlist → attachEntryPlan` | 已接線，**行為證明**：拿掉這個呼叫會讓 `cmd/scanner/entryplan_pipeline_test.go` 的行為測試轉紅（它讀的是回傳結果，不是原始碼文字） |
+| production 接線：`main() → buildWatchlist` | **僅結構守衛**：只有 `TestMainCallsTheProductionWatchlistSeam` 看著它，而那是一條 AST 斷言（「main() 裡有這個呼叫」），不是行為證明。呼叫被搬到永遠不會執行的地方它照樣會過。兩層的守衛強度不同，請不要合併理解 |
+| shadow 隔離（開 / 關的唯一差異是 EntryPlan 欄位） | 已用結構化 diff 證明，但範圍限定在 `buildWatchlist` 回傳的 `[]WatchlistEntry`、且只跑 offline fixture（`cmd/scanner/shadowdiff_test.go`）；**不涵蓋** report / HTML / analysis-history 這些下游產出。EP-6C 另外在「plan 真的帶價格」的情況下重跑同一份 diff（`TestEntryPlanRemainsShadowOnlyWhenPlansCarryPrices`），因為原本的 fixture 每一檔都是無價的 `INSUFFICIENT_DATA` |
+| 證據投影：entry semantic（由既有 `WatchAction` 映射） | **已實作 + 已接線（EP-6C）**，涵蓋 7 個 `WatchAction` 的逐一歸屬；兩個出場動作（`TAKE_PROFIT` / `REMOVE_FROM_WATCHLIST`）明確投影為 UNAVAILABLE，不偽造進場語意 |
+| 證據投影：市場 regime | **已實作 + 已接線（EP-6C）**，來源是 `cmd/market-fetch` 寫的 dashboard snapshot（與 AI 解讀共用同一次載入）。橋接本身不推導 regime；沒有 snapshot 就是 UNAVAILABLE，不會退化成中性盤 |
+| 證據投影：前一交易日收盤 / 還原日齡 | **已實作 + 已接線（EP-6C）**，從該檔自己的 K 線序列讀取，且序列必須**收在分析日當天**才採用（避免 lookahead） |
+| 證據投影：MA60 | **維持 UNAVAILABLE**。理由**不是**「沒人算 60 日均線」—— `internal/scanner` 內已有四處在算（`horizonhint.go:187`、`holdinghorizon.go:122`、`trendext.go:353`、`rotation.go:371`），其中 `horizonhint.go:187` 正是把它當**個股拉回支撐**在用。真正的事實較窄：**沒有任何 producer 把 MA60 這個「價位」publish 出來** —— `indicator.Result` 與 `StockAnalysis` 都沒有 MA60 欄位，四處都是就地算完丟掉（留下的是 setup 標籤 / 斜率 / 乖離 / 布林值）。橋接拒絕成為**第五處**：那會是第五套各自的 warm-up 與零值約定（現有四處的判法就不一致），也會把一個沒有 producer 背書的 level 送給 `entryplan.SelectCenter` 當 MA20 的同級候選。要補請先加在 `internal/indicator` + `StockAnalysis`，並與既有四處（尤其 `horizonhint.go:187`）對齊 warm-up / 零值約定（獨立的 Work Item，尚未編號 —— 指標層；不是 EP-7，EP-7 是持久化） |
+| 證據投影：估值上限 | **已實作 + 已接線（EP-6G）**。`cmd/scanner` 在 `loadResearchViews(asOf)` 之後，以同一分析日、同一 K 線序列呼叫純函式 `valuation.BuildEntryPlanEvidence`；只把 availability、BASE target、suitability、asOf 投影進 scanner bridge，scanner 不依賴 healthcheck。只有既有 `ComputeTargetPrice` 的 **BASE** 情境可夾限 Target2；可夾限與否由 EP-4 的 `ValuationSuitability.PermitsCeiling`（`internal/entryplan/input.go`）決定：**除 `UNSUITABLE` 以外的已知代碼**都可夾限，也就是 `SUITABLE`、`CONDITIONAL`、`WEAK`、`INSUFFICIENT_DATA`；`UNSUITABLE`、空值與未知代碼不夾限（不是「只有 SUITABLE 才夾限」）。例如 P/E 連續、觀察窗足夠但沒有可見財報時，`valuation.ClassifySuitability` 給的是 `CONDITIONAL`，仍會夾限；不產生區間、Target1、停損、追價上限或 BUY_NOW，也不改 status / R:R / scanner verdict。未載入、日期不符、非有限或不適用的證據不偽造成 0。S1 sell-side contradiction 仍是 `NO_VALID_ENTRY` 且不公布任何可執行價或 trace 目標；估值目標價在 S1 plan 的 `VALUATION_BASE_TARGET` 證據列也**不帶數值**（狀態 `UNAVAILABLE`、文字 `NOT_SCREENED`），整份 plan JSON 都不會出現該數字。歷史可重建性為 **PARTIAL**：僅限分析日當時已有 valuation archive、可見的 fundamental filing、ratio 對應日原始收盤與 market snapshot 的日期；缺任一項就保留 UNAVAILABLE / INSUFFICIENT_DATA，不能用今天資料回填。這是整合與 PIT 測試，不是 EP-9 回測驗證 |
+| 「既有 BUY thesis」守衛：`SELL` / `REDUCE` / `TAKE PROFIT` / `STOP LOSS` → `NO_VALID_ENTRY` 且不產生進場價位（EP-6D） | **已實作 + 已接線**（橋接把 `A.Action` 投影成 `Snapshot.Thesis`；決策表 S1 在進場語意確定後判定，`ComputePlan` 對 S1 的 plan 不計算任何進場步驟，之後 invariant gate 照常檢查），**行為證明到 `AttachEntryPlan` 為止**（沒有另外透過 `buildWatchlist` 餵 SELL 股票的測試；`buildWatchlist → attachEntryPlan` 本身已有行為證明）：決策矩陣逐列測試（矛盾 → S1、未分類 → 只拿掉 BUY_NOW）、經 `ComputePlan` 的 zone / risk 案例矩陣（矛盾 → 無任何可下單價位）、橋接端對 types.go 宣告的 8 個 `Action` 加空值 / 未知值逐一測試；plan 不變式 `BUY_NOW_THESIS_NOT_CONTRADICTED` 與 `THESIS_CONTRADICTED_PUBLISHES_NO_ENTRY`（總數 18 → 20）。S1 的 plan 不執行區間 / 追價 / 停損 / 目標步驟，`EntryTrace` 內這四段紀錄為空；另有測試把 plan 序列化成 JSON，確認這些進場數字都不出現（同一 fixture 不帶 thesis 時則都出現）。S1 plan 保留的是**市場觀察值**（現價、ATR、MA20 / MA60 / base low / pivot、前一交易日收盤、成交量、還原日齡），這些證據列照常帶數值；**估值目標價不是市場觀察而是策略目標**，所以 `VALUATION_BASE_TARGET` 列保留但不帶數值（`UNAVAILABLE` / `NOT_SCREENED`），suitability 列（文字、無數字）照舊。EP-6G 以 `TestSellSidePlanJSONCarriesNoValuationTarget` 對四個賣出類 Action 各自序列化整份 plan，確認植入的估值數字不出現（`BUY` 對照組則出現）。只在 `enable_entry_plan: true` 時生效 |
+| `DecisionResult` 欄位 exact allowlist（EP-6D） | **已實作，僅結構守衛**：欄位集合必須剛好是 `Status` / `Rule` / `Reasons`，雙向比對；多加 `Confidence` 之類欄位會紅。證明的是型別形狀，不是運算 |
+| architecture / purity 守衛（EP-6D） | **已實作，僅結構守衛（AST / `go list`，是早期警示，不是行為證明）**：`internal/entryplan` 的直接 import 必須剛好等於 allowlist、禁止依賴 `internal/valuation`、只有 `input.go` / `series.go` 可 import `time` 且只能用 `time.Parse` / `time.Time`；全 repo（`cmd/`、`internal/` 非測試檔）只有 `AttachEntryPlan`（寫入）、EP-7 的 `research.buildEntryPlanEvidence`（唯讀，只投影成 evidence 列）與 EP-8 的 `report.entryPlanView`（唯讀，只格式化成 ⑲ 顯示字串）這三個函式寫得出 `.EntryPlan`。看不到經由 reflection / `encoding/json` 的讀取 |
+| 橋接不做 I/O（EP-6D） | **已實作，僅結構守衛**：`entryplan_attach.go` 的 import、對 `fetcher` / `model` / `math` 的 selector、以及每一個函式呼叫都必須在固定集合內（同檔宣告的函式、`len` / `float64`、少數依名稱比對的方法）。不做型別檢查、也不檢查被允許函式的內部 |
+| status invariant 的 gate 行為（EP-6E） | **已補行為測試**：EP-5 的五條 status invariant（`STATUS_HAS_REASON` / `BUY_NOW_HAS_ZONE` / `BUY_NOW_PRICE_AUTHORISED` / `TOO_EXTENDED_ABOVE_CEILING` / `TOO_EXTENDED_KEEPS_ZONE`）先前只證明「會觸發」，沒證明 gate 觸發後做什麼 —— 從 `enforce.go` 的 `statusInvariants` 移除任一條時測試仍全綠。`internal/entryplan/statusgate_test.go` 對每條各植入「恰好一條」違規的 plan，斷言 gate 的完整輸出（撤回判定為 `INSUFFICIENT_DATA`、不撤價格、stamp `STATUS_WITHDRAWN`），並以合法對照組確認不被誤傷。突變驗證（runner 逐一核對目標檔 md5 已改變、改的是程式碼不是註解、可編譯、還原後 md5 相符）：五條成員移除、各條述詞弱化、以及 EP-6D 兩條 thesis invariant 的突變，共 32 個全數 KILLED。僅涵蓋手工植入的 plan；`ComputePlan` 本身不會產生這些違規 |
+| 研究庫持久化（EP-7） | **已實作，reviewer 已核准（尚未 commit）**。不新增資料表、不改 schema（仍是 R13 schema version 2）：plan 以 evidence 列寫進既有的 `scan_runs → stock_snapshots → evidence`，category `entry_plan`，只在 `research.enabled` 與 `enable_entry_plan` 都開時才會有列。key 固定為 `ep_status`、`ep_rule_version`（取自 `Plan.RuleVersion`）、`ep_policy`（`EntryTrace.Policy.Name`，政策代碼文字）、`ep_zone_low` / `ep_zone_high`（`IdealEntry.Low/High`）、`ep_max_chase`、`ep_invalidation`、`ep_target_1`、`ep_target_2`（最終公布的 Target2，估值夾限後的值）、`ep_rr_ratio`（`RiskReward.Ratio`）。**缺值就是沒有這個 key**：欄位為 nil 時不寫 0、不寫空字串；`enable_entry_plan: false`（plan 為 nil）時完全沒有 `ep_*` 列；S1 賣出矛盾的 plan 只有 status / version / policy 三列、沒有任何價位列。不寫 `EntryTrace` 的計算數字、理由碼、caveats、confidence、`InvariantCheck`。**身分必須相符**：只有 `Plan.Symbol` 等於快照代號、且 `Plan.AsOf` 等於快照交易日時才寫入；任一不符就**零筆** `ep_*` 列並記 log（該快照與其他 evidence 照常寫入）。不改寫 `Plan.AsOf`、不改存到 K 棒日期、不把前一日的 plan 掛到今天的快照、不另造快照。`cmd/scanner` 的研究庫交易日是 `-date`（未給則為執行當天），plan 的 `AsOf` 則是該檔最後一根 K 棒日期，所以週末、假日、開盤前執行時通常沒有 `ep_*` 列——這是**刻意的**。**不做盤中 / 收盤判斷**：持久化不讀時鐘、不檢查是否收盤；盤中執行時若 plan 與快照同代號同日，就照樣寫入。這一層只是記錄器；EP-9 回測（尚未實作）要維持自己的「只用已完成 K 棒 / T+1」契約，這裡的決定不放寬它。測試：`TestEntryPlanAsOfMismatchPersistsNoEntryPlanRows`、`TestEntryPlanSymbolMismatchPersistsNoEntryPlanRows`、`TestEntryPlanSameIdentityPlanIsPersistedWithoutSessionGating`（皆走真實 `RecordScan` 與 SQLite）；「沒有時鐘」另有 AST 結構守衛 `TestEntryPlanPersistenceHasNoClockOrSessionReference`，只看 `entryplan_evidence.go` 與 `RecordScan` 的 watchlist 迴圈、以名稱比對，不是行為證明。結構守衛（`internal/research/entryplan_evidence_guard_test.go`，AST / `go list`）確認沒有 production 程式讀回這些 key；行為測試只證明寫入不改變快照、scanner decision 與其他 evidence。寫入不代表回測或驗證過 |
+| 報告呈現 ⑲ 進場計畫（EP-8） | **已整合，待 review（尚未 commit）**。`show_entry_plan: true` 時，**只有 plan 公布「買方進場型態」的股票**（`ENTRY_SEMANTIC` 證據列為 `AVAILABLE` 且為 `PULLBACK` / `BREAKOUT`）的觀察清單卡片多一個「⑲ 進場計畫（Shadow Only，不改變 BUY／WATCH／SELL）」區塊；plan 為 nil 的股票不顯示該區塊，不偽造 plan。**出場動作**（`WatchAction` 為 `TAKE_PROFIT` / `REMOVE_FROM_WATCHLIST`，橋接刻意不給進場型態）以及掃描器已回答但未指明型態的股票（`PREPARE_ENTRY` / `WATCH_CLOSELY` / `WAIT`，證據列 `INSUFFICIENT_DATA` + `UNKNOWN`）**都不顯示 ⑲**（使用者決定，解決 `entryplan_attach.go` 的 EP-8 TODO）。這是**純顯示層**規則：橋接照常投影、`EntryPlan` 不變成 nil、EP-7 的 `ep_*` 列照常寫入（`TestEntryPlanExitActionEntryStillPersistsItsRows` 走真實 `RecordScan`）。反之，EP-6D/6G 的**賣出矛盾（S1）**是另一回事：掃描器已給買方型態、主要 `Action` 為賣出類，⑲ 仍顯示 `NO_VALID_ENTRY` 與 `—`。內容全部取自已算好的 `WatchlistEntry.EntryPlan`：狀態碼（6 種 canonical 狀態原碼照印，另附中文說明；未知碼明示「未知」）、理想進場區 `Low – High`、追價上限、想法失效價、Target1、Target2（只印最終公布值；被撤回就是 `—`，不回填 trace 的原始值或估值目標價）、R:R（只印公布的 `Ratio`）、Policy（`EntryTrace.Policy.Name`）、RuleVersion、Confidence、理由碼（依 plan 原順序；未對應的碼照印原碼）、caveats。缺值一律 `—`，不印 0。「現價位置」標籤是唯一在報告端推導的東西，只供顯示：現價取自 plan 自己的 `CURRENT_PRICE` 證據列（不退回 `A.Close`），比較方式與 `DecideStatus` 相同（`decide.go:626-627`、`636`、`652`，上下緣含、等於追價上限不算超過）。賣出類 `Action` 的 plan 在 ⑲ 只顯示 `NO_VALID_ENTRY` 與 `—`（⑰ 估值區塊照舊）。**不是回測驗證**、不影響 BUY／WATCH／SELL、分數、排序或 `EntryStatus`；舊版「④ 價位計畫」的進場區／停損價／停利區與表格欄位**不變**（EP-10 的收斂決定維持這一點，只加標示，不動欄位——見下方 EP-10 列）。**呈現覆蓋率（presentation coverage）**：依本節下方 EP-6C／EP-6D 的一次性實測，當時 `.cache` 的 1,993 檔裡只有約 **11 檔**具備進場語意（其餘 1,982 檔的 `WatchAction` 是 `WAIT` / `WATCH_CLOSELY` / `PREPARE_ENTRY` / `TAKE_PROFIT` / `REMOVE_FROM_WATCHLIST`），所以 ⑲ 大約也只會顯示這 11 檔。這個數字是**從該次量測推得**、EP-8 未另行重量，且與那張表一樣**無法用 `go test` 重現、沒有任何測試守著**，`.cache` 或掃描器設定一變就會漂移。它衡量的是「有多少檔會顯示這個區塊」，**不是資料完整度**（缺的不是 MA60 或估值，而是掃描器根本沒指出拉回買或突破買），**更不是策略有效性**（EP-9 回測驗證尚未進行）。**不得為了把這個數字做高而放寬顯示規則**：沒有進場想法的股票顯示 `INSUFFICIENT_DATA` 區塊，等於把「還沒有進場想法」講成「想法有了但證據不足」，那是兩件事。證據：`internal/report/report_entryplan_test.go` 的輸出測試（含同一份掃描結果 OFF / ON 產生 HTML、剝除 ⑲ 區塊與其樣式後逐位元組相同，以及渲染前後 plan 深度比對）；報告端不呼叫 `ComputePlan` / `DecideStatus` / 價位步驟函式的 AST 守衛 `report_entryplan_guard_test.go` 是**僅結構守衛**；`main.go` 的旗標接線也只有 AST 守衛。突變稽核 `docs/EP8_MUTATION_AUDIT.md`（`go run ./scripts/ep8_mutation` 產生） |
+| 研究驗證閘（EP-9） | **已實作為獨立研究層，未接進 production**（`internal/entryplanbacktest`、`cmd/ep9-scope`、`cmd/ep9-study`）。它產生的每一個數字都是 **REPLAYED_PIT / CLEAN / EXECUTABLE_ONLY 的研究觀察**，不是 production 歷史績效，也不是回測擬合的結果：`production_historical_execution = NOT_EVALUABLE`（production 的歷史路徑取不到歷史 regime 證據）、`replay_not_production_wired = true`、`archived_regime_n = 0`、`posture = UNKNOWN`、`posture_dependent_rules = NOT_EVALUABLE`、`breadth_survivorship_bias = true`。§18 的可執行母體只有 `BUY_NOW` / `WAIT_PULLBACK` / `WAIT_BREAKOUT` / `TOO_EXTENDED` 四種狀態；`INSUFFICIENT_DATA` 與 `NO_VALID_ENTRY` **不可執行**，被排除的那批是 **EVALUATOR-BLOCKED ENTRY CANDIDATES**（`NEAR_SUPPORT` / `ELEVATED_EVIDENCE` 這兩個條件本 repo 沒有評估器），**`UNKNOWN` 不等於 `PASS`**，也不是「差一點的 `BUY_NOW`」；它們的事後結果是 `POST_HOC_DISCOVERY`。EP-9 沒有改任何 production 語意、沒有調任何參數。突變稽核 `docs/EP9_MUTATION_AUDIT.md` |
+| 收斂與最終整合（EP-10） | **已整合，待 review（尚未 commit）**。做的是**呈現層澄清**，不是語意取代：⑲ **沒有**升格成權威價位來源，④ **一個欄位都沒有移除**，掃描器語意（Score / Decision / WatchAction / RocketScore / 排序）全部未動，`RuleVersion` 仍是 `EP6G-v1`。量測（`scripts/ep10_convergence`，REPLAYED_PIT 研究觀察、不含任何報酬數字）：兩個交易日、各約 1,975 檔中，只有 ④ 的 1,962 / 1,949 檔，只有 ⑲ 的 0 / 0 檔，兩者皆有且實質一致的 **0 / 0 檔**，兩者皆有但實質矛盾的 14 / 26 檔。矛盾面向與決定寫在 `docs/EP10_LEGACY_VS_ENTRYPLAN.md`。UI 變更只在**兩區同時出現時**生效：④ 標題加「（舊版掃描器價位指引）」並加一行說明，⑲ 底部改寫兩者關係。另外：⑲ 第一次用真實瀏覽器逐狀態檢視（fixture 在 `internal/report/report_entryplan_visual_test.go`），修掉三個呈現缺陷（無法斷行的長 reason code 會撐寬整份報告、⑲ 擠在三分之一欄寬、進場區不存在時仍印出它的基準）；reason 對照表從 28 / 60 補齊到剛好等於 `entryplan.AllReasons`，並加雙向精確守衛。突變稽核 `docs/EP10_MUTATION_AUDIT.md` |
+| 進場建議是否可用於實際下單 | **尚未驗證**：EP-5 的決策表是 heuristic、沒有任何 backtest 擬合；EP-6E、EP-6F、EP-6G（估值證據投影）、EP-7（持久化）已實作並經 reviewer 核准（尚未 commit）；EP-8（報告呈現）、EP-9（研究驗證閘）、EP-10（收斂與最終整合）已整合、待 review。EntryPlan 的定位不變：**Shadow Only、HEURISTIC、NOT BACKTEST-FITTED**，production 歷史執行為 `NOT_EVALUABLE`；EP-9 產出的是 replay 條件下的研究觀察，不是 production 歷史績效 |
+
+**EP-6C 之後打開 `enable_entry_plan` 會發生什麼（一次性實測，不是估計，也不是回測）**：把
+`.cache` 現有的 1,993 檔（全市場當成觀察清單跑、單一日期）餵進同一條 attach —
+（這張表量的是 **plan 的計算結果**，不是 ⑲ 的顯示範圍：即使某一列是 `INSUFFICIENT_DATA`，只要
+該檔沒有進場語意，EP-8 就完全不顯示 ⑲——見上面那列的「呈現覆蓋率」。）
+
+> ⚠️ 這張表**無法用 `go test` 重現，也沒有任何測試守著它**。它是一次性量測（依賴本機 `.cache`
+> 的當時內容），不是 regression 的一部分。掃描器的分級規則、`.cache` 內容或 EP-5 決策表一變，
+> 表上的數字就會漂移而**不會有任何測試轉紅** —— 要用它做決策前請重新量一次。
+
+| 市場 regime | 有可執行價格 | 仍 `INSUFFICIENT_DATA` |
+|------|------|------|
+| 沒有 snapshot | 0 | 1,993 |
+| `BULL` | 11（`BUY_NOW` 2 / `TOO_EXTENDED` 5 / `WAIT_PULLBACK` 4） | 1,982 |
+| `SIDEWAYS` / `DISTRIBUTION` | 11（其中 9 檔 `WAIT_PULLBACK`，另 2 檔有價但狀態仍 `INSUFFICIENT_DATA`） | 1,984 |
+| `BEAR` | 0（11 檔為 `NO_VALID_ENTRY` —— 這是「看過了，沒有邊」的結論，不是缺資料） | 1,982 |
+
+**EP-6D 的量測（同樣是一次性實測，沒有測試守著）**：量的是「帶 thesis」與「thesis 視為不矛盾」
+兩種決策逐檔比對後的差異；絕對數字依賴當時的 `.cache`。
+
+- **較早的 `.cache`（上表那一份）**：用 `configs/config.yaml` 的 scanner 設定，上表每一格數字
+  完全不變，7 種 regime 狀態下差異都是 0 檔（`PULLBACK_BUY` 的 11 檔 `Action` 都是 `HOLD` / `WATCH`）。
+- **`.cache` 於 2026-09-14 10:04 前後被重新抓取之後**（非 EP-6D 所為）：上表已漂移 —— 同一設定下
+  `BULL` 變成 `BUY_NOW` 2 / `TOO_EXTENDED` 2 / `WAIT_PULLBACK` 4，`BEAR` 變成 `NO_VALID_ENTRY` 8；
+  但「帶 thesis」與「不矛盾」的差異在 7 種 regime 狀態下**仍是 0 檔**。
+- **這條守衛不是空轉**：同一份新 `.cache` 改用空的 scanner 設定（所有選配層關閉）時，有 9 檔
+  帶進場語意（`PULLBACK_BUY` / `BREAKOUT_BUY`）的股票 `Action` 是 `SELL`（2221、2880、4198、4908、6173、6885）或 `REDUCE`
+  （2033、2883、6620）。它們在無 snapshot / `BULL` / `BULL_PULLBACK` / `SIDEWAYS` / `DISTRIBUTION` /
+  `UNKNOWN` 下全部變成 `NO_VALID_ENTRY`（`BULL` 下原本是 `BUY_NOW` 5、`TOO_EXTENDED` 3、
+  `WAIT_PULLBACK` 1），`BEAR` 下狀態本來就是 `NO_VALID_ENTRY`、改由 S1 判定；其餘股票不動。
+  這 9 檔的 plan 序列化成 JSON 後，不含任何原本（thesis 視為不矛盾時）的區間、追價上限、失效價或
+  目標價數字（剛好等於某個保留的市場觀測值者除外），四段步驟紀錄皆為空。資料中沒有任何一檔是 `TAKE PROFIT` / `STOP LOSS`。
+
+剩下 1,982 檔缺的**不是** MA60 也不是估值，而是**進場語意**：掃描器對它們給的
+`WatchAction` 是 `WAIT` / `WATCH_CLOSELY` / `PREPARE_ENTRY` / `TAKE_PROFIT` /
+`REMOVE_FROM_WATCHLIST`，本來就沒有指出要拉回買還是突破買。這是正確輸出，不是待調參數。
+
+打開它今天的意義，仍然只是讓 plan 以 shadow evidence 的身分存在；它保證不會動到任何既有輸出
+（Score / Action / 飆股分數 / watch_action / 排序 / 停損 / 既有 shadow 欄位）。只有再打開
+`show_entry_plan` 時，使用者才會在報告 ⑲ 看到它，而那仍是未經回測驗證的規劃證據，不是下單指令。
 
 ### scanner — 技術指標參數
 

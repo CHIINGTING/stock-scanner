@@ -1,0 +1,57 @@
+[
+ {
+  "Date": "20260904",
+  "Contract": "TXO",
+  "ContractMonth(Week)": "202609",
+  "StrikePrice": "46000",
+  "CallPut": "買權",
+  "Volume": "1,234",
+  "SettlementPrice": "610",
+  "OpenInterest": "0",
+  "TradingSession": "一般"
+ },
+ {
+  "Date": "20260904",
+  "Contract": "TXO",
+  "ContractMonth(Week)": "202609",
+  "StrikePrice": "四萬六",
+  "CallPut": "賣權",
+  "Volume": "12",
+  "SettlementPrice": "-",
+  "OpenInterest": "9",
+  "TradingSession": "一般"
+ },
+ {
+  "Date": "20260904",
+  "Contract": "TXO",
+  "ContractMonth(Week)": "202609",
+  "StrikePrice": "46200",
+  "CallPut": "買權",
+  "Volume": "n/a",
+  "SettlementPrice": "NULL",
+  "OpenInterest": "-",
+  "TradingSession": "盤後"
+ },
+ {
+  "Date": "20260904",
+  "Contract": "TXO",
+  "ContractMonth(Week)": "202609",
+  "StrikePrice": "46400",
+  "CallPut": "認購",
+  "Volume": "7",
+  "SettlementPrice": "",
+  "OpenInterest": "3",
+  "TradingSession": "一般"
+ },
+ {
+  "Date": "20260904",
+  "Contract": "TXO",
+  "ContractMonth(Week)": "202609",
+  "StrikePrice": "46600",
+  "CallPut": "賣權",
+  "Volume": "5",
+  "SettlementPrice": "610",
+  "OpenInterest": "2",
+  "TradingSession": "夜盤"
+ }
+]

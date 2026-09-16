@@ -9,20 +9,24 @@ import (
 // replayRegimes runs the whole M2+M3 chain across the cached history. Posture is UNKNOWN
 // throughout because no producer exists until M6 — which is exactly the state M3 ships in,
 // so this is the honest thing to validate against.
+//
+// The loop this helper used to inline is now ReplayRegimes (regime_replay.go), a production
+// API. The helper delegates to it and maps the rows back onto model.RegimeDecision, so the
+// assertions below — written against the inlined loop — now serve as the regression suite
+// for that promotion: they pass only if the production function behaves identically.
 func replayRegimes(t *testing.T) []model.RegimeDecision {
 	t.Helper()
 	bars, panel := loadHistory(t)
+	rows := ReplayRegimes(model.Benchmark0050, bars, panel, th)
 	var out []model.RegimeDecision
-	for i := th.MinBenchmarkBars; i < len(bars); i++ {
-		_, pview := AnalyzePrice(model.Benchmark0050, bars[:i+1], th)
-		bi := indexOfDate(panel.Dates, bars[i].Date)
-		if bi < 0 {
-			continue
-		}
-		nearHigh := pview.DDHigh <= th.NearHighDDPct
-		_, bview := AnalyzeBreadth(panel, bi, nearHigh, th)
-		v := BuildStructureView(pview, bview, model.PostureUnknown, th)
-		out = append(out, DecideRegime(v, th))
+	for _, r := range rows {
+		out = append(out, model.RegimeDecision{
+			Regime:  r.Regime,
+			RuleID:  r.RuleID,
+			View:    r.Structure,
+			Reasons: r.Reasons,
+			Caveats: r.Caveats,
+		})
 	}
 	return out
 }

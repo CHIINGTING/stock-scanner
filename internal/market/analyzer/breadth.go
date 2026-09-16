@@ -43,6 +43,16 @@ type BreadthPanel struct {
 	Base60  []int
 	Base120 []int
 	BaseAdv []int
+
+	// Symbols is how many symbol series the panel was built from — len(closes).
+	//
+	// It is NOT the same thing as ValidCount, and the difference is the point: ValidCount is
+	// how many stocks were measurable on one date, Symbols is how many were loaded at all.
+	// With a CacheFeed universe that membership is whatever *.json is in the cache right
+	// now, so a replay of a past session measures breadth over TODAY's constituents. Panels
+	// built weeks apart give the same price metrics and different breadth; Symbols is what
+	// makes that visible. See model.CaveatReplayUniverseAsCached.
+	Symbols int
 }
 
 // BreadthView is one date's breadth, ready for classification.
@@ -80,6 +90,7 @@ type BreadthView struct {
 func BuildBreadthPanel(dates []string, closes [][]float64) *BreadthPanel {
 	p := &BreadthPanel{
 		Dates:      dates,
+		Symbols:    len(closes),
 		AboveMA20:  make([]float64, len(dates)),
 		AboveMA60:  make([]float64, len(dates)),
 		AboveMA120: make([]float64, len(dates)),

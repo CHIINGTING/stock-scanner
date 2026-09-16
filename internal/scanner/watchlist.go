@@ -5,6 +5,7 @@ import (
 
 	"github.com/deep-huang/stock-scanner/internal/ai"
 	"github.com/deep-huang/stock-scanner/internal/candlestick"
+	"github.com/deep-huang/stock-scanner/internal/entryplan"
 	"github.com/deep-huang/stock-scanner/internal/etfflow"
 	"github.com/deep-huang/stock-scanner/internal/fetcher"
 	"github.com/deep-huang/stock-scanner/internal/institution"
@@ -149,6 +150,26 @@ type WatchlistEntry struct {
 	// Score/Action/RocketScore/WatchAction/sort/stop. When enabled it is ALWAYS non-nil
 	// (Status distinguishes NO_PATTERN / INVALID_BAR from "disabled = nil"). SPEC R10-2 §11.
 	Candlestick *candlestick.Result `json:"candlestick,omitempty"`
+
+	// EntryPlan (EP-6): shadow-only EXECUTION-SIDE reading — at what price this already-
+	// decided candidate may be bought, how far it may be chased, where the thesis is wrong
+	// and what it is worth. nil unless enable_entry_plan is on.
+	//
+	// Deliberately a dedicated field, NOT inside ShadowSignals, so the C6b guardrail
+	// scoring — which reads ShadowSignals and nothing else — cannot reach it. Attached by
+	// the AttachEntryPlan POST-PASS (NOT EnrichWatchlist), which runs after the watchlist
+	// sort is already final, so score/action/probability/ranking are finished verdicts by
+	// the time any plan exists. NEVER affects Score / Action / RocketScore / WatchAction /
+	// ExplosionProb / sort / stop / ranking / position sizing.
+	//
+	// That direction is the whole point of the feature: entryplan answers "at what price"
+	// only AFTER something else has answered "is this worth owning". A decision that could
+	// consult a plan would be scoring the chart's tidiness — see internal/entryplan/doc.go.
+	//
+	// nil means the FEATURE IS OFF, never "no plan could be made". A plan that could not be
+	// made is a non-nil Plan whose own Status says INSUFFICIENT_DATA / NO_VALID_ENTRY, and
+	// the two are opposite statements: one is "nobody looked", the other is "we looked".
+	EntryPlan *entryplan.Plan `json:"entry_plan,omitempty"` // enable_entry_plan
 }
 
 // EnrichWatchlist turns raw watchlist OHLCV into rocket-candidate decision sheets,

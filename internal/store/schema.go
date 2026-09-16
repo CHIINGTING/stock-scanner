@@ -6,29 +6,84 @@ import (
 	"fmt"
 )
 
-// SchemaVersion is the highest migration this build knows how to apply. A database
-// migrated PAST this version is refused rather than used: an older binary silently
-// writing into a newer schema is how audit stores quietly lose columns.
-const SchemaVersion = 2
+// SchemaVersion is the highest migration the R13 schema declares, and therefore the highest
+// this build knows how to apply to r13.db. A database migrated PAST its schema's version is
+// refused rather than used: an older binary silently writing into a newer schema is how audit
+// stores quietly lose columns.
+//
+// It is DERIVED from R13Schema rather than written as a literal, so the constant and the list
+// can no longer drift. It is kept because internal/store/store_test.go pins it; nothing in
+// production reads it.
+var SchemaVersion = R13Schema.Version()
 
-// migration is one forward-only schema step. There is deliberately no Down: this is an
+// Migration is one forward-only schema step. There is deliberately no Down: this is an
 // audit store, and the answer to a bad migration is a new forward migration, not an
 // automated rollback that destroys recorded evidence.
-type migration struct {
-	version int
-	name    string
-	stmts   []string
+//
+// It is exported because more than one database now uses this machinery: R15 keeps its
+// derivatives tables in its OWN file with its OWN migration sequence (see
+// docs/SPEC_R15_TAIFEX_DERIVATIVES_RISK.md §7.1), because adding a migration to the list
+// below would raise the R13 ceiling and make a binary built WITHOUT R15 refuse to open
+// r13.db at all.
+type Migration struct {
+	Version int
+	Name    string
+	Stmts   []string
 }
 
-// migrations must stay append-only and ordered. Editing a RELEASED migration would leave
+// Schema is one database's migration set: the list plus the name that appears in errors.
+//
+// The zero value is not a usable schema — Config.Defaulted() maps it to R13Schema, so every
+// caller written before this type existed keeps opening the R13 database unchanged.
+type Schema struct {
+	// Name identifies the database in error messages: "r13", "r15_derivatives".
+	Name string
+	// Migrations must stay append-only and ordered.
+	Migrations []Migration
+}
+
+// Version is the highest migration this schema declares, and the ceiling migrate() judges a
+// database against. It is a property of the LIST, not a package constant: a single constant
+// would judge every database by the R13 sequence, so the day R15's own list reached version 3
+// the R15 code would refuse the R15 file.
+//
+// It is a max rather than len() or the last element, so an out-of-order or duplicated entry
+// cannot quietly lower the ceiling.
+func (s Schema) Version() int {
+	v := 0
+	for _, m := range s.Migrations {
+		if m.Version > v {
+			v = m.Version
+		}
+	}
+	return v
+}
+
+// String is the schema's name for error messages, with a fallback so an unnamed schema still
+// produces a readable failure.
+func (s Schema) String() string {
+	if s.Name == "" {
+		return "(unnamed)"
+	}
+	return s.Name
+}
+
+// isZero reports whether this is the zero Schema, i.e. the caller never chose one.
+func (s Schema) isZero() bool { return s.Name == "" && len(s.Migrations) == 0 }
+
+// R13Schema is the original store: scan_runs → stock_snapshots → evidence / analysis_runs →
+// agent_analysis / decisions / outcomes. It is the default for every Config that does not
+// name a schema.
+//
+// The list must stay append-only and ordered. Editing a RELEASED migration would leave
 // existing databases permanently inconsistent with new ones; once version 1 has shipped,
 // every change is a new version. (Version 1 itself was still amended in place during R13-M1
 // review, while no database built from it existed anywhere.)
-var migrations = []migration{
+var R13Schema = Schema{Name: "r13", Migrations: []Migration{
 	{
-		version: 1,
-		name:    "r13_foundation",
-		stmts: []string{
+		Version: 1,
+		Name:    "r13_foundation",
+		Stmts: []string{
 			// ── scan_runs ────────────────────────────────────────────────────────────
 			// One row per scanner execution. Everything else in R13 is reachable from
 			// here, which is what makes "trace this back to one scan" a schema property
@@ -203,9 +258,9 @@ var migrations = []migration{
 		},
 	},
 	{
-		version: 2,
-		name:    "agent_output_json",
-		stmts: []string{
+		Version: 2,
+		Name:    "agent_output_json",
+		Stmts: []string{
 			// R13-M3. `reasoning` holds one agent's prose; the R11 analyst also produces
 			// three DISTINCT LISTS (bull case, bear case, risk flags) plus a summary.
 			// Packing four structured values into the prose column would (a) void that
@@ -221,14 +276,17 @@ var migrations = []migration{
 			`ALTER TABLE agent_analysis ADD COLUMN output_json TEXT NOT NULL DEFAULT ''`,
 		},
 	},
-}
+}}
 
-// migrate brings an open database up to SchemaVersion.
+// migrate brings an open database up to schema.Version().
+//
+// The ceiling comes from the SCHEMA, not from a package constant, which is what makes two
+// databases with independent version sequences possible in one binary.
 //
 // Each migration runs in its own transaction together with the row that records it, so a
 // half-applied migration is impossible: either the DDL and the version bump both land, or
 // neither does.
-func migrate(ctx context.Context, db *sql.DB) error {
+func migrate(ctx context.Context, db *sql.DB, schema Schema) error {
 	if _, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
 		version    INTEGER PRIMARY KEY,
 		name       TEXT NOT NULL,
@@ -241,13 +299,13 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	if current > SchemaVersion {
+	if current > schema.Version() {
 		return fmt.Errorf("store: database schema is version %d but this build only knows %d "+
-			"— refusing to write with an older binary", current, SchemaVersion)
+			"— refusing to write with an older binary (schema %s)", current, schema.Version(), schema)
 	}
 
-	for _, m := range migrations {
-		if m.version <= current {
+	for _, m := range schema.Migrations {
+		if m.Version <= current {
 			continue
 		}
 		if err := applyMigration(ctx, db, m); err != nil {
@@ -257,25 +315,25 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func applyMigration(ctx context.Context, db *sql.DB, m migration) error {
+func applyMigration(ctx context.Context, db *sql.DB, m Migration) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("store: begin migration %d: %w", m.version, err)
+		return fmt.Errorf("store: begin migration %d: %w", m.Version, err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	for i, stmt := range m.stmts {
+	for i, stmt := range m.Stmts {
 		if _, err := tx.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("store: migration %d (%s) statement %d: %w", m.version, m.name, i+1, err)
+			return fmt.Errorf("store: migration %d (%s) statement %d: %w", m.Version, m.Name, i+1, err)
 		}
 	}
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)`,
-		m.version, m.name, nowUTC().Format(timeLayout)); err != nil {
-		return fmt.Errorf("store: record migration %d: %w", m.version, err)
+		m.Version, m.Name, nowUTC().Format(timeLayout)); err != nil {
+		return fmt.Errorf("store: record migration %d: %w", m.Version, err)
 	}
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("store: commit migration %d: %w", m.version, err)
+		return fmt.Errorf("store: commit migration %d: %w", m.Version, err)
 	}
 	return nil
 }

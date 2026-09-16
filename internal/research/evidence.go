@@ -581,8 +581,8 @@ func countByCategory(into map[string]int, items []store.Evidence) {
 
 // describeCounts renders a category tally for logs.
 func describeCounts(byCat map[string]int) string {
-	return fmt.Sprintf("technical=%d institution=%d sector=%d news=%d market=%d risk=%d",
+	return fmt.Sprintf("technical=%d institution=%d sector=%d news=%d market=%d risk=%d entry_plan=%d",
 		byCat[store.CategoryTechnical], byCat[store.CategoryInstitution],
 		byCat[store.CategorySector], byCat[store.CategoryNews],
-		byCat[store.CategoryMarket], byCat[store.CategoryRisk])
+		byCat[store.CategoryMarket], byCat[store.CategoryRisk], byCat[store.CategoryEntryPlan])
 }
