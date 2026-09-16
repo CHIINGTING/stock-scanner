@@ -93,37 +93,100 @@ var epConfidenceLabels = map[entryplan.Confidence]string{
 	entryplan.ConfidenceInsufficientData: "必要證據不足",
 }
 
-// epReasonLabels is a presentation map for the stable reason codes a reader meets most often.
-// It is NOT exhaustive on purpose: an unmapped code renders as its raw code, never disappears.
+// epReasonLabels is the presentation map for entryplan's reason codes.
+//
+// EP-10 COMPLETED IT: it now covers entryplan.AllReasons EXACTLY — no code without a label and
+// no label for a code entryplan does not register. TestEntryPlanReasonLabelsCoverTheRegistry
+// enforces both directions off entryplan.AllReasons itself, so a reason added upstream fails the
+// suite here rather than silently rendering as a bare SCREAMING_SNAKE code.
+//
+// PRESENTATION ONLY, and three properties survive the completion:
+//
+//	the canonical code is ALWAYS printed beside the text (epReasons), so nothing is lost;
+//	an UNMAPPED code still renders as its raw code — the fallback is kept, not removed,
+//	  because a decoder reading an archived plan may meet a code this build never heard of;
+//	the plan's own ORDER is preserved, so the output is deterministic.
+//
+// No wording here adds, removes or reinterprets a condition. Where entryplan draws a line the
+// label draws the same one — in particular "未評估" (not evaluated) is never written as "未通過"
+// (failed) or as anything a reader could take for a pass: STATUS_REQUIREMENT_NOT_EVALUATED is a
+// missing evaluator in this repo, not a judgement about the stock (reasons.go:585 and the TODO
+// decide.go's evaluateRequirement carries).
 var epReasonLabels = map[entryplan.Reason]string{
-	entryplan.ReasonSnapshotMalformed:               "輸入快照缺少代號或交易日",
-	entryplan.ReasonCurrentPriceUnavailable:         "現價不可用",
-	entryplan.ReasonPriceBasisUnavailable:           "價格基準不可用",
-	entryplan.ReasonMarketRegimeUnavailable:         "大盤狀態不可用",
-	entryplan.ReasonEntrySemanticUnavailable:        "掃描器未提供進場型態",
-	entryplan.ReasonZoneATRUnavailable:              "ATR 不可用，無法建立進場區",
-	entryplan.ReasonPreviousCloseUnavailable:        "前一日收盤不可用，無法計算追價上限",
-	entryplan.ReasonChaseNotAllowed:                 "此大盤狀態的政策不允許追價",
-	entryplan.ReasonNoValidInvalidation:             "沒有合格的想法失效價",
+	// Snapshot-level evidence.
+	entryplan.ReasonSnapshotMalformed:        "輸入快照缺少代號或交易日",
+	entryplan.ReasonCurrentPriceUnavailable:  "現價不可用",
+	entryplan.ReasonPriceBasisUnavailable:    "價格基準不可用",
+	entryplan.ReasonMarketRegimeUnavailable:  "大盤狀態不可用",
+	entryplan.ReasonEntrySemanticUnavailable: "掃描器未提供進場型態",
+
+	// EP-3b: the zone step.
+	entryplan.ReasonZoneSemanticNotPermitted:          "此大盤狀態的政策不允許這種進場型態",
+	entryplan.ReasonZonePolicyUnresolved:              "進場區政策未定（不是禁止）",
+	entryplan.ReasonPullbackLevelsUnavailable:         "沒有可用的支撐價位（MA20／MA60／平台低點皆不可用）",
+	entryplan.ReasonPullbackLevelsBasisMismatch:       "支撐價位與報價的價格基準不同，拒絕換算",
+	entryplan.ReasonPullbackLevelNotBelowCurrentPrice: "所有可用支撐都不低於現價，沒有可回檔承接的位置",
+	entryplan.ReasonBreakoutLevelUnavailable:          "沒有可用的前高樞紐，無從定義突破",
+	entryplan.ReasonBreakoutLevelBasisMismatch:        "前高樞紐與報價的價格基準不同，拒絕換算",
+	entryplan.ReasonBreakoutLevelNotAQuote:            "前高樞紐不是一個實際報價（未落在檔位上）",
+	entryplan.ReasonZoneATRUnavailable:                "ATR 不可用，無法建立進場區寬度",
+	entryplan.ReasonZoneATRBasisMismatch:              "ATR 與進場區的價格基準不同",
+	entryplan.ReasonZoneATRPeriodMismatch:             "ATR 週期不是寬度規則所定義的週期",
+	entryplan.ReasonZoneTickAlignmentUnavailable:      "進場區價位無法對齊檔位",
+	entryplan.ReasonZoneLowNotAPrice:                  "進場區下緣算出來不是一個價格",
+	entryplan.ReasonPullbackZoneOverlapsCurrentPrice:  "回檔進場區與現價重疊（附註，不是拒絕）",
+	entryplan.ReasonRecentPriceAdjustment:             "近期有除權息還原，ATR 寬度仍含部分還原殘留（附註，不是拒絕）",
+
+	// EP-3b: the chase step.
+	entryplan.ReasonChaseNotAllowed:               "此大盤狀態的政策不允許追價",
+	entryplan.ReasonChasePolicyUnresolved:         "追價政策未定（不是禁止）",
+	entryplan.ReasonPreviousCloseUnavailable:      "前一日收盤不可用，無法計算追價上限",
+	entryplan.ReasonPreviousCloseBasisMismatch:    "前一日收盤與計畫其餘價格的基準不同",
+	entryplan.ReasonChaseLimitRequiresRawBasis:    "漲跌幅上限只適用未還原價，本計畫的價格是還原價",
+	entryplan.ReasonChaseLimitRuleUnavailable:     "無法判定此標的適用的漲跌幅規則",
+	entryplan.ReasonChaseLimitPriceUnavailable:    "漲跌幅適用，但無法算出當日上限價",
+	entryplan.ReasonChaseCeilingBelowZone:         "當日最高合法價低於進場區上緣，追價上限撤回",
+	entryplan.ReasonChaseTickAlignmentUnavailable: "追價上限價無法對齊檔位",
+
+	// EP-4: the invalidation step.
+	entryplan.ReasonNoValidInvalidation:               "沒有合格的想法失效價",
+	entryplan.ReasonInvalidationEvidenceUnavailable:   "沒有任何可比較的失效價證據",
+	entryplan.ReasonInvalidationSelectionInconsistent: "失效價的篩選與選取互相矛盾（內部不一致，不是市場狀態）",
+
+	// EP-4: the target step.
+	entryplan.ReasonTarget1TickAlignmentUnavailable: "目標一無法對齊檔位",
+	entryplan.ReasonTarget1NotAboveEntry:            "目標一不高於進場區上緣",
+	entryplan.ReasonTarget2TickAlignmentUnavailable: "目標二無法對齊檔位",
 	entryplan.ReasonValuationCeilingBelowEntry:      "估值上限低於進場價，第二目標撤回",
-	entryplan.ReasonStatusSemanticUnresolved:        "進場型態未定",
-	entryplan.ReasonStatusCurrentPriceUnavailable:   "無現價可比較",
-	entryplan.ReasonStatusPolicyUnresolved:          "進場政策未定",
-	entryplan.ReasonStatusPolicyRefused:             "進場政策不允許此型態",
-	entryplan.ReasonStatusEntryZoneUnavailable:      "進場區不可用",
-	entryplan.ReasonStatusNoLegalEntryZone:          "沒有合法進場區",
-	entryplan.ReasonStatusRiskBoundaryUnavailable:   "想法失效價不可用",
-	entryplan.ReasonStatusNoRiskBoundary:            "沒有風險邊界",
-	entryplan.ReasonStatusAboveMaxChase:             "現價高於追價上限",
-	entryplan.ReasonStatusPriceInsideZone:           "現價位於進場區內",
-	entryplan.ReasonStatusPriceAboveEntryZone:       "現價高於進場區",
-	entryplan.ReasonStatusPriceBelowEntryZone:       "現價低於進場區",
-	entryplan.ReasonStatusImmediateEntryRefused:     "政策不允許在區外立即進場",
+	entryplan.ReasonTarget2BelowTarget1:             "估值上限把目標二壓到目標一之下，目標二撤回",
+	entryplan.ReasonRiskNotEstablished:              "沒有風險分母，無法計算目標與風險報酬比",
+
+	// EP-5: the decision step.
+	entryplan.ReasonStatusSemanticUnresolved:       "進場型態未定",
+	entryplan.ReasonStatusCurrentPriceUnavailable:  "無現價可比較",
+	entryplan.ReasonStatusPolicyUnresolved:         "進場政策未定",
+	entryplan.ReasonStatusPolicyRefused:            "進場政策不允許此型態",
+	entryplan.ReasonStatusEntryZoneUnavailable:     "進場區不可用",
+	entryplan.ReasonStatusNoLegalEntryZone:         "沒有合法進場區",
+	entryplan.ReasonStatusRiskBoundaryUnavailable:  "想法失效價不可用",
+	entryplan.ReasonStatusNoRiskBoundary:           "沒有風險邊界",
+	entryplan.ReasonStatusAboveMaxChase:            "現價高於追價上限",
+	entryplan.ReasonStatusPriceInsideZone:          "現價位於進場區內",
+	entryplan.ReasonStatusPriceAboveEntryZone:      "現價高於進場區",
+	entryplan.ReasonStatusPriceBelowEntryZone:      "現價低於進場區",
+	entryplan.ReasonStatusImmediateEntryRefused:    "政策不允許在區外立即進場",
+	entryplan.ReasonStatusImmediateEntryUnresolved: "對於是否可立即進場，政策未做出決定",
+	entryplan.ReasonStatusRequirementNotMet:        "權限附帶的必要條件在這裡不成立",
+	// 未評估 ≠ 通過，也 ≠ 未通過：這是本 repo 沒有實作的評估器。
+	entryplan.ReasonStatusRequirementNotEvaluated:   "權限附帶的必要條件本系統尚無法評估（未評估，不等於通過）",
 	entryplan.ReasonStatusImmediateChasePermitted:   "政策允許在追價上限內進場",
 	entryplan.ReasonStatusChaseCeilingUnresolved:    "追價上限無法計算",
 	entryplan.ReasonStatusNoExecutablePriceRelation: "現價與進場區沒有可執行的關係",
 	entryplan.ReasonStatusThesisContradicted:        "掃描器主要動作與進場想法矛盾",
 	entryplan.ReasonStatusThesisUnclassified:        "掃描器主要動作未分類",
+
+	// Reserved (entryplan.ReservedReasons): production can emit them, no ComputePlan input can.
+	entryplan.ReasonPlanInvariantViolated: "計畫不變式被違反（本層的程式瑕疵，不是市場狀態）",
 }
 
 // entryPlanSection is the pre-formatted view of ONE published plan. Every field is a string the
@@ -329,8 +392,13 @@ func epZone(z *entryplan.PriceZone) string {
 	return epPrice(z.Low) + " – " + epPrice(z.High)
 }
 
+// epZoneBasis renders the zone's own basis, and ONLY when the zone itself renders.
+//
+// EP-10 browser finding: a plan whose bounds are not prices rendered "理想進場區 — MA20・RAW",
+// a basis for a zone that was never published. A basis is a statement ABOUT a published zone,
+// so it is withheld on exactly the condition epZone withholds the zone.
 func epZoneBasis(z *entryplan.PriceZone) string {
-	if z == nil {
+	if epZone(z) == epUnavailable {
 		return ""
 	}
 	parts := make([]string, 0, len(z.Basis)+1)

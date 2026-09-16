@@ -54,6 +54,47 @@ var entryPlanFieldFunctions = map[string]string{
 	// changes no HTML outside the ⑲ block and mutates no plan.
 	"internal/report/report_entryplan.go#entryPlanView": "EP-8 report section ⑲: the only " +
 		"report READ, formatting the published plan for display",
+
+	// ── EP-9, the research validation gate. FOUR READ-ONLY SITES, and the reason they are
+	// listed individually rather than exempted as a package is the sentence in the doc above:
+	// the allowlist is an EXACT set, and a package exemption would silently admit the next
+	// reader somebody adds under internal/entryplanbacktest/.
+	//
+	// What they have in common, and why each is safe:
+	//
+	//   * READ-ONLY. None assigns to .EntryPlan and none mutates the *entryplan.Plan behind it.
+	//     TestTheResearchReadersNeverMutateAPlan (internal/entryplanbacktest/recon) deep-copies
+	//     every plan before the read and compares the JSON afterwards.
+	//   * DOWNSTREAM AND OUT OF BAND. They run in a separate binary over a RECONSTRUCTED
+	//     historical session, after scanner.AttachEntryPlan has already produced the plan. They
+	//     are not on any path a production scan takes.
+	//   * UNREACHABLE FROM PRODUCTION. Nothing outside internal/entryplanbacktest/... and
+	//     cmd/ep9-* imports them. TestNoProductionPackageImportsTheResearchLayer
+	//     (internal/entryplanbacktest/recon) walks the import graph and fails if one ever does,
+	//     so "downstream" is enforced rather than asserted.
+	//
+	// The behavioural evidence that production itself did not move is unchanged: EP-9 adds no
+	// production file, so EP-6B's OFF-vs-ON shadow diff
+	// (cmd/scanner/entryplan_pipeline_test.go's TestEntryPlanIsTheOnlyDifferenceBetweenOffAndOn
+	// and TestEntryPlanDoesNotChangeWatchlistOrder) compares the same two pipelines it always did.
+	"internal/entryplanbacktest/recon/funnel.go#Funnel.addEntry": "EP-9 research: the §8 " +
+		"coverage funnel's per-entry counter; reads status and price presence only",
+	"internal/entryplanbacktest/study/observe.go#ObserveSession": "EP-9 research: projects one " +
+		"reconstructed session's plans into study observations; reads only",
+	"cmd/ep9-scope/scope.go#measureFidelity": "EP-9 research: the full-vs-empty context " +
+		"fidelity measurement; compares two reconstructions and mutates neither",
+	"cmd/ep9-scope/scope.go#measureZeros": "EP-9 research: counts the §19/§6 expected " +
+		"zeros (BREAKOUT, valuation ceiling) on reconstructed plans; reads only",
+
+	// ── EP-10. ONE further read-only site, and the reason scripts/ joined the walked
+	// directories below is this entry: a research reader placed outside the scanned tree
+	// would be a reader this guard cannot see, which is exactly the evasion the EP-10 brief
+	// forbids. It is read-only (it copies published fields onto a JSON row and assigns
+	// nothing), it runs in its own binary over a RECONSTRUCTED session, and nothing imports
+	// it — scripts/ep10_convergence is package main.
+	"scripts/ep10_convergence/main.go#classify": "EP-10 research: the legacy ④ vs ⑲ " +
+		"presentation comparison; reads the published plan's status, zone, invalidation and " +
+		"targets and mutates nothing",
 }
 
 func TestOnlyAttachEntryPlanTouchesTheEntryPlanFieldRepoWide(t *testing.T) {
@@ -61,7 +102,9 @@ func TestOnlyAttachEntryPlanTouchesTheEntryPlanFieldRepoWide(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found, scanned, err := entryPlanSelectorSites(root, []string{"cmd", "internal"})
+	// EP-10 widened the walk from {cmd, internal} to include scripts/: research tooling lives
+	// there too, and a directory this scan does not enter is a place a reader can hide.
+	found, scanned, err := entryPlanSelectorSites(root, []string{"cmd", "internal", "scripts"})
 	if err != nil {
 		t.Fatal(err)
 	}

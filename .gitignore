@@ -5,6 +5,10 @@ bin/
 /daily-data
 /valuation-backfill
 /market-regime-replay
+# EP-9 research drivers (Phase 2a scope measurement, Phase 2b study).
+/ep9-scope
+/ep9-study
+/ep9_mutation
 .cache/
 .cache_fresh_r6_5/
 # R14 健檢儀表板的獨立價格快取。它與 .cache 分開是刻意的：fetcher 會回寫抓到的

@@ -70,6 +70,11 @@ func epLegacyEntry(p *entryplan.Plan) scanner.WatchlistEntry {
 var epSectionRe = regexp.MustCompile(`(?s)<section class="wl-sec wl-ep">.*?</section>`)
 var epStylesRe = regexp.MustCompile(`(?s)<style id="ep19-styles">.*?</style>`)
 
+// EP-10: the two EntryPlan presentation differences that live OUTSIDE the ⑲ section — ④'s
+// legacy label and its relationship note. Both appear only beside a rendered ⑲.
+var epLegacyNoteRe = regexp.MustCompile(`(?s)\n\s*<div class="wl-note ep-legacy-note">.*?</div>`)
+var epLegacyLabelRe = regexp.MustCompile(`<h4>④ 價位計畫（舊版掃描器價位指引）</h4>`)
+
 func epSections(html string) []string { return epSectionRe.FindAllString(html, -1) }
 
 // epOneSection renders one entry with ShowEntryPlan on and returns its single ⑲ block.
@@ -552,11 +557,15 @@ func TestEntryPlanSectionReasonsAndCaveats(t *testing.T) {
 	sec := epOneSection(t, epLegacyEntry(p))
 	epAssertContains(t, sec,
 		`<ul class="wl-gs-list ep-reasons"><li>現價高於進場區（STATUS_PRICE_ABOVE_ENTRY_ZONE）</li>`+
-			`<li>EP8_TEST_UNMAPPED_CODE</li><li>RECENT_PRICE_ADJUSTMENT</li></ul>`,
+			`<li>EP8_TEST_UNMAPPED_CODE</li>`+
+			`<li>近期有除權息還原，ATR 寬度仍含部分還原殘留（附註，不是拒絕）（RECENT_PRICE_ADJUSTMENT）</li></ul>`,
 		`<ul class="wl-gs-list ep-caveats"><li>第二則&lt;b&gt;注意&lt;/b&gt;</li><li>第一則</li></ul>`,
 	)
-	if _, mapped := epReasonLabels[entryplan.ReasonRecentPriceAdjustment]; mapped {
-		t.Fatal("fixture: RECENT_PRICE_ADJUSTMENT is expected to be unmapped")
+	// The UNMAPPED fallback is still live after EP-10 completed the map: a code entryplan does
+	// not register (an archived plan from another build, say) renders as its raw code and
+	// disappears from nothing.
+	if _, mapped := epReasonLabels["EP8_TEST_UNMAPPED_CODE"]; mapped {
+		t.Fatal("fixture: EP8_TEST_UNMAPPED_CODE must stay unmapped")
 	}
 	// No dead mapping: every mapped code is a code entryplan can publish.
 	for r := range epReasonLabels {
@@ -576,9 +585,51 @@ func TestEntryPlanSectionShadowOnlyDisclaimer(t *testing.T) {
 	epAssertContains(t, sec,
 		"<h4>⑲ 進場計畫（Shadow Only，不改變 BUY／WATCH／SELL）</h4>",
 		"規劃／研究證據，不是下單指令。規則為啟發式，未經回測驗證。",
-		"舊版「④ 價位計畫」的進場區／停損價／停利區維持原樣，EP-10 之前不收斂；本區不取代舊欄位。",
+		// EP-10 convergence wording. It must keep saying that ④ stays and ⑲ does not replace it.
+		"與上方「④ 價位計畫（舊版掃描器價位指引）」的關係：",
+		"<b>④ 仍是報告既有的價位欄位，⑲ 不取代它，也不是經過回測驗證的策略。</b>",
 	)
 	epAssertAbsent(t, sec, "回測驗證通過", "已回測", "已驗證", "買進", "賣出")
+	// The stale EP-8 wording is gone: EP-10 IS the convergence decision, so a sentence
+	// promising it for later would be false.
+	epAssertAbsent(t, sec, "EP-10 之前不收斂")
+}
+
+// EP-10 Workstream B: when BOTH blocks are on screen, ④ names itself the legacy scanner price
+// guidance and says what it is. It does so ONLY then — a report with no ⑲ section for that stock
+// is unchanged, which is what keeps this a presentation clarification rather than a rewrite of ④.
+func TestLegacyPriceBlockIsLabelledLegacyOnlyBesideARenderedEntryPlan(t *testing.T) {
+	withPlan := epLegacyEntry(epSynthPlan(entryplan.StatusWaitPullback, 98.50))
+	noPlan := epLegacyEntry(nil)
+	noPlan.A.Symbol = "2222"
+
+	on := genHTML(t, []scanner.WatchlistEntry{withPlan}, GuardrailViewOptions{ShowEntryPlan: true})
+	for _, want := range []string{
+		"<h4>④ 價位計畫（舊版掃描器價位指引）</h4>",
+		`<div class="wl-note ep-legacy-note">本區為<b>舊版掃描器</b>的價位指引`,
+	} {
+		if !strings.Contains(on, want) {
+			t.Errorf("the legacy ④ label is missing %q", want)
+		}
+	}
+	// ④ keeps every one of its own fields: this is a label, not a suppression.
+	for _, keep := range []string{"進場區：88.81 ~ 89.91", "停損價", "停利區", "突破價", "支撐價"} {
+		if !strings.Contains(on, keep) {
+			t.Errorf("labelling ④ removed %q from it", keep)
+		}
+	}
+	// No ⑲ section for that stock → ④ is exactly what it was.
+	noSection := genHTML(t, []scanner.WatchlistEntry{noPlan}, GuardrailViewOptions{ShowEntryPlan: true})
+	if strings.Contains(noSection, "ep-legacy-note") || strings.Contains(noSection, "舊版掃描器價位指引") {
+		t.Error("④ was relabelled for a stock that has no ⑲ section")
+	}
+	off := genHTML(t, []scanner.WatchlistEntry{withPlan}, GuardrailViewOptions{})
+	if strings.Contains(off, "ep-legacy-note") || strings.Contains(off, "舊版掃描器價位指引") {
+		t.Error("④ was relabelled with show_entry_plan off")
+	}
+	if !strings.Contains(off, "<h4>④ 價位計畫</h4>") {
+		t.Error("④'s original heading did not survive with the flag off")
+	}
 }
 
 func TestEntryPlanSectionNeverShowsLegacyPriceFields(t *testing.T) {
@@ -719,7 +770,20 @@ func TestEntryPlanDisplayChangesOnlyTheEntryPlanBlockAndMutatesNothing(t *testin
 	if len(epSections(off)) != 0 || strings.Contains(off, "ep19-styles") {
 		t.Fatal("OFF rendered ⑲ content")
 	}
+	// EP-10 adds ONE further EntryPlan presentation difference outside the ⑲ block: ④ names
+	// itself the legacy price guidance beside a rendered ⑲ (epLegacyLabelRe / epLegacyNoteRe).
+	// It is stripped here for the same reason the ⑲ section is — and the two anti-vacuity
+	// checks below make sure the strip is measuring something: the label must be PRESENT in
+	// ON (three of the four fixture entries render a section) and ABSENT from OFF.
+	if n := len(epLegacyNoteRe.FindAllString(on, -1)); n != 3 {
+		t.Fatalf("ON carries %d legacy ④ notes, want 3 (one per rendered ⑲ section)", n)
+	}
+	if epLegacyNoteRe.MatchString(off) || epLegacyLabelRe.MatchString(off) {
+		t.Fatal("OFF carries the legacy ④ label, which only exists beside a rendered ⑲")
+	}
 	stripped := epStylesRe.ReplaceAllString(epSectionRe.ReplaceAllString(on, ""), "")
+	stripped = epLegacyNoteRe.ReplaceAllString(stripped, "")
+	stripped = epLegacyLabelRe.ReplaceAllString(stripped, "<h4>④ 價位計畫</h4>")
 	if stripped != off {
 		t.Errorf("enabling ⑲ changed HTML outside the ⑲ block and its styles (len off=%d, stripped on=%d)\n%s",
 			len(off), len(stripped), epFirstDiff(off, stripped))

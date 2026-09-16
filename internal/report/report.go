@@ -2211,8 +2211,13 @@ th.rotscore{min-width:120px}
 {{ end }}
 </style>{{ if .GV.ShowEntryPlan }}<style id="ep19-styles">
 /* ⑲ 進場計畫（EP-8）— shadow 區塊，虛線框與舊版「④ 價位計畫」區隔 */
-.wl-ep{border:1px dashed #6d28d9;background:#130f24}
+/* EP-10 版面：⑲ 有 11 個欄位加兩份清單，擠在 .wl-grid 的三分之一欄寬會讓每個 ep-code 標籤
+   換行；grid-column:1/-1 讓它獨占整列。min-width:0 與 overflow-wrap:anywhere 是 EP-10 在瀏覽器
+   實測到的缺陷修正：.wl-grid 的軌道是 1fr（= minmax(auto,1fr)），一個無法斷行的長 reason code
+   會把整份報告撐寬，連同一頁其他個股的卡片一起推出畫面外。兩者都只影響 .wl-ep 自身。 */
+.wl-ep{border:1px dashed #6d28d9;background:#130f24;grid-column:1/-1;min-width:0;overflow-wrap:anywhere}
 .wl-ep h4{color:#c4b5fd}
+.wl-ep .ep-grid>div,.wl-ep ul,.wl-ep li{min-width:0;overflow-wrap:anywhere}
 .wl-ep .ep-status{display:inline-block;border-radius:6px;padding:3px 10px;font-size:.78rem;font-weight:700;margin-bottom:6px;border:1px solid #334155;background:#111827;color:#cbd5e1}
 .wl-ep .ep-status.ep-s-now{border-color:#14532d;color:#86efac}
 .wl-ep .ep-status.ep-s-wait{border-color:#1e3a8a;color:#93c5fd}
@@ -2386,7 +2391,10 @@ th.rotscore{min-width:120px}
             <div>信心：<span class="{{ confCSS $e.Backtest.Confidence }}">{{ $e.Backtest.Confidence }}</span></div>
           </div>
           <div class="wl-sec">
-            <h4>④ 價位計畫</h4>
+            <h4>④ 價位計畫{{ if and $.GV.ShowEntryPlan (entryPlanView $e) }}（舊版掃描器價位指引）{{ end }}</h4>
+            {{- if and $.GV.ShowEntryPlan (entryPlanView $e) }}
+            <div class="wl-note ep-legacy-note">本區為<b>舊版掃描器</b>的價位指引：每一檔都會列出，ATR 或停損無法計算時會以固定比例替代。下方 ⑲ 是另一套 Shadow Only 的進場計畫，只在掃描器給出可辨識的進場型態時才出現。兩區的數字本來就不一定一致，實測也確實不一致。</div>
+            {{- end }}
             <div>現價：<b>{{ f2 $e.A.Close }}</b>{{ $mag := pvMagnitude $e.A }}{{ with $mag }}　今日：<span class="pv-mag {{ pvMoveCSS $e.A.PriceMove }}">{{ . }}</span>{{ end }}{{ if $e.A.PriceVolumeSignal }}　量比 {{ f1 $e.A.VolumeRatio }}x（<span class="{{ pvCSS $e.A.PriceVolumeSignal }}">{{ $e.A.PriceVolumeSignal }}</span>）{{ end }}</div>
             <div>進場區：{{ $e.EntryZone }}</div>
             <div>突破價：<span class="t-t1">{{ f1 $e.BreakoutPrice }}</span>　支撐價：{{ f1 $e.SupportPrice }}</div>
@@ -2707,7 +2715,7 @@ th.rotscore{min-width:120px}
             <div class="wl-gs-h">注意：</div>
             <ul class="wl-gs-list ep-caveats">{{- range .Caveats }}<li>{{ . }}</li>{{- end }}</ul>
             {{- end }}
-            <div class="wl-note">舊版「④ 價位計畫」的進場區／停損價／停利區維持原樣，EP-10 之前不收斂；本區不取代舊欄位。</div>
+            <div class="wl-note">與上方「④ 價位計畫（舊版掃描器價位指引）」的關係：④ 每一檔都會列出、必要時以固定比例替代；⑲ 只在掃描器給出可辨識的進場型態時才出現，沒有合格價位就一格都不填。兩者的進場／停損／停利本來就會不同，實測全市場兩個交易日的結果是<b>兩區同時出現時沒有一檔完全一致</b>。<b>④ 仍是報告既有的價位欄位，⑲ 不取代它，也不是經過回測驗證的策略。</b></div>
           </section>{{- end }}{{- end }}
         </div>
       </div>
